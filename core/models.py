@@ -166,7 +166,33 @@ class HistoricoDownload(models.Model):
         verbose_name = 'Histórico de Download'
         verbose_name_plural = 'Históricos de Download'
         ordering = ['-data_inicio']
-
+class ArquivoConversao(models.Model):
+    """Modelo para arquivos enviados para conversão"""
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('convertendo', 'Convertendo'),
+        ('concluido', 'Concluído'),
+        ('erro', 'Erro'),
+    ]
+    
+    usuario = models.ForeignKey(Pessoa, on_delete=models.CASCADE, null=True, blank=True)
+    arquivo_original = models.FileField(upload_to='conversor/originais/')
+    arquivo_convertido = models.FileField(upload_to='conversor/convertidos/', blank=True, null=True)
+    nome_original = models.CharField(max_length=255)
+    formato_origem = models.CharField(max_length=10)
+    formato_destino = models.CharField(max_length=10)
+    tamanho_original = models.IntegerField(default=0)  # em bytes
+    tamanho_convertido = models.IntegerField(default=0, null=True, blank=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    mensagem_erro = models.TextField(blank=True)
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_conversao = models.DateTimeField(null=True, blank=True)
+    
+    def __str__(self):
+        return f"{self.nome_original} → {self.formato_destino}"
+    
+    class Meta:
+        ordering = ['-data_criacao']
 class NotaFiscal(models.Model):
     TIPO_CHOICES = [
         ('entrada', 'Entrada'),

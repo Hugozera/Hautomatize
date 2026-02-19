@@ -1,6 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
 from . import views
+from . import views_conversor  # ← ADICIONE ESTA LINHA!
 
 urlpatterns = [
     # Dashboard
@@ -54,6 +55,17 @@ path('download/lista/', views.listar_downloads, name='lista_downloads'),
     
 path('empresas/upload-certificado/', views.upload_certificado_temporario, name='upload_certificado'),
     path('empresas/upload-certificado/', views.upload_certificado_temporario, name='upload_certificado'),
+   
+   # Conversor de Arquivos
+path('conversor/', views_conversor.conversor_index, name='conversor_index'),
+path('conversor/upload/', views_conversor.upload_arquivo, name='upload_arquivo'),
+path('conversor/processar/<int:conversao_id>/', views_conversor.processar_conversao, name='processar_conversao'),
+path('conversor/status/<int:conversao_id>/', views_conversor.status_conversao, name='status_conversao'),
+path('conversor/historico/', views_conversor.historico_conversoes, name='historico_conversoes'),
+path('conversor/download/<int:conversao_id>/', views_conversor.download_arquivo, name='download_arquivo'),
+path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos'),
+   
+   
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),

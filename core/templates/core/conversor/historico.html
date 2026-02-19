@@ -1,0 +1,151 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-clock-history text-success me-2"></i>Histórico de Conversões
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'conversor_index' %}" class="text-decoration-none">Conversor</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Histórico</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{% url 'conversor_index' %}" class="btn btn-success">
+            <i class="bi bi-arrow-left me-1"></i>Novo Conversor
+        </a>
+    </div>
+
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Arquivo Original</th>
+                            <th>Conversão</th>
+                            <th>Tamanho</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in conversoes %}
+                        <tr>
+                            <td>{{ c.data_criacao|date:'d/m/Y H:i' }}</td>
+                            <td>
+                                <i class="bi bi-file-earmark me-1"></i>
+                                {{ c.nome_original|truncatechars:30 }}
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark">{{ c.formato_origem|upper }}</span>
+                                <i class="bi bi-arrow-right mx-1"></i>
+                                <span class="badge bg-success">{{ c.formato_destino|upper }}</span>
+                            </td>
+                            <td>
+                                {% if c.tamanho_convertido %}
+                                    {{ c.tamanho_convertido|filesizeformat }}
+                                {% else %}
+                                    {{ c.tamanho_original|filesizeformat }}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if c.status == 'concluido' %}
+                                    <span class="badge bg-success">Concluído</span>
+                                {% elif c.status == 'convertendo' %}
+                                    <span class="badge bg-primary">Convertendo</span>
+                                {% elif c.status == 'erro' %}
+                                    <span class="badge bg-danger" title="{{ c.mensagem_erro }}">Erro</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">Pendente</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if c.arquivo_convertido %}
+                                <a href="{% url 'download_arquivo' c.id %}" class="btn btn-sm btn-success" download>
+                                    <i class="bi bi-download"></i> Download
+                                </a>
+                                {% endif %}
+                                <a href="#" class="btn btn-sm btn-outline-secondary" onclick="verDetalhes({{ c.id }})">
+                                    <i class="bi bi-info-circle"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-arrow-left-right" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                                <h5>Nenhuma conversão realizada</h5>
+                                <p class="mb-3">Vá para o conversor e comece a converter seus arquivos.</p>
+                                <a href="{% url 'conversor_index' %}" class="btn btn-success">
+                                    <i class="bi bi-arrow-left-right me-1"></i>Ir para Conversor
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Detalhes -->
+<div class="modal fade" id="detalhesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Detalhes da Conversão</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="detalhesConteudo">
+                Carregando...
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function verDetalhes(id) {
+    fetch(`/conversor/status/${id}/`)
+        .then(response => response.json())
+        .then(data => {
+            let html = `
+                <p><strong>Arquivo:</strong> ${data.nome_original}</p>
+                <p><strong>Conversão:</strong> ${data.formato_origem.toUpperCase()} → ${data.formato_destino.toUpperCase()}</p>
+                <p><strong>Data:</strong> ${data.data_criacao}</p>
+                <p><strong>Tamanho original:</strong> ${formatBytes(data.tamanho_original)}</p>
+            `;
+            
+            if (data.tamanho_convertido) {
+                html += `<p><strong>Tamanho convertido:</strong> ${formatBytes(data.tamanho_convertido)}</p>`;
+            }
+            
+            if (data.data_conversao) {
+                html += `<p><strong>Concluído em:</strong> ${data.data_conversao}</p>`;
+            }
+            
+            if (data.mensagem_erro) {
+                html += `<div class="alert alert-danger mt-2">${data.mensagem_erro}</div>`;
+            }
+            
+            document.getElementById('detalhesConteudo').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('detalhesModal')).show();
+        });
+}
+
+function formatBytes(bytes) {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+}
+</script>
+{% endblock %}
