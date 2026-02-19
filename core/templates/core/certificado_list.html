@@ -1,0 +1,155 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-shield-lock text-success me-2"></i>Certificados Digitais
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/">Principal</a></li>
+                    <li class="breadcrumb-item active">Certificados</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header bg-transparent">
+            <i class="bi bi-shield-lock me-2 text-success"></i>
+            Certificados Instalados no Windows
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Emitente</th>
+                            <th>Validade</th>
+                            <th>Thumbprint</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cert in certificados %}
+                        <tr>
+                            <td>{{ cert.subject }}</td>
+                            <td>
+                                {% if cert.validade %}
+                                    {{ cert.validade|date:'d/m/Y' }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td><code>{{ cert.thumbprint|truncatechars:20 }}</code></td>
+                            <td>
+                                <a href="{% url 'certificado_test' %}?thumbprint={{ cert.thumbprint }}" class="btn btn-sm btn-outline-success me-2">
+                                    <i class="bi bi-check-circle"></i> Testar
+                                </a>
+
+                                <button type="button" class="btn btn-sm btn-outline-primary btn-salvar-cert" data-thumbprint="{{ cert.thumbprint }}">
+                                    <i class="bi bi-download"></i> Salvar
+                                </button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="4" class="text-center py-4">
+                                <i class="bi bi-shield-exclamation me-2"></i>
+                                Nenhum certificado encontrado na loja do Windows.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Salvar Certificado em Empresa -->
+<div class="modal fade" id="modalSalvarCert" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Salvar certificado</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="modal_thumbprint">
+        <div class="mb-3">
+          <label class="form-label">Empresa</label>
+          <select id="modal_empresa" class="form-select">
+            <option value="">Selecione uma empresa...</option>
+            {% for e in empresas %}
+              <option value="{{ e.pk }}">{{ e.nome_fantasia }} — {{ e.cnpj }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-text text-muted">O arquivo `.pfx` será exportado da loja do Windows e salvo no cadastro da empresa.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" id="modalSalvarBtn" class="btn btn-primary">Salvar .pfx</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+(function(){
+  const modalEl = document.getElementById('modalSalvarCert');
+  const bsModal = new bootstrap.Modal(modalEl);
+
+  document.querySelectorAll('.btn-salvar-cert').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const thumb = btn.getAttribute('data-thumbprint');
+      document.getElementById('modal_thumbprint').value = thumb;
+      document.getElementById('modal_empresa').value = '';
+      bsModal.show();
+    });
+  });
+
+  document.getElementById('modalSalvarBtn').addEventListener('click', () => {
+    const thumb = document.getElementById('modal_thumbprint').value;
+    const empresaId = document.getElementById('modal_empresa').value;
+    if (!empresaId) { alert('Selecione uma empresa.'); return; }
+
+    const formData = new FormData();
+    formData.append('thumbprint', thumb);
+    formData.append('empresa_id', empresaId);
+
+    fetch('{% url "salvar_certificado" %}', {
+      method: 'POST',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      body: formData
+    })
+    .then(r => r.json())
+    .then(j => {
+      if (j.status === 'OK') {
+        bsModal.hide();
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'alert alert-success alert-dismissible fade show';
+        alertDiv.innerHTML = `<i class="bi bi-check-circle me-2"></i>${j.msg}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+        document.querySelector('.container-fluid').prepend(alertDiv);
+      } else if (j.status === 'NEEDS_PFX') {
+        bsModal.hide();
+        const proceed = confirm(j.msg + '\n\nDeseja abrir a página da empresa para fazer upload do .pfx agora?');
+        if (proceed) {
+          window.location = `/empresas/${j.empresa_id}/editar/?thumbprint=${j.thumbprint}&show_upload=1`;
+        } else {
+          alert('OK — você pode fazer upload do .pfx mais tarde na edição da empresa.');
+        }
+      } else {
+        alert(j.msg || 'Erro ao salvar certificado.');
+      }
+    })
+    .catch(err => { console.error(err); alert('Erro ao salvar certificado.'); });
+  });
+})();
+</script>
+{% endblock %}
+"@ | Set-Content -Path "certificado_list.html" -Encoding UTF8

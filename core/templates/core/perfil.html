@@ -1,0 +1,149 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-person-circle text-success me-2"></i>Meu Perfil
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Perfil</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Card do Perfil -->
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-body text-center pt-4">
+            <!-- Foto -->
+            <div class="mb-4">
+                {% if pessoa.foto %}
+                    <img src="{{ pessoa.foto.url }}" class="rounded-circle border border-3" style="width: 120px; height: 120px; object-fit: cover; border-color: var(--verde-deep) !important;">
+                {% else %}
+                    <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px; border: 3px solid var(--verde-deep);">
+                        <i class="bi bi-person" style="font-size: 4rem; color: var(--verde-deep);"></i>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <!-- Nome -->
+            <h3 class="mb-1">{{ request.user.get_full_name|default:request.user.username }}</h3>
+            <p class="text-muted mb-3">{{ request.user.email }}</p>
+            
+            <!-- Informações -->
+            <div class="text-start border-top pt-3 mt-3">
+                <div class="row mb-2">
+                    <div class="col-4 text-muted">CPF:</div>
+                    <div class="col-8 fw-semibold">{{ pessoa.cpf|default:"Não informado" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 text-muted">Telefone:</div>
+                    <div class="col-8 fw-semibold">{{ pessoa.telefone|default:"Não informado" }}</div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-4 text-muted">Cadastro:</div>
+                    <div class="col-8 fw-semibold">{{ pessoa.data_cadastro|date:'d/m/Y H:i' }}</div>
+                </div>
+            </div>
+            
+            <!-- Botões -->
+            <div class="d-flex gap-2 mt-4 pt-3 border-top">
+                <a href="{% url 'pessoa_edit' pessoa.pk %}" class="btn btn-outline-success flex-grow-1">
+                    <i class="bi bi-pencil me-2"></i>Editar Perfil
+                </a>
+                <a href="{% url 'password_change' %}" class="btn btn-outline-primary flex-grow-1">
+                    <i class="bi bi-key me-2"></i>Alterar Senha
+                </a>
+            </div>
+
+            <!-- Agent token -->
+            <div class="mt-4 pt-3 border-top text-start">
+                <h6 class="mb-2">Token do Agente Local</h6>
+                {% if pessoa.client_api_token %}
+                    <div class="input-group mb-2">
+                        <input id="clientTokenInput" type="text" class="form-control" value="{{ pessoa.client_api_token }}" readonly>
+                        <button id="btnCopyToken" class="btn btn-outline-secondary" type="button">Copiar</button>
+                        <button id="btnRegenerateToken" class="btn btn-outline-danger" type="button">Regenerar</button>
+                    </div>
+                    <small class="text-muted d-block">Use este token no agente local (header Authorization: Token &lt;token&gt;).</small>
+                {% else %}
+                    <div class="mb-2">
+                        <button id="btnGenerateToken" class="btn btn-outline-primary">Gerar token para agente local</button>
+                    </div>
+                    <small class="text-muted d-block">Gere um token para permitir que o agente da sua máquina envie NFSe para o servidor.</small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Empresas Vinculadas -->
+    <div class="card mt-4 animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent">
+            <i class="bi bi-building me-2" style="color: var(--verde-deep);"></i>
+            Empresas Vinculadas
+        </div>
+        <div class="card-body">
+            {% if pessoa.empresas.all %}
+                <div class="list-group">
+                    {% for empresa in pessoa.empresas.all %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ empresa.nome_fantasia }}</strong><br>
+                                <small class="text-muted">{{ empresa.cnpj }}</small>
+                            </div>
+                            <span class="badge {% if empresa.ativo %}bg-success{% else %}bg-secondary{% endif %}">
+                                {{ empresa.ativo|yesno:"Ativa,Inativa" }}
+                            </span>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted text-center mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Nenhuma empresa vinculada.
+                </p>
+            {% endif %}
+        </div>
+    </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const genBtn = document.getElementById('btnGenerateToken');
+    const regenBtn = document.getElementById('btnRegenerateToken');
+    const copyBtn = document.getElementById('btnCopyToken');
+
+    if (genBtn) genBtn.addEventListener('click', () => {
+        fetch('{% url "generate_client_token" %}', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+            .then(r => r.json()).then(j => {
+                if (j.status === 'OK') {
+                    location.reload();
+                } else {
+                    alert('Erro ao gerar token.');
+                }
+            });
+    });
+
+    if (regenBtn) regenBtn.addEventListener('click', () => {
+        if (!confirm('Regenerar token invalidará o token atual. Continuar?')) return;
+        fetch('{% url "generate_client_token" %}', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+            .then(r => r.json()).then(j => {
+                if (j.status === 'OK') location.reload(); else alert('Erro ao regenerar token.');
+            });
+    });
+
+    if (copyBtn) copyBtn.addEventListener('click', () => {
+        const input = document.getElementById('clientTokenInput');
+        input.select();
+        navigator.clipboard.writeText(input.value).then(() => {
+            alert('Token copiado para a área de transferência.');
+        });
+    });
+});
+</script>
+</div>
+{% endblock %}

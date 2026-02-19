@@ -1,0 +1,29 @@
+/* estilos personalizados extraídos de base.html */
+body { background: linear-gradient(135deg, #F5F0E6 0%, #E8F0E0 100%); }
+.sidebar {
+  min-height: 100vh;
+  background: #fff9e6cc;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  border-right: 1px solid rgba(76,175,80,0.1);
+  transition: width 0.2s;
+}
+.sidebar-collapsed { width: 70px; }
+.sidebar-expanded { width: 220px; }
+.sidebar .nav-link.active { background: #E8F0E0; color: #4CAF50; font-weight: bold; }
+.sidebar .nav-link { color: #333; }
+.sidebar .nav-link:hover { background: #F5F0E6; color: #4CAF50; }
+.sidebar .icon { width: 24px; display: inline-block; text-align: center; }
+
+/* pequenos ajustes visuais gerais */
+.card-custom {
+  background: #ffffffcc;
+  border: 1px solid rgba(0,0,0,0.05);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.04);
+  border-radius: 8px;
+}
+.btn-ghost-success {
+  background: transparent;
+  border: 1px solid rgba(76,175,80,0.12);
+  color: #2e7d32;
+}
+.table-hover tbody tr:hover { background: #fbfdf9; }

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HDowloader - Download Automático de NFSe</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600;14..32,700&display=swap" rel="stylesheet">
+    
+    <!-- Animate.css -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <!-- Nosso CSS personalizado -->
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+</head>
+<body>
+    <div class="d-flex position-relative">
+        <!-- Menu Lateral -->
+        <div id="sidebar" class="sidebar sidebar-expanded">
+            <div class="menu-toggle" onclick="toggleMenu()">
+                <i class="bi bi-chevron-left" id="menuIcon"></i>
+            </div>
+            
+            <div class="d-flex flex-column h-100">
+                <!-- Logo -->
+                <div class="sidebar-logo">
+                    <span>HDowloader</span>
+                </div>
+                
+                <!-- Itens do Menu -->
+                <ul class="nav flex-column flex-grow-1">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+                            <i class="bi bi-house-door"></i>
+                            <span class="nav-text">Principal</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/empresas' in request.path %}active{% endif %}" href="{% url 'empresa_list' %}">
+                            <i class="bi bi-building"></i>
+                            <span class="nav-text">Empresas</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/dashboard' in request.path %}active{% endif %}" href="{% url 'dashboard' %}">
+                            <i class="bi bi-bar-chart"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/agendamentos' in request.path %}active{% endif %}" href="{% url 'agendamento_list' %}">
+                            <i class="bi bi-clock"></i>
+                            <span class="nav-text">Programar</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/download' in request.path %}active{% endif %}" href="{% url 'download_manual' %}">
+                            <i class="bi bi-cloud-download"></i>
+                            <span class="nav-text">Download Rápido</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/certificados' in request.path %}active{% endif %}" href="{% url 'certificado_list' %}">
+                            <i class="bi bi-shield-lock"></i>
+                            <span class="nav-text">Certificados</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item mt-auto">
+                        <a class="nav-link {% if '/configuracao' in request.path %}active{% endif %}" href="{% url 'configuracao' %}">
+                            <i class="bi bi-gear"></i>
+                            <span class="nav-text">Configurações</span>
+                        </a>
+                    </li>
+                    
+                    {% if request.user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
+                            <i class="bi bi-people"></i>
+                            <span class="nav-text">Usuários</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'perfil' %}">
+                            <i class="bi bi-person-circle"></i>
+                            <span class="nav-text">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'logout' %}">
+                            <i class="bi bi-box-arrow-right"></i>
+                            <span class="nav-text">Sair</span>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Conteúdo Principal -->
+        <div class="main-content" id="mainContent">
+            <!-- Mensagens -->
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show animate__animated animate__fadeIn" role="alert">
+                        <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            <!-- Conteúdo da página -->
+            {% block content %}{% endblock %}
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    
+    <script>
+        // Função para toggle do menu
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const menuIcon = document.getElementById('menuIcon');
+            
+            if (sidebar.classList.contains('sidebar-expanded')) {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                menuIcon.classList.remove('bi-chevron-left');
+                menuIcon.classList.add('bi-chevron-right');
+                localStorage.setItem('sidebarState', 'collapsed');
+            } else {
+                sidebar.classList.remove('sidebar-collapsed');
+                sidebar.classList.add('sidebar-expanded');
+                menuIcon.classList.remove('bi-chevron-right');
+                menuIcon.classList.add('bi-chevron-left');
+                localStorage.setItem('sidebarState', 'expanded');
+            }
+        }
+        
+        // Carregar estado do menu
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebarState = localStorage.getItem('sidebarState');
+            const sidebar = document.getElementById('sidebar');
+            const menuIcon = document.getElementById('menuIcon');
+            
+            if (sidebarState === 'collapsed') {
+                sidebar.classList.remove('sidebar-expanded');
+                sidebar.classList.add('sidebar-collapsed');
+                menuIcon.classList.remove('bi-chevron-left');
+                menuIcon.classList.add('bi-chevron-right');
+            }
+        });
+    </script>
+    
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

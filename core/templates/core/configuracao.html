@@ -1,0 +1,49 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-gear text-success me-2"></i>Configurações
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Configurações</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Cards de Configuração -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-shield-lock" style="font-size: 3rem; color: var(--verde-deep);"></i>
+                    <h5 class="card-title mt-3">Certificados</h5>
+                    <p class="card-text text-muted">Gerencie os certificados digitais instalados no sistema.</p>
+                    <a href="{% url 'certificado_list' %}" class="btn btn-outline-success">
+                        <i class="bi bi-arrow-right me-1"></i>Acessar
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                <div class="card-body text-center p-4">
+                    <i class="bi bi-person-circle" style="font-size: 3rem; color: var(--amarelo-deep);"></i>
+                    <h5 class="card-title mt-3">Meu Perfil</h5>
+                    <p class="card-text text-muted">Atualize suas informações pessoais e altere sua senha.</p>
+                    <a href="{% url 'perfil' %}" class="btn btn-outline-success">
+                        <i class="bi bi-arrow-right me-1"></i>Acessar
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

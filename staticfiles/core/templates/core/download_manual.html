@@ -1,0 +1,142 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-cloud-download text-success me-2"></i>Download Manual de NFSe
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Download Manual</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Card do Formulário -->
+    <div class="card animate__animated animate__fadeInUp" style="max-width: 900px;">
+        <div class="card-header bg-transparent d-flex align-items-center">
+            <i class="bi bi-cloud-download fs-4 me-2" style="color: var(--verde-deep);"></i>
+            <span class="fw-semibold">Configurar Download</span>
+        </div>
+        
+        <div class="card-body">
+            {% if msg %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="bi bi-check-circle me-2"></i>
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-building me-1 text-success"></i>Empresa *
+                        </label>
+                        <select name="empresa" class="form-select" required>
+                            <option value="">Selecione uma empresa...</option>
+                            {% for e in empresas %}
+                                <option value="{{ e.pk }}" {% if request.GET.empresa == e.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ e.nome_fantasia }} ({{ e.cnpj }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-arrow-left-right me-1 text-success"></i>Tipo *
+                        </label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="emitidas">Emitidas (Saída)</option>
+                            <option value="recebidas">Recebidas (Entrada)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar me-1 text-success"></i>Mês/Ano *
+                        </label>
+                        <input type="month" name="mes_ano" class="form-control" required>
+                        <div class="form-text">Selecione o mês para download</div>
+                    </div>
+                </div>
+                
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-start me-1 text-success"></i>Data Início *
+                        </label>
+                        <input type="date" name="data_inicio" class="form-control" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-end me-1 text-success"></i>Data Fim *
+                        </label>
+                        <input type="date" name="data_fim" class="form-control" required>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Importante:</strong> O download será realizado usando o certificado configurado para a empresa selecionada.
+                </div>
+                
+                <!-- Botões -->
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a href="/" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-cloud-download me-2"></i>Iniciar Download
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Instruções -->
+    <div class="card mt-4 animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent">
+            <i class="bi bi-question-circle me-2" style="color: var(--amarelo-deep);"></i>
+            Instruções
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li class="mb-2">Selecione a empresa que possui o certificado configurado.</li>
+                <li class="mb-2">Escolha o tipo de nota: Emitidas (suas vendas) ou Recebidas (compras).</li>
+                <li class="mb-2">Defina o período desejado para o download.</li>
+                <li class="mb-2">O sistema baixará automaticamente todas as notas do período.</li>
+                <li class="mb-2">Os arquivos serão salvos em: <code>media/nfse/[tipo]/[ano]/[mes]/</code></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Preencher datas automaticamente quando selecionar mês/ano
+document.querySelector('input[name="mes_ano"]').addEventListener('change', function(e) {
+    const mesAno = e.target.value.split('-');
+    const ano = mesAno[0];
+    const mes = mesAno[1];
+    
+    // Primeiro dia do mês
+    document.querySelector('input[name="data_inicio"]').value = `${ano}-${mes}-01`;
+    
+    // Último dia do mês
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    document.querySelector('input[name="data_fim"]').value = `${ano}-${mes}-${ultimoDia}`;
+});
+</script>
+{% endblock %}
+{% endblock %}

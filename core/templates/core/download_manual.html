@@ -1,0 +1,205 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-cloud-download text-success me-2"></i>Download Manual de NFSe
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Download Manual</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Card do Formulário -->
+    <div class="card animate__animated animate__fadeInUp" style="max-width: 900px;">
+        <div class="card-header bg-transparent d-flex align-items-center">
+            <i class="bi bi-cloud-download fs-4 me-2" style="color: var(--verde-deep);"></i>
+            <span class="fw-semibold">Configurar Download</span>
+        </div>
+        
+        <div class="card-body">
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        <i class="bi bi-{% if message.tags == 'success' %}check-circle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+            
+            {% if msg %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-building me-1 text-success"></i>Empresa *
+                        </label>
+                        <select name="empresa" class="form-select" required>
+                            <option value="">Selecione uma empresa...</option>
+                            {% for e in empresas %}
+                                <option value="{{ e.pk }}" 
+                                    {% if empresa_selecionada and e.pk == empresa_selecionada.pk %}selected{% endif %}
+                                    {% if request.GET.empresa == e.pk|stringformat:"s" %}selected{% endif %}>
+                                    {{ e.nome_fantasia }} ({{ e.cnpj }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-arrow-left-right me-1 text-success"></i>Tipo *
+                        </label>
+                        <select name="tipo" class="form-select" required>
+                            <option value="emitidas">Emitidas (Saída)</option>
+                            <option value="recebidas">Recebidas (Entrada)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar me-1 text-success"></i>Mês/Ano *
+                        </label>
+                        <input type="month" name="mes_ano" class="form-control" required>
+                        <div class="form-text">Selecione o mês para download</div>
+                    </div>
+                </div>
+                
+                <div class="row g-4 mt-2">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-start me-1 text-success"></i>Data Início *
+                        </label>
+                        <input type="date" name="data_inicio" class="form-control" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-calendar-end me-1 text-success"></i>Data Fim *
+                        </label>
+                        <input type="date" name="data_fim" class="form-control" required>
+                    </div>
+                </div>
+                
+                <!-- Campo de senha - aparece apenas quando necessário -->
+                {% if precisa_senha %}
+                <div class="row g-4 mt-3">
+                    <div class="col-md-12">
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <strong>Primeiro acesso:</strong> Digite a senha do certificado. Ela será salva para os próximos downloads.
+                        </div>
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-key me-1 text-warning"></i>Senha do Certificado *
+                        </label>
+                        <div class="input-group">
+                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control" required>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
+                                <i class="bi bi-eye" id="olhoSenha"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">A senha será salva e não precisará ser digitada novamente.</div>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    <strong>Importante:</strong> O download será realizado usando o certificado configurado para a empresa selecionada.
+                </div>
+                
+                <!-- Botões -->
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a href="/" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-cloud-download me-2"></i>Iniciar Download
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Instruções -->
+    <div class="card mt-4 animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent">
+            <i class="bi bi-question-circle me-2" style="color: var(--amarelo-deep);"></i>
+            Instruções
+        </div>
+        <div class="card-body">
+            <ul class="mb-0">
+                <li class="mb-2">Selecione a empresa que possui o certificado configurado.</li>
+                <li class="mb-2">Na primeira vez, será solicitada a senha do certificado.</li>
+                <li class="mb-2">A senha fica salva para os próximos downloads.</li>
+                <li class="mb-2">Escolha o tipo de nota: Emitidas (suas vendas) ou Recebidas (compras).</li>
+                <li class="mb-2">Defina o período desejado para o download.</li>
+                <li class="mb-2">Os arquivos serão salvos em: <code>media/nfse/[tipo]/[ano]/[mes]/</code></li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Função para mostrar/esconder senha
+function toggleSenha() {
+    const senhaInput = document.getElementById('id_certificado_senha');
+    const olho = document.getElementById('olhoSenha');
+    
+    if (senhaInput.type === 'password') {
+        senhaInput.type = 'text';
+        olho.classList.remove('bi-eye');
+        olho.classList.add('bi-eye-slash');
+    } else {
+        senhaInput.type = 'password';
+        olho.classList.remove('bi-eye-slash');
+        olho.classList.add('bi-eye');
+    }
+}
+
+// Preencher datas automaticamente quando selecionar mês/ano
+document.querySelector('input[name="mes_ano"]').addEventListener('change', function(e) {
+    const mesAno = e.target.value.split('-');
+    const ano = mesAno[0];
+    const mes = mesAno[1];
+    
+    // Primeiro dia do mês
+    document.querySelector('input[name="data_inicio"]').value = `${ano}-${mes}-01`;
+    
+    // Último dia do mês
+    const ultimoDia = new Date(ano, mes, 0).getDate();
+    document.querySelector('input[name="data_fim"]').value = `${ano}-${mes}-${ultimoDia}`;
+});
+
+// Se veio com empresa na URL, já seleciona no dropdown
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const empresaParam = urlParams.get('empresa');
+    if (empresaParam) {
+        const select = document.querySelector('select[name="empresa"]');
+        if (select) {
+            select.value = empresaParam;
+        }
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,147 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-clock-history text-success me-2"></i>Histórico de Downloads
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Histórico</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4 animate__animated animate__fadeIn">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-3">
+                    <label class="form-label">Empresa</label>
+                    <select name="empresa" class="form-select">
+                        <option value="">Todas</option>
+                        {% for empresa in empresas %}
+                            <option value="{{ empresa.pk }}">{{ empresa.nome_fantasia }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Tipo</label>
+                    <select name="tipo" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="emitidas">Emitidas</option>
+                        <option value="recebidas">Recebidas</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <label class="form-label">Status</label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="sucesso">Sucesso</option>
+                        <option value="parcial">Parcial</option>
+                        <option value="erro">Erro</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">Período</label>
+                    <div class="d-flex gap-2">
+                        <input type="date" name="data_inicio" class="form-control" placeholder="Início">
+                        <input type="date" name="data_fim" class="form-control" placeholder="Fim">
+                    </div>
+                </div>
+                
+                <div class="col-md-2 d-flex align-items-end gap-2">
+                    <button type="submit" class="btn btn-outline-success w-100">
+                        <i class="bi bi-funnel"></i> Filtrar
+                    </button>
+                    <a href="{% url 'historico' %}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-eraser"></i>
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela de Histórico -->
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Empresa</th>
+                            <th>Tipo</th>
+                            <th>Período</th>
+                            <th>Encontradas</th>
+                            <th>Baixadas</th>
+                            <th>Status</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historico %}
+                        <tr>
+                            <td>{{ h.data_inicio|date:'d/m/Y H:i' }}</td>
+                            <td class="fw-semibold">{{ h.empresa.nome_fantasia }}</td>
+                            <td>
+                                {% if h.tipo_nota == 'emitidas' %}
+                                    <span class="badge bg-primary">Emitidas</span>
+                                {% else %}
+                                    <span class="badge bg-info">Recebidas</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ h.periodo_busca_inicio|date:'d/m/Y' }}<br>
+                                <small class="text-muted">até {{ h.periodo_busca_fim|date:'d/m/Y' }}</small>
+                            </td>
+                            <td>{{ h.quantidade_notas }}</td>
+                            <td>{{ h.quantidade_sucesso }}</td>
+                            <td>
+                                {% if h.status == 'sucesso' %}
+                                    <span class="badge bg-success">Sucesso</span>
+                                {% elif h.status == 'parcial' %}
+                                    <span class="badge bg-warning text-dark">Parcial</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Erro</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    {% if h.arquivo_zip %}
+                                    <a href="{{ h.arquivo_zip.url }}" class="btn btn-outline-success" title="Download ZIP">
+                                        <i class="bi bi-file-zip"></i>
+                                    </a>
+                                    {% endif %}
+                                    <a href="#" class="btn btn-outline-primary" title="Ver detalhes">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5 text-muted">
+                                <i class="bi bi-clock-history" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                                <h5>Nenhum download realizado</h5>
+                                <p class="mb-3">Faça seu primeiro download na página de Download Manual.</p>
+                                <a href="{% url 'download_manual' %}" class="btn btn-success">
+                                    <i class="bi bi-cloud-download me-1"></i>Download Manual
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,187 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-house-door text-success me-2"></i>Visão Geral
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item active" aria-current="page">Principal</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <span class="badge bg-light text-dark p-3">
+                <i class="bi bi-calendar me-2"></i>
+                {{ now|date:"d/m/Y" }}
+            </span>
+        </div>
+    </div>
+
+    <!-- Cards de Estatísticas -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 3rem; color: var(--verde-deep);">📄</div>
+                    <h6 class="card-subtitle mb-2 text-muted">Notas baixadas no mês</h6>
+                    <h2 class="display-4 mb-0" style="color: var(--verde-deep); font-weight: 700;">{{ total_mes }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 3rem; color: var(--amarelo-deep);">🏢</div>
+                    <h6 class="card-subtitle mb-2 text-muted">Empresas vinculadas</h6>
+                    <h2 class="display-4 mb-0" style="color: var(--amarelo-deep); font-weight: 700;">{{ empresas|length }}</h2>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3">
+            <div class="card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
+                <div class="card-body text-center">
+                    <div class="mb-3" style="font-size: 3rem; color: #6c757d;">⏰</div>
+                    <h6 class="card-subtitle mb-2 text-muted">Agendamentos ativos</h6>
+                    <h2 class="display-4 mb-0" style="color: #6c757d; font-weight: 700;">{{ agendamentos_count|default:"0" }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Minhas Empresas -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">
+            <i class="bi bi-building me-2" style="color: var(--verde-deep);"></i>
+            Minhas Empresas
+        </h2>
+        <a href="{% url 'empresa_create_custom' %}" class="btn btn-success btn-sm">
+            <i class="bi bi-plus-circle me-1"></i>Nova Empresa
+        </a>
+    </div>
+
+    <div class="row">
+        {% for e in empresas %}
+        <div class="col-md-4 mb-4">
+            <div class="card h-100 shadow-sm animate__animated animate__fadeInUp" style="animation-delay: {{ forloop.counter|add:"0.1" }}s;">
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div style="font-size: 2rem; color: var(--verde-deep); margin-right: 12px;">🏢</div>
+                        <div>
+                            <h6 class="card-title mb-1 fw-bold">{{ e.nome_fantasia }}</h6>
+                            <small class="text-muted">{{ e.cnpj }}</small>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-2">
+                        {% if e.certificado_thumbprint %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-shield-check me-1"></i>Certificado OK
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="bi bi-shield-exclamation me-1"></i>Sem Certificado
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mt-3 pt-2 border-top">
+                        <small class="text-muted d-block mb-2">
+                            <i class="bi bi-clock-history me-1"></i>
+                            Último download: {% if e.ultimo_download %}{{ e.ultimo_download|date:'d/m/Y H:i' }}{% else %}Nunca{% endif %}
+                        </small>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'empresa_edit' e.pk %}" class="btn btn-outline-success btn-sm flex-grow-1">
+                                <i class="bi bi-pencil"></i> Editar
+                            </a>
+                            <a href="{% url 'download_manual' %}?empresa={{ e.pk }}" class="btn btn-outline-primary btn-sm flex-grow-1">
+                                <i class="bi bi-cloud-download"></i> Download
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info text-center animate__animated animate__fadeIn">
+                <i class="bi bi-info-circle me-2"></i>
+                Nenhuma empresa vinculada. 
+                <a href="{% url 'empresa_create_custom' %}" class="alert-link">Cadastre uma empresa</a> para começar.
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Últimos Downloads -->
+    <h2 class="h4 mb-3 mt-4">
+        <i class="bi bi-clock-history me-2" style="color: var(--amarelo-deep);"></i>
+        Últimos Downloads
+    </h2>
+
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Data</th>
+                            <th>Empresa</th>
+                            <th>Tipo</th>
+                            <th>Período</th>
+                            <th>Notas</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for h in historico %}
+                        <tr>
+                            <td>{{ h.data_inicio|date:'d/m/Y H:i' }}</td>
+                            <td>{{ h.empresa.nome_fantasia }}</td>
+                            <td>
+                                {% if h.tipo_nota == 'emitidas' %}
+                                    <span class="badge bg-primary">Emitidas</span>
+                                {% else %}
+                                    <span class="badge bg-info">Recebidas</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ h.periodo_busca_inicio|date:'d/m/Y' }} a {{ h.periodo_busca_fim|date:'d/m/Y' }}</td>
+                            <td>{{ h.quantidade_sucesso }}/{{ h.quantidade_notas }}</td>
+                            <td>
+                                {% if h.status == 'sucesso' %}
+                                    <span class="badge bg-success">Sucesso</span>
+                                {% elif h.status == 'parcial' %}
+                                    <span class="badge bg-warning">Parcial</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Erro</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4 text-muted">
+                                <i class="bi bi-inbox me-2"></i>
+                                Nenhum download recente.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% if historico %}
+        <div class="card-footer bg-transparent text-end">
+            <a href="{% url 'historico' %}" class="btn btn-outline-success btn-sm">
+                Ver todos <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,59 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-check-circle text-success me-2"></i>Testar Certificado
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'certificado_list' %}" class="text-decoration-none">Certificados</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Testar</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Card de Teste -->
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent">
+            <i class="bi bi-shield-lock me-2" style="color: var(--verde-deep);"></i>
+            Teste de Conexão com Certificado
+        </div>
+        
+        <div class="card-body">
+            {% if msg %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Selecione o Certificado</label>
+                    <select name="thumbprint" class="form-select" required>
+                        <option value="">Selecione...</option>
+                        {% for cert in certificados %}
+                            <option value="{{ cert.thumbprint }}" {% if request.GET.thumbprint == cert.thumbprint %}selected{% endif %}>
+                                {{ cert.subject }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn btn-success w-100">
+                    <i class="bi bi-check-circle me-2"></i>Testar Conexão
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

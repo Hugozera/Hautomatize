@@ -1,0 +1,10 @@
+Django==6.0.2
+requests
+pyopenssl
+cryptography
+beautifulsoup4
+lxml
+celery
+redis
+django-crispy-forms
+psycopg2-binary

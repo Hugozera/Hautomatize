@@ -1,0 +1,124 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-shield-lock text-success me-2"></i>Importar Empresa via Certificado
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'empresa_list' %}" class="text-decoration-none">Empresas</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Importar Certificado</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Card do Formulário -->
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent d-flex align-items-center">
+            <i class="bi bi-shield-lock fs-4 me-2" style="color: var(--verde-deep);"></i>
+            <span class="fw-semibold">Selecionar Certificado da Loja do Windows</span>
+        </div>
+        
+        <div class="card-body">
+            {% if msg %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+            
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">
+                        <i class="bi bi-fingerprint me-1 text-success"></i>Certificados Disponíveis
+                    </label>
+                    <select name="thumbprint" id="select_thumbprint" class="form-select" required>
+                        <option value="">Selecione um certificado...</option>
+                        {% for cert in certificados %}
+                            <option value="{{ cert.thumbprint }}">
+                                {{ cert.subject }} ({{ cert.thumbprint|truncatechars:20 }})
+                            </option>
+                        {% empty %}
+                            <option value="" disabled>Nenhum certificado encontrado</option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text mb-3">
+                        <i class="bi bi-info-circle me-1"></i>
+                        Selecione o certificado digital instalado na loja do Windows.
+                    </div>
+
+                    <!-- Salvar .pfx em empresa existente -->
+                    <div class="mb-2">
+                        <label class="form-label">Salvar .pfx em empresa existente</label>
+                        <div class="input-group">
+                            <select id="select_empresa_para_salvar" class="form-select">
+                                <option value="">Selecione a empresa...</option>
+                                {% for e in empresas %}
+                                    <option value="{{ e.pk }}">{{ e.nome_fantasia }} — {{ e.cnpj }}</option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" id="btnSalvarThumbprint" class="btn btn-outline-primary">Salvar .pfx</button>
+                        </div>
+                        <div class="form-text">Exporta o `.pfx` da loja do Windows e salva no cadastro da empresa selecionada.</div>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Atenção:</strong> O sistema irá extrair o CNPJ do certificado e consultar os dados na ReceitaWS automaticamente.
+                </div>
+                
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a href="{% url 'empresa_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-shield-check me-2"></i>Importar Empresa
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.getElementById('btnSalvarThumbprint').addEventListener('click', function() {
+    const thumb = document.getElementById('select_thumbprint').value;
+    const empresaId = document.getElementById('select_empresa_para_salvar').value;
+    if (!thumb) { alert('Selecione um certificado.'); return; }
+    if (!empresaId) { alert('Selecione uma empresa.'); return; }
+
+    const formData = new FormData();
+    formData.append('thumbprint', thumb);
+    formData.append('empresa_id', empresaId);
+
+    fetch('{% url "salvar_certificado" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    })
+    .then(r => r.json())
+    .then(j => {
+        if (j.status === 'OK') {
+            if (typeof showNotification === 'function') showNotification(j.msg, 'success'); else alert(j.msg);
+        } else if (j.status === 'NEEDS_PFX') {
+            const go = confirm(j.msg + '\n\nDeseja abrir a empresa para fazer upload do .pfx agora?');
+            if (go) window.location = `/empresas/${j.empresa_id}/editar/?thumbprint=${j.thumbprint}&show_upload=1`;
+        } else {
+            alert(j.msg || 'Erro ao salvar certificado.');
+        }
+    })
+    .catch(err => { console.error(err); alert('Erro ao salvar certificado.'); });
+});
+</script>
+{% endblock %}

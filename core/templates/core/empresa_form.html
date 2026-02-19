@@ -1,0 +1,532 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                {% if form.instance.pk %}
+                    <i class="bi bi-pencil-square text-success me-2"></i>Editar Empresa
+                {% else %}
+                    <i class="bi bi-plus-circle text-success me-2"></i>Nova Empresa
+                {% endif %}
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'empresa_list' %}" class="text-decoration-none">Empresas</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">
+                        {% if form.instance.pk %}Editar{% else %}Nova{% endif %}
+                    </li>
+                </ol>
+            </nav>
+        </div>
+        {% if form.instance.pk %}
+        <div>
+            <span class="badge bg-light text-dark p-3">
+                <i class="bi bi-qr-code me-2"></i>
+                ID: {{ form.instance.pk }}
+            </span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Card do Formulário -->
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-header bg-transparent d-flex align-items-center">
+            <i class="bi bi-building fs-4 me-2" style="color: var(--verde-deep);"></i>
+            <span class="fw-semibold">Informações da Empresa</span>
+        </div>
+        
+        <div class="card-body">
+            {% if msg %}
+                <div class="alert alert-info alert-dismissible fade show" role="alert">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {{ msg }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endif %}
+            
+            <form method="post" enctype="multipart/form-data" id="empresaForm">
+                {% csrf_token %}
+                
+                <!-- Dados Básicos -->
+                <div class="row g-4 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-qr-code me-1 text-success"></i>CNPJ *
+                        </label>
+                        <input type="text" name="cnpj" id="id_cnpj" class="form-control" 
+                               value="{{ form.cnpj.value|default:'' }}" maxlength="18" 
+                               {% if form.instance.pk %}readonly{% endif %} required>
+                        {% if not form.instance.pk %}
+                        <div class="form-text">
+                            <button type="button" class="btn btn-sm btn-outline-success mt-1" onclick="buscarCNPJ()">
+                                <i class="bi bi-search"></i> Buscar dados do CNPJ
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-tag me-1 text-success"></i>Tipo *
+                        </label>
+                        <select name="tipo" id="id_tipo" class="form-select" required>
+                            <option value="matriz" {% if form.tipo.value == 'matriz' %}selected{% endif %}>Matriz</option>
+                            <option value="filial" {% if form.tipo.value == 'filial' %}selected{% endif %}>Filial</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-building me-1 text-success"></i>Razão Social *
+                        </label>
+                        <input type="text" name="razao_social" id="id_razao_social" class="form-control" 
+                               value="{{ form.razao_social.value|default:'' }}" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-shop me-1 text-success"></i>Nome Fantasia
+                        </label>
+                        <input type="text" name="nome_fantasia" id="id_nome_fantasia" class="form-control" 
+                               value="{{ form.nome_fantasia.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-file-text me-1 text-success"></i>Inscrição Municipal
+                        </label>
+                        <input type="text" name="inscricao_municipal" id="id_inscricao_municipal" class="form-control" 
+                               value="{{ form.inscricao_municipal.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-file-text me-1 text-success"></i>Inscrição Estadual
+                        </label>
+                        <input type="text" name="inscricao_estadual" id="id_inscricao_estadual" class="form-control" 
+                               value="{{ form.inscricao_estadual.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mt-4">
+                            <input type="checkbox" name="ativo" id="id_ativo" class="form-check-input" 
+                                   {% if form.ativo.value or not form.instance.pk %}checked{% endif %}>
+                            <label class="form-check-label fw-semibold" for="id_ativo">
+                                <i class="bi bi-check-circle me-1 text-success"></i>Empresa Ativa
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Endereço -->
+                <h5 class="mb-3">
+                    <i class="bi bi-geo-alt me-2" style="color: var(--amarelo-deep);"></i>
+                    Endereço
+                </h5>
+                
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <label class="form-label">CEP</label>
+                        <div class="input-group">
+                            <input type="text" name="cep" id="id_cep" class="form-control" 
+                                   value="{{ form.cep.value|default:'' }}" placeholder="00000-000">
+                            <button type="button" class="btn btn-outline-success" onclick="buscarCEP()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-8">
+                        <label class="form-label">Logradouro</label>
+                        <input type="text" name="logradouro" id="id_logradouro" class="form-control" 
+                               value="{{ form.logradouro.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Número</label>
+                        <input type="text" name="numero" id="id_numero" class="form-control" 
+                               value="{{ form.numero.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Complemento</label>
+                        <input type="text" name="complemento" id="id_complemento" class="form-control" 
+                               value="{{ form.complemento.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label">Bairro</label>
+                        <input type="text" name="bairro" id="id_bairro" class="form-control" 
+                               value="{{ form.bairro.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Município</label>
+                        <input type="text" name="municipio" id="id_municipio" class="form-control" 
+                               value="{{ form.municipio.value|default:'' }}">
+                    </div>
+                    
+                    <div class="col-md-2">
+                        <label class="form-label">UF</label>
+                        <input type="text" name="uf" id="id_uf" class="form-control" 
+                               value="{{ form.uf.value|default:'' }}" maxlength="2" placeholder="SP">
+                    </div>
+                </div>
+                
+                <!-- Certificado Digital -->
+                <h5 class="mb-3">
+                    <i class="bi bi-shield-lock me-2" style="color: var(--verde-deep);"></i>
+                    Certificado Digital
+                </h5>
+                
+                <div class="alert {% if require_pfx %}alert-warning{% else %}alert-info{% endif %}">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {% if require_pfx %}
+                        Este certificado precisa do arquivo .pfx porque não pôde ser exportado da loja do Windows. Faça upload do .pfx e informe a senha para salvá-lo.
+                    {% else %}
+                        {% if form.instance.pk %}
+                            Deixe em branco para manter o certificado atual.
+                        {% else %}
+                            Faça upload do certificado (.pfx) e informe a senha.
+                        {% endif %}
+                    {% endif %}
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Arquivo do Certificado (.pfx)</label>
+                        <input type="file" name="certificado" id="id_certificado" class="form-control" 
+                               accept=".pfx" {% if not form.instance.pk or require_pfx %}required{% endif %}>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold">Senha do Certificado</label>
+                        <div class="input-group">
+                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control" 
+                                   {% if not form.instance.pk %}required{% endif %}>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
+                                <i class="bi bi-eye" id="olhoSenha"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-2 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-success w-100" onclick="buscarEmpresaCertificado()">
+                            <i class="bi bi-shield-check"></i> Extrair
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Campos ocultos para dados do certificado -->
+                <input type="hidden" name="certificado_thumbprint" id="id_certificado_thumbprint" value="{{ form.certificado_thumbprint.value|default:'' }}">
+                <input type="hidden" name="certificado_emitente" id="id_certificado_emitente" value="{{ form.certificado_emitente.value|default:'' }}">
+                <input type="hidden" name="certificado_validade" id="id_certificado_validade" value="{{ form.certificado_validade.value|default:'' }}">
+                <input type="hidden" name="certificado_temp" id="id_certificado_temp" value="">
+                <input type="hidden" name="pfx_required" id="id_pfx_required" value="{% if require_pfx %}1{% else %}0{% endif %}">
+                
+                {% if form.instance.certificado_thumbprint %}
+                <div class="mt-3 p-3 bg-light rounded">
+                    <small class="d-block">
+                        <i class="bi bi-fingerprint me-1"></i>
+                        <strong>Thumbprint atual:</strong> {{ form.instance.certificado_thumbprint }}
+                    </small>
+                    <small class="d-block">
+                        <i class="bi bi-person me-1"></i>
+                        <strong>Emitente:</strong> {{ form.instance.certificado_emitente|truncatechars:80 }}
+                    </small>
+                    {% if form.instance.certificado_validade %}
+                    <small class="d-block">
+                        <i class="bi bi-calendar me-1"></i>
+                        <strong>Validade:</strong> {{ form.instance.certificado_validade|date:'d/m/Y' }}
+                    </small>
+                    {% endif %}
+                    {% if form.instance.certificado_arquivo %}
+                    <small class="d-block mt-2">
+                        <i class="bi bi-file-earmark-lock me-1"></i>
+                        <strong>Arquivo:</strong>
+                        <a href="{{ form.instance.certificado_arquivo.url }}" target="_blank">{{ form.instance.certificado_arquivo.name }}</a>
+                    </small>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Botões -->
+                <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                    <a href="{% url 'empresa_list' %}" class="btn btn-secondary">
+                        <i class="bi bi-x-circle me-2"></i>Cancelar
+                    </a>
+
+                    <!-- Botão para salvar apenas o certificado (exibe quando certificado extraído ou já configurado) -->
+                    <button type="submit" name="salvar_certificado" id="btnSalvarCertificado" class="btn btn-outline-primary" style="{% if form.instance.certificado_thumbprint %}display:inline-block{% else %}display:none{% endif %};">
+                        <i class="bi bi-download me-2"></i>Salvar Certificado
+                    </button>
+
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-2"></i>
+                        {% if form.instance.pk %}Atualizar Empresa{% else %}Salvar Empresa{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// Função para buscar CNPJ
+function buscarCNPJ() {
+    const cnpj = document.getElementById('id_cnpj').value.replace(/\D/g, '');
+    
+    if (cnpj.length !== 14) {
+        alert('CNPJ inválido! Digite um CNPJ com 14 dígitos.');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Buscando...';
+    btn.disabled = true;
+    
+    fetch('{% url "buscar_cnpj" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ cnpj: cnpj })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'OK') {
+            document.getElementById('id_razao_social').value = data.nome || '';
+            document.getElementById('id_nome_fantasia').value = data.fantasia || '';
+            document.getElementById('id_inscricao_estadual').value = data.ie || '';
+            document.getElementById('id_inscricao_municipal').value = data.im || '';
+            document.getElementById('id_cep').value = data.cep || '';
+            document.getElementById('id_logradouro').value = data.logradouro || '';
+            document.getElementById('id_numero').value = data.numero || '';
+            document.getElementById('id_bairro').value = data.bairro || '';
+            document.getElementById('id_municipio').value = data.municipio || '';
+            document.getElementById('id_uf').value = data.uf || '';
+            
+            showNotification('Dados do CNPJ carregados com sucesso!', 'success');
+        } else {
+            alert('CNPJ não encontrado ou erro na consulta.');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao consultar CNPJ. Tente novamente.');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+// Função para buscar CEP
+function buscarCEP() {
+    const cep = document.getElementById('id_cep').value.replace(/\D/g, '');
+    
+    if (cep.length !== 8) {
+        alert('CEP inválido! Digite um CEP com 8 dígitos.');
+        return;
+    }
+    
+    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+        .then(response => response.json())
+        .then(data => {
+            if (!data.erro) {
+                document.getElementById('id_logradouro').value = data.logradouro || '';
+                document.getElementById('id_bairro').value = data.bairro || '';
+                document.getElementById('id_municipio').value = data.localidade || '';
+                document.getElementById('id_uf').value = data.uf || '';
+                document.getElementById('id_complemento').value = data.complemento || '';
+                
+                showNotification('Endereço carregado com sucesso!', 'success');
+            } else {
+                alert('CEP não encontrado.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            alert('Erro ao consultar CEP.');
+        });
+}
+
+// Função para extrair dados do certificado
+function buscarEmpresaCertificado() {
+    const fileInput = document.getElementById('id_certificado');
+    const senha = document.getElementById('id_certificado_senha').value;
+    
+    if (!fileInput.files.length || !senha) {
+        alert('Selecione o certificado e digite a senha.');
+        return;
+    }
+    
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processando...';
+    btn.disabled = true;
+    
+    const formData = new FormData();
+    formData.append('certificado', fileInput.files[0]);
+    formData.append('senha', senha);
+    
+    fetch('{% url "buscar_certificado" %}', {
+        method: 'POST',
+        headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+        body: formData
+    })
+    .then(response => response.json())
+    .then(dados => {
+        if (dados.status === 'OK') {
+            // Preencher campos principais
+            document.getElementById('id_cnpj').value = dados.cnpj || '';
+            document.getElementById('id_razao_social').value = dados.nome || '';
+            document.getElementById('id_nome_fantasia').value = dados.fantasia || '';
+            document.getElementById('id_inscricao_estadual').value = dados.ie || '';
+            document.getElementById('id_inscricao_municipal').value = dados.im || '';
+            document.getElementById('id_cep').value = dados.cep || '';
+            document.getElementById('id_logradouro').value = dados.logradouro || '';
+            document.getElementById('id_numero').value = dados.numero || '';
+            document.getElementById('id_bairro').value = dados.bairro || '';
+            document.getElementById('id_municipio').value = dados.municipio || '';
+            document.getElementById('id_uf').value = dados.uf || '';
+            
+            // Preencher campos do certificado
+            document.getElementById('id_certificado_thumbprint').value = dados.thumbprint || '';
+            document.getElementById('id_certificado_emitente').value = dados.emitente || '';
+            // Guarda caminho temporário do .pfx retornado pelo servidor (será movido ao salvar)
+            if (dados.certificado_temp) {
+                document.getElementById('id_certificado_temp').value = dados.certificado_temp;
+            }
+            // Exibe botão de salvar somente para o certificado importado/extraído
+            const btnSalvarCert = document.getElementById('btnSalvarCertificado');
+            if (btnSalvarCert) btnSalvarCert.style.display = 'inline-block';
+            
+            showNotification('Dados extraídos do certificado com sucesso!', 'success');
+        } else {
+            alert(dados.msg || 'Certificado inválido ou dados não encontrados.');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao processar certificado.');
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
+// Função para mostrar/esconder senha
+function toggleSenha() {
+    const senhaInput = document.getElementById('id_certificado_senha');
+    const olho = document.getElementById('olhoSenha');
+    
+    if (senhaInput.type === 'password') {
+        senhaInput.type = 'text';
+        olho.classList.remove('bi-eye');
+        olho.classList.add('bi-eye-slash');
+    } else {
+        senhaInput.type = 'password';
+        olho.classList.remove('bi-eye-slash');
+        olho.classList.add('bi-eye');
+    }
+}
+
+// Função para mostrar notificação
+function showNotification(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show animate__animated animate__fadeIn`;
+    alertDiv.setAttribute('role', 'alert');
+    alertDiv.innerHTML = `
+        <i class="bi bi-${type === 'success' ? 'check-circle' : 'info-circle'} me-2"></i>
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.querySelector('.main-content').insertBefore(alertDiv, document.querySelector('.main-content').firstChild);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+
+// Auto-formatar CNPJ enquanto digita (apenas para novo cadastro)
+{% if not form.instance.pk %}
+document.getElementById('id_cnpj').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 14) {
+        if (value.length > 12) {
+            value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+        } else if (value.length > 8) {
+            value = value.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+        } else if (value.length > 5) {
+            value = value.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+        } else if (value.length > 2) {
+            value = value.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+        }
+        e.target.value = value;
+    }
+});
+{% endif %}
+
+// Auto-formatar CEP
+document.getElementById('id_cep').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length <= 8) {
+        if (value.length > 5) {
+            value = value.replace(/^(\d{5})(\d{0,3})/, '$1-$2');
+        }
+        e.target.value = value;
+    }
+});
+
+// Validar formulário antes de enviar
+document.getElementById('empresaForm').addEventListener('submit', function(e) {
+    const cnpj = document.getElementById('id_cnpj').value.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+        e.preventDefault();
+        alert('CNPJ inválido! O CNPJ deve ter 14 dígitos.');
+    }
+});
+
+// Se a página foi aberta com thumbprint (ex.: export falhou), mostrar instruções para upload
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        const params = new URLSearchParams(window.location.search);
+        const thumb = params.get('thumbprint');
+        const showUpload = params.get('show_upload');
+        if (thumb) {
+            const fileInput = document.getElementById('id_certificado');
+            const parentCardBody = fileInput ? (fileInput.closest('.card-body') || document.querySelector('.card-body')) : document.querySelector('.card-body');
+            const alerta = document.createElement('div');
+            alerta.className = 'alert alert-warning';
+            alerta.innerHTML = `<i class="bi bi-exclamation-triangle me-2"></i> O certificado <code>${thumb}</code> não pôde ser exportado da loja. Faça upload do arquivo <strong>.pfx</strong> abaixo para salvá-lo na empresa.`;
+            if (parentCardBody) parentCardBody.insertBefore(alerta, parentCardBody.firstChild);
+
+            const thumbInput = document.getElementById('id_certificado_thumbprint');
+            if (thumbInput) thumbInput.value = thumb;
+
+            const btnSalvarCert = document.getElementById('btnSalvarCertificado');
+            if (btnSalvarCert) btnSalvarCert.style.display = 'inline-block';
+
+            if (showUpload === '1' && fileInput) {
+                fileInput.scrollIntoView({behavior: 'smooth', block: 'center'});
+                fileInput.focus();
+            }
+        }
+    } catch (err) {
+        console.error(err);
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

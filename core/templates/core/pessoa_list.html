@@ -1,0 +1,131 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Cabeçalho -->
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-people text-success me-2"></i>Usuários
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Usuários</li>
+                </ol>
+            </nav>
+        </div>
+        <a href="{% url 'pessoa_create' %}" class="btn btn-success">
+            <i class="bi bi-plus-circle me-1"></i>Novo Usuário
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card mb-4 animate__animated animate__fadeIn">
+        <div class="card-body">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label">
+                        <i class="bi bi-search me-1"></i>Buscar
+                    </label>
+                    <input type="text" name="q" value="{{ q }}" class="form-control" placeholder="Nome, CPF ou e-mail">
+                </div>
+                
+                <div class="col-md-3">
+                    <label class="form-label">
+                        <i class="bi bi-check-circle me-1"></i>Status
+                    </label>
+                    <select name="status" class="form-select">
+                        <option value="">Todos</option>
+                        <option value="ativa" {% if status == 'ativa' %}selected{% endif %}>Ativo</option>
+                        <option value="inativa" {% if status == 'inativa' %}selected{% endif %}>Inativo</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-outline-success w-100">
+                        <i class="bi bi-funnel me-1"></i>Filtrar
+                    </button>
+                </div>
+                
+                <div class="col-md-2">
+                    <a href="{% url 'pessoa_list' %}" class="btn btn-outline-secondary w-100">
+                        <i class="bi bi-eraser me-1"></i>Limpar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabela de Usuários -->
+    <div class="card animate__animated animate__fadeInUp">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Nome</th>
+                            <th>CPF</th>
+                            <th>E-mail</th>
+                            <th>Telefone</th>
+                            <th>Status</th>
+                            <th>Data Cadastro</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in pessoas %}
+                        <tr>
+                            <td class="fw-semibold">
+                                {% if p.foto %}
+                                    <img src="{{ p.foto.url }}" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
+                                {% else %}
+                                    <i class="bi bi-person-circle me-2" style="font-size: 1.5rem; color: var(--verde-deep);"></i>
+                                {% endif %}
+                                {{ p.user.get_full_name|default:p.user.username }}
+                            </td>
+                            <td>{{ p.cpf|default:"-" }}</td>
+                            <td>{{ p.user.email|default:"-" }}</td>
+                            <td>{{ p.telefone|default:"-" }}</td>
+                            <td>
+                                {% if p.ativo %}
+                                    <span class="badge bg-success">Ativo</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Inativo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ p.data_cadastro|date:'d/m/Y' }}</td>
+                            <td>
+                                <a href="{% url 'pessoa_edit' p.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-people" style="font-size: 3rem; display: block; margin-bottom: 1rem;"></i>
+                                <h5>Nenhum usuário cadastrado</h5>
+                                <p class="mb-3">Clique no botão "Novo Usuário" para começar.</p>
+                                <a href="{% url 'pessoa_create' %}" class="btn btn-success">
+                                    <i class="bi bi-plus-circle me-1"></i>Novo Usuário
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        {% if pessoas %}
+        <div class="card-footer bg-transparent text-muted">
+            <small>
+                <i class="bi bi-info-circle me-1"></i>
+                Total de {{ pessoas|length }} usuário{{ pessoas|length|pluralize:"s" }} encontrado{{ pessoas|length|pluralize:"s" }}
+            </small>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,157 @@
+from django.db import models
+from django.contrib.auth.models import User
+from django.core.validators import MinValueValidator, MaxValueValidator
+from django.utils import timezone
+import os
+
+def validar_cpf(value):
+    # Implementar validação de CPF
+    return value
+
+class Pessoa(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='pessoa')
+    cpf = models.CharField(max_length=14, unique=True, validators=[validar_cpf])
+    telefone = models.CharField(max_length=20, blank=True)
+    foto = models.ImageField(upload_to='fotos/', blank=True, null=True)
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    ativo = models.BooleanField(default=True)
+    # Token para agente local (usado pelo cliente-side agent)
+    client_api_token = models.CharField(max_length=64, blank=True, null=True)
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
+
+    class Meta:
+        verbose_name = 'Pessoa'
+        verbose_name_plural = 'Pessoas'
+
+class Empresa(models.Model):
+    TIPO_CHOICES = [
+        ('matriz', 'Matriz'),
+        ('filial', 'Filial')
+    ]
+    
+    cnpj = models.CharField(max_length=18, unique=True)
+    razao_social = models.CharField(max_length=200)
+    nome_fantasia = models.CharField(max_length=200)
+    inscricao_municipal = models.CharField(max_length=50, blank=True)
+    inscricao_estadual = models.CharField(max_length=50, blank=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES, default='matriz')
+    ativo = models.BooleanField(default=True)
+    usuarios = models.ManyToManyField(Pessoa, related_name='empresas', blank=True)
+    
+    # Endereço
+    cep = models.CharField(max_length=9, blank=True)
+    logradouro = models.CharField(max_length=200, blank=True)
+    numero = models.CharField(max_length=20, blank=True)
+    complemento = models.CharField(max_length=100, blank=True)
+    bairro = models.CharField(max_length=100, blank=True)
+    municipio = models.CharField(max_length=100, blank=True)
+    uf = models.CharField(max_length=2, blank=True)
+    
+    # Certificado
+    certificado_thumbprint = models.CharField(max_length=40, blank=True)
+    certificado_senha = models.CharField(max_length=255, blank=True)  # Criptografar
+    certificado_validade = models.DateField(null=True, blank=True)
+    certificado_emitente = models.CharField(max_length=255, blank=True)
+    certificado_arquivo = models.FileField(upload_to='certificados/', blank=True, null=True)
+    
+    data_cadastro = models.DateTimeField(auto_now_add=True)
+    ultimo_download = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.nome_fantasia or self.razao_social
+
+    class Meta:
+        verbose_name = 'Empresa'
+        verbose_name_plural = 'Empresas'
+        ordering = ['nome_fantasia']
+
+class Agendamento(models.Model):
+    TIPO_NOTA_CHOICES = [
+        ('entrada', 'Entrada'),
+        ('saida', 'Saída'),
+        ('ambos', 'Ambos')
+    ]
+    
+    PERIODO_FIM_CHOICES = [
+        ('ultimo_dia', 'Último dia do mês'),
+        ('fixo', 'Dia fixo')
+    ]
+    
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='agendamentos')
+    tipo_nota = models.CharField(max_length=10, choices=TIPO_NOTA_CHOICES)
+    dia_mes = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(31)])
+    periodo_inicio = models.IntegerField(default=1)
+    periodo_fim_tipo = models.CharField(max_length=10, choices=PERIODO_FIM_CHOICES, default='ultimo_dia')
+    periodo_fim_dia = models.IntegerField(null=True, blank=True)
+    ativo = models.BooleanField(default=True)
+    horario_preferencial = models.TimeField(default='23:00')
+    notificar_email = models.BooleanField(default=False)
+    compactar_auto = models.BooleanField(default=True)
+    ultima_execucao = models.DateTimeField(null=True, blank=True)
+    proxima_execucao = models.DateTimeField(null=True, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    atualizado_em = models.DateTimeField(auto_now=True, null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.empresa.nome_fantasia} - {self.get_tipo_nota_display()} - Dia {self.dia_mes}"
+
+    class Meta:
+        verbose_name = 'Agendamento'
+        verbose_name_plural = 'Agendamentos'
+
+class HistoricoDownload(models.Model):
+    STATUS_CHOICES = [
+        ('sucesso', 'Sucesso'),
+        ('parcial', 'Parcial'),
+        ('erro', 'Erro')
+    ]
+    
+    empresa = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, related_name='historicos')
+    usuario = models.ForeignKey(Pessoa, on_delete=models.SET_NULL, null=True)
+    tipo_nota = models.CharField(max_length=10)
+    data_inicio = models.DateTimeField()
+    data_fim = models.DateTimeField(null=True, blank=True)
+    periodo_busca_inicio = models.DateField()
+    periodo_busca_fim = models.DateField()
+    quantidade_notas = models.IntegerField(default=0)
+    quantidade_sucesso = models.IntegerField(default=0)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='erro')
+    arquivo_zip = models.FileField(upload_to='zips/', blank=True, null=True)
+    log_detalhado = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.empresa} - {self.data_inicio.strftime('%d/%m/%Y %H:%M')}"
+
+    class Meta:
+        verbose_name = 'Histórico de Download'
+        verbose_name_plural = 'Históricos de Download'
+        ordering = ['-data_inicio']
+
+class NotaFiscal(models.Model):
+    TIPO_CHOICES = [
+        ('entrada', 'Entrada'),
+        ('saida', 'Saída')
+    ]
+    
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE, related_name='notas')
+    historico = models.ForeignKey(HistoricoDownload, on_delete=models.CASCADE, related_name='notas')
+    numero = models.CharField(max_length=50)
+    chave_acesso = models.CharField(max_length=44, unique=True)
+    data_emissao = models.DateField()
+    valor = models.DecimalField(max_digits=15, decimal_places=2)
+    tomador_cnpj = models.CharField(max_length=18, blank=True)
+    tomador_nome = models.CharField(max_length=200, blank=True)
+    arquivo_pdf = models.FileField(upload_to='pdfs/')
+    arquivo_xml = models.FileField(upload_to='xmls/', blank=True, null=True)
+    tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
+    data_download = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.numero} - {self.data_emissao}"
+
+    class Meta:
+        verbose_name = 'Nota Fiscal'
+        verbose_name_plural = 'Notas Fiscais'
+        ordering = ['-data_emissao']
