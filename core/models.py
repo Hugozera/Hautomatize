@@ -96,7 +96,45 @@ class Agendamento(models.Model):
 
     def __str__(self):
         return f"{self.empresa.nome_fantasia} - {self.get_tipo_nota_display()} - Dia {self.dia_mes}"
-
+class TarefaDownload(models.Model):
+    """Modelo para rastrear tarefas de download em andamento"""
+    STATUS_CHOICES = [
+        ('aguardando', 'Aguardando'),
+        ('processando', 'Processando'),
+        ('extraindo_links', 'Extraindo Links'),
+        ('baixando', 'Baixando Notas'),
+        ('concluido', 'Concluído'),
+        ('erro', 'Erro'),
+        ('zipando', 'Zipando Arquivos'),
+    ]
+    
+    usuario = models.ForeignKey(Pessoa, on_delete=models.CASCADE, null=True, blank=True)
+    empresa = models.ForeignKey(Empresa, on_delete=models.CASCADE)
+    tipo_nota = models.CharField(max_length=10)  # 'emitidas' ou 'recebidas'
+    data_inicio = models.DateField()
+    data_fim = models.DateField()
+    data_criacao = models.DateTimeField(auto_now_add=True)
+    data_inicio_execucao = models.DateTimeField(null=True, blank=True)
+    data_fim_execucao = models.DateTimeField(null=True, blank=True)
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='aguardando')
+    progresso = models.IntegerField(default=0)  # 0 a 100
+    mensagem = models.TextField(blank=True)
+    
+    total_notas = models.IntegerField(default=0)
+    notas_baixadas = models.IntegerField(default=0)
+    notas_erro = models.IntegerField(default=0)
+    
+    pasta_destino = models.CharField(max_length=500, blank=True)
+    arquivo_zip = models.FileField(upload_to='zips/', blank=True, null=True)
+    
+    logs = models.TextField(blank=True)  # Para debug
+    
+    def __str__(self):
+        return f"{self.empresa.nome_fantasia} - {self.tipo_nota} - {self.data_inicio} a {self.data_fim}"
+    
+    class Meta:
+        ordering = ['-data_criacao']
     class Meta:
         verbose_name = 'Agendamento'
         verbose_name_plural = 'Agendamentos'

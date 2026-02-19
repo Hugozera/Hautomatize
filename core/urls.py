@@ -48,7 +48,12 @@ urlpatterns = [
     
     # Histórico
     path('historico/', views.historico, name='historico'),
+    path('download/progresso/<int:tarefa_id>/', views.progresso_download, name='progresso_download'),
+path('download/api/progresso/<int:tarefa_id>/', views.api_progresso_download, name='api_progresso_download'),
+path('download/lista/', views.listar_downloads, name='lista_downloads'),
     
+path('empresas/upload-certificado/', views.upload_certificado_temporario, name='upload_certificado'),
+    path('empresas/upload-certificado/', views.upload_certificado_temporario, name='upload_certificado'),
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),

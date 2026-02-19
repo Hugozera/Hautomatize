@@ -1,0 +1,223 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+        <div>
+            <h1 class="h2 mb-2">
+                <i class="bi bi-arrow-repeat text-success me-2"></i>Progresso do Download
+            </h1>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'download_manual' %}" class="text-decoration-none">Download</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Progresso</li>
+                </ol>
+            </nav>
+        </div>
+        <div>
+            <span class="badge bg-light text-dark p-3">
+                <i class="bi bi-hash me-2"></i>
+                ID: {{ tarefa.pk }}
+            </span>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8">
+            <!-- Card de Progresso -->
+            <div class="card mb-4 animate__animated animate__fadeInUp">
+                <div class="card-header bg-transparent d-flex align-items-center">
+                    <i class="bi bi-info-circle fs-4 me-2" style="color: var(--verde-deep);"></i>
+                    <span class="fw-semibold">Detalhes do Download</span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Empresa:</strong> {{ tarefa.empresa.nome_fantasia }}
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Tipo:</strong> 
+                            {% if tarefa.tipo_nota == 'emitidas' %}
+                                <span class="badge bg-primary">Emitidas (Saída)</span>
+                            {% else %}
+                                <span class="badge bg-info">Recebidas (Entrada)</span>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <strong>Período:</strong> {{ tarefa.data_inicio|date:'d/m/Y' }} a {{ tarefa.data_fim|date:'d/m/Y' }}
+                        </div>
+                        <div class="col-md-6 mt-2">
+                            <strong>Iniciado em:</strong> {{ tarefa.data_criacao|date:'d/m/Y H:i:s' }}
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Status:</label>
+                        <span class="badge 
+                            {% if tarefa.status == 'concluido' %}bg-success
+                            {% elif tarefa.status == 'erro' %}bg-danger
+                            {% elif tarefa.status == 'processando' %}bg-primary
+                            {% elif tarefa.status == 'zipando' %}bg-info
+                            {% elif tarefa.status == 'extraindo_links' %}bg-warning text-dark
+                            {% else %}bg-secondary{% endif %} fs-6 p-2">
+                            <i class="bi 
+                                {% if tarefa.status == 'concluido' %}bi-check-circle
+                                {% elif tarefa.status == 'erro' %}bi-exclamation-triangle
+                                {% elif tarefa.status == 'processando' %}bi-arrow-repeat
+                                {% elif tarefa.status == 'zipando' %}bi-file-zip
+                                {% elif tarefa.status == 'extraindo_links' %}bi-search
+                                {% else %}bi-hourglass-split{% endif %} me-1"></i>
+                            {{ tarefa.get_status_display }}
+                        </span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Progresso:</label>
+                        <div class="progress" style="height: 25px;">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated 
+                                {% if tarefa.status == 'erro' %}bg-danger{% else %}bg-success{% endif %}" 
+                                role="progressbar" style="width: {{ tarefa.progresso }}%;">
+                                {{ tarefa.progresso }}%
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="card text-center h-100">
+                                <div class="card-body">
+                                    <h3 id="totalNotas" class="mb-0">{{ tarefa.total_notas }}</h3>
+                                    <small class="text-muted">Total de Notas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center h-100 border-success">
+                                <div class="card-body">
+                                    <h3 id="baixadas" class="mb-0 text-success">{{ tarefa.notas_baixadas }}</h3>
+                                    <small class="text-muted">Baixadas</small>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card text-center h-100 border-danger">
+                                <div class="card-body">
+                                    <h3 id="erros" class="mb-0 text-danger">{{ tarefa.notas_erro }}</h3>
+                                    <small class="text-muted">Erros</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mensagemContainer" class="mt-3 alert alert-info d-none"></div>
+
+                    <div id="zipContainer" class="{% if not tarefa.arquivo_zip %}d-none{% endif %}">
+                        <hr>
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle me-2"></i>
+                            Download concluído! Clique abaixo para baixar o ZIP com todas as notas:
+                        </div>
+                        <a id="downloadZip" href="{{ tarefa.arquivo_zip.url }}" class="btn btn-success w-100 py-3" download>
+                            <i class="bi bi-file-zip me-2 fs-5"></i>
+                            Baixar ZIP ({{ tarefa.total_notas }} notas)
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <!-- Card de Logs -->
+            <div class="card h-100 animate__animated animate__fadeInUp">
+                <div class="card-header bg-transparent d-flex align-items-center">
+                    <i class="bi bi-journal-text fs-4 me-2" style="color: var(--verde-deep);"></i>
+                    <span class="fw-semibold">Logs da Operação</span>
+                </div>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto; background-color: #f8f9fa;">
+                    <pre id="logsContainer" style="font-size: 0.8rem; white-space: pre-wrap; word-wrap: break-word; margin: 0; padding: 0;">{{ tarefa.logs }}</pre>
+                </div>
+                <div class="card-footer bg-transparent text-end">
+                    <small class="text-muted">Atualizado em tempo real</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botão de Voltar -->
+    <div class="text-center mt-4">
+        <a href="{% url 'download_manual' %}" class="btn btn-outline-success">
+            <i class="bi bi-arrow-left me-2"></i>Voltar para Download Manual
+        </a>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+function atualizarProgresso() {
+    fetch('{% url "api_progresso_download" tarefa.pk %}')
+        .then(response => response.json())
+        .then(data => {
+            // Atualiza barra de progresso
+            const progressBar = document.getElementById('progressBar');
+            progressBar.style.width = data.progresso + '%';
+            progressBar.textContent = data.progresso + '%';
+            
+            // Atualiza contadores
+            document.getElementById('totalNotas').textContent = data.total_notas;
+            document.getElementById('baixadas').textContent = data.notas_baixadas;
+            document.getElementById('erros').textContent = data.notas_erro;
+            
+            // Atualiza status (se mudou)
+            if (data.status !== '{{ tarefa.status }}') {
+                location.reload(); // Recarrega se status mudou
+            }
+            
+            // Atualiza logs
+            if (data.logs) {
+                const logsContainer = document.getElementById('logsContainer');
+                logsContainer.textContent = data.logs;
+                // Scroll automático para o fim
+                logsContainer.parentElement.scrollTop = logsContainer.parentElement.scrollHeight;
+            }
+            
+            // Atualiza mensagem
+            if (data.mensagem) {
+                const msgContainer = document.getElementById('mensagemContainer');
+                msgContainer.textContent = data.mensagem;
+                msgContainer.classList.remove('d-none');
+            }
+            
+            // Mostra ZIP se disponível
+            if (data.zip_url) {
+                const zipContainer = document.getElementById('zipContainer');
+                zipContainer.classList.remove('d-none');
+                document.getElementById('downloadZip').href = data.zip_url;
+            }
+            
+            // Continua atualizando se não estiver concluído ou com erro
+            if (data.status !== 'concluido' && data.status !== 'erro') {
+                setTimeout(atualizarProgresso, 2000);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao atualizar:', error);
+            setTimeout(atualizarProgresso, 5000); // Tenta novamente em 5s
+        });
+}
+
+// Inicia atualização automática
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(atualizarProgresso, 1000);
+});
+
+// Função para copiar logs
+function copiarLogs() {
+    const logs = document.getElementById('logsContainer').textContent;
+    navigator.clipboard.writeText(logs).then(() => {
+        alert('Logs copiados para a área de transferência!');
+    });
+}
+</script>
+{% endblock %}
+{% endblock %}

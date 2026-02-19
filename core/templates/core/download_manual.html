@@ -202,4 +202,266 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+<!-- Modal de Upload de Certificado -->
+{% if precisa_certificado and empresa_selecionada %}
+<div class="modal fade show" id="modalCertificado" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header" style="background: linear-gradient(135deg, var(--verde-deep), var(--amarelo-deep)); color: white;">
+                <h5 class="modal-title">
+                    <i class="bi bi-shield-lock me-2"></i>
+                    Certificado Necessário
+                </h5>
+            </div>
+            <div class="modal-body">
+                <p>A empresa <strong>{{ empresa_selecionada.nome_fantasia }}</strong> não possui um certificado cadastrado.</p>
+                <p>Para realizar o download, faça o upload do arquivo .pfx do certificado:</p>
+                
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    O certificado será salvo e usado para este e futuros downloads.
+                </div>
+                
+                <form id="formUploadCertificado">
+                    {% csrf_token %}
+                    <input type="hidden" name="empresa_id" value="{{ empresa_selecionada.pk }}">
+                    <input type="hidden" name="tipo" value="{{ tipo }}">
+                    <input type="hidden" name="data_inicio" value="{{ data_inicio }}">
+                    <input type="hidden" name="data_fim" value="{{ data_fim }}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-file-earmark-lock me-1"></i>Arquivo do Certificado (.pfx) *
+                        </label>
+                        <input type="file" name="certificado" id="certificadoFile" class="form-control" accept=".pfx" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-key me-1"></i>Senha do Certificado *
+                        </label>
+                        <div class="input-group">
+                            <input type="password" name="senha" id="certificadoSenha" class="form-control" required>
+                            <button type="button" class="btn btn-outline-secondary" onclick="toggleSenhaModal()">
+                                <i class="bi bi-eye" id="olhoSenhaModal"></i>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="progress mb-3 d-none" id="uploadProgress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                             role="progressbar" style="width: 0%">0%</div>
+                    </div>
+                    
+                    <div id="uploadStatus" class="alert d-none"></div>
+                </form>
+            </div>
+            <!-- Downloads Recentes -->
+{% if tarefas_recentes %}
+<div class="card mt-4">
+    <div class="card-header bg-transparent">
+        <i class="bi bi-clock-history me-2 text-success"></i>
+        Downloads Recentes
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Empresa</th>
+                        <th>Período</th>
+                        <th>Status</th>
+                        <th>Progresso</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for tarefa in tarefas_recentes %}
+                    <tr>
+                        <td>{{ tarefa.data_criacao|date:'d/m/Y H:i' }}</td>
+                        <td>{{ tarefa.empresa.nome_fantasia }}</td>
+                        <td>{{ tarefa.data_inicio|date:'d/m/Y' }}<br>
+                            <small>até {{ tarefa.data_fim|date:'d/m/Y' }}</small>
+                        </td>
+                        <td>
+                            <span class="badge 
+                                {% if tarefa.status == 'concluido' %}bg-success
+                                {% elif tarefa.status == 'erro' %}bg-danger
+                                {% elif tarefa.status == 'processando' %}bg-primary
+                                {% else %}bg-secondary{% endif %}">
+                                {{ tarefa.get_status_display }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success" 
+                                     role="progressbar" 
+                                     style="width: {{ tarefa.progresso }}%;"
+                                     aria-valuenow="{{ tarefa.progresso }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <small>{{ tarefa.progresso }}%</small>
+                        </td>
+                        <td>
+                            <a href="{% url 'progresso_download' tarefa.pk %}" 
+                               class="btn btn-sm btn-outline-success">
+                                <i class="bi bi-eye"></i> Ver
+                            </a>
+                            {% if tarefa.arquivo_zip %}
+                            <a href="{{ tarefa.arquivo_zip.url }}" 
+                               class="btn btn-sm btn-success" download>
+                                <i class="bi bi-file-zip"></i> ZIP
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="text-end">
+            <a href="{% url 'lista_downloads' %}" class="btn btn-outline-success btn-sm">
+                Ver todos <i class="bi bi-arrow-right ms-1"></i>
+            </a>
+        </div>
+    </div>
+</div>
+{% endif %}
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="history.back()">
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="uploadCertificado()">
+                    <i class="bi bi-cloud-upload me-2"></i>Upload e Continuar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleSenhaModal() {
+    const senhaInput = document.getElementById('certificadoSenha');
+    const olho = document.getElementById('olhoSenhaModal');
+    
+    if (senhaInput.type === 'password') {
+        senhaInput.type = 'text';
+        olho.classList.remove('bi-eye');
+        olho.classList.add('bi-eye-slash');
+    } else {
+        senhaInput.type = 'password';
+        olho.classList.remove('bi-eye-slash');
+        olho.classList.add('bi-eye');
+    }
+}
+
+function uploadCertificado() {
+    const fileInput = document.getElementById('certificadoFile');
+    const senha = document.getElementById('certificadoSenha').value;
+    const empresaId = document.querySelector('input[name="empresa_id"]').value;
+    const tipo = document.querySelector('input[name="tipo"]').value;
+    const dataInicio = document.querySelector('input[name="data_inicio"]').value;
+    const dataFim = document.querySelector('input[name="data_fim"]').value;
+    
+    if (!fileInput.files.length) {
+        alert('Selecione o arquivo do certificado');
+        return;
+    }
+    
+    if (!senha) {
+        alert('Digite a senha do certificado');
+        return;
+    }
+    
+    // Mostra progresso
+    const progress = document.getElementById('uploadProgress');
+    const progressBar = progress.querySelector('.progress-bar');
+    const statusDiv = document.getElementById('uploadStatus');
+    
+    progress.classList.remove('d-none');
+    statusDiv.classList.add('d-none');
+    progressBar.style.width = '0%';
+    progressBar.textContent = '0%';
+    
+    const formData = new FormData();
+    formData.append('certificado', fileInput.files[0]);
+    formData.append('senha', senha);
+    formData.append('empresa_id', empresaId);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    // Simula progresso
+    let progresso = 0;
+    const interval = setInterval(() => {
+        progresso += 10;
+        if (progresso <= 90) {
+            progressBar.style.width = progresso + '%';
+            progressBar.textContent = progresso + '%';
+        }
+    }, 200);
+    
+    fetch('{% url "upload_certificado" %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(interval);
+        
+        if (data.status === 'OK') {
+            progressBar.style.width = '100%';
+            progressBar.textContent = '100%';
+            
+            statusDiv.className = 'alert alert-success';
+            statusDiv.innerHTML = '<i class="bi bi-check-circle me-2"></i> Certificado salvo! Redirecionando...';
+            statusDiv.classList.remove('d-none');
+            
+            // Recria o formulário original e submete
+            setTimeout(() => {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = window.location.href;
+                
+                form.innerHTML = `
+                    {% csrf_token %}
+                    <input type="hidden" name="empresa" value="${empresaId}">
+                    <input type="hidden" name="tipo" value="${tipo}">
+                    <input type="hidden" name="data_inicio" value="${dataInicio}">
+                    <input type="hidden" name="data_fim" value="${dataFim}">
+                `;
+                
+                document.body.appendChild(form);
+                form.submit();
+            }, 1500);
+        } else {
+            clearInterval(interval);
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            statusDiv.className = 'alert alert-danger';
+            statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i> ' + data.msg;
+            statusDiv.classList.remove('d-none');
+        }
+    })
+    .catch(error => {
+        clearInterval(interval);
+        progressBar.style.width = '0%';
+        progressBar.textContent = '0%';
+        
+        statusDiv.className = 'alert alert-danger';
+        statusDiv.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i> Erro no upload: ' + error;
+        statusDiv.classList.remove('d-none');
+    });
+}
+</script>
+
+<style>
+.modal.show {
+    display: block;
+    background-color: rgba(0,0,0,0.5);
+}
+</style>
+{% endif %}
 {% endblock %}

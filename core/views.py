@@ -1,6 +1,8 @@
 # views.py - Completo e Organizado
 # HDowloader - Sistema de Download Automático de NFSe
-
+from .tasks import iniciar_download_tarefa
+from .models import TarefaDownload
+from django.http import JsonResponse
 # ========== IMPORTS PADRÃO ==========
 import json
 import os
@@ -33,13 +35,13 @@ from .download_service import download_em_massa
 import secrets
 
 # ========== VIEWS DE DOWNLOAD ==========
-
 @login_required
 def download_manual(request):
-    """Download manual de NFSe"""
+    """Download manual de NFSe com tarefas em background"""
     import os
     from django.contrib import messages
-    from .download_service import download_em_massa
+    from .models import Empresa
+    from .tasks import iniciar_download_tarefa
     
     # Filtra empresas disponíveis
     if request.user.is_superuser:
@@ -49,9 +51,17 @@ def download_manual(request):
     else:
         empresas = Empresa.objects.none()
     
+    # Tarefas recentes do usuário
+    if hasattr(request.user, 'pessoa'):
+        tarefas_recentes = TarefaDownload.objects.filter(
+            usuario=request.user.pessoa
+        ).order_by('-data_criacao')[:5]
+    else:
+        tarefas_recentes = []
+    
     msg = None
     empresa_selecionada = None
-    precisa_senha = False
+    precisa_certificado = False
     
     # Verifica se tem empresa na URL
     empresa_id = request.GET.get('empresa') or request.POST.get('empresa')
@@ -59,9 +69,8 @@ def download_manual(request):
     if empresa_id and str(empresa_id).isdigit():
         try:
             empresa_selecionada = Empresa.objects.get(pk=empresa_id)
-            # Verifica se precisa de senha
-            if not empresa_selecionada.certificado_senha:
-                precisa_senha = True
+            if not empresa_selecionada.certificado_arquivo:
+                precisa_certificado = True
         except Empresa.DoesNotExist:
             pass
     
@@ -69,9 +78,6 @@ def download_manual(request):
         tipo = request.POST.get('tipo')
         data_inicio = request.POST.get('data_inicio')
         data_fim = request.POST.get('data_fim')
-        
-        # Se veio uma senha no POST, salva
-        senha_digitada = request.POST.get('certificado_senha', '').strip()
         
         if not empresa_id:
             msg = 'Selecione uma empresa.'
@@ -81,70 +87,155 @@ def download_manual(request):
             try:
                 empresa = get_object_or_404(Empresa, pk=empresa_id)
                 
-                # Se digitou uma senha, salva no banco
-                if senha_digitada:
-                    empresa.certificado_senha = senha_digitada
-                    empresa.save()
-                    messages.success(request, 'Senha do certificado salva com sucesso!')
+                if not empresa.certificado_arquivo:
+                    return render(request, 'core/download_manual.html', {
+                        'empresas': empresas,
+                        'tarefas_recentes': tarefas_recentes,
+                        'msg': 'Empresa não possui certificado. Faça o upload abaixo.',
+                        'empresa_selecionada': empresa,
+                        'precisa_certificado': True,
+                        'tipo': tipo,
+                        'data_inicio': data_inicio,
+                        'data_fim': data_fim,
+                    })
                 
-                # Usa a senha do banco (ou a que foi digitada agora)
-                senha = empresa.certificado_senha or senha_digitada
+                # Prepara pasta de destino
+                pasta_destino = os.path.join(
+                    'media', 'nfse', tipo,
+                    data_inicio[:4], data_inicio[5:7]
+                )
+                pasta_destino = os.path.abspath(pasta_destino)
+                os.makedirs(pasta_destino, exist_ok=True)
                 
-                if not senha:
-                    precisa_senha = True
-                    msg = 'Empresa não possui senha do certificado cadastrada.'
-                else:
-                    # Prepara pasta de destino
-                    pasta_destino = os.path.join(
-                        'media', 'nfse', 
-                        tipo, 
-                        str(timezone.now().year), 
-                        f"{timezone.now().month:02d}"
-                    )
-                    
-                    # Define URL base
-                    url_base = (
-                        'https://www.nfse.gov.br/EmissorNacional/Notas/Emitidas' 
-                        if tipo == 'emitidas' 
-                        else 'https://www.nfse.gov.br/EmissorNacional/Notas/Recebidas'
-                    )
-                    
-                    # Executa download com a senha
-                    total, baixadas = download_em_massa(
-                        empresa.certificado_thumbprint,
-                        tipo,
-                        data_inicio,
-                        data_fim,
-                        pasta_destino,
-                        url_base,
-                        senha  # ← Passa a senha!
-                    )
-                    
-                    # Registra histórico
-                    HistoricoDownload.objects.create(
-                        empresa=empresa,
-                        usuario=request.user.pessoa if hasattr(request.user, 'pessoa') else None,
-                        tipo_nota=tipo,
-                        data_inicio=timezone.now(),
-                        periodo_busca_inicio=data_inicio,
-                        periodo_busca_fim=data_fim,
-                        quantidade_notas=total,
-                        quantidade_sucesso=baixadas,
-                        status='sucesso' if baixadas == total else 'parcial',
-                    )
-                    
-                    messages.success(request, f'✅ Download concluído: {baixadas} de {total} notas baixadas!')
-                    return redirect('download_manual')
+                # Inicia tarefa em background
+                tarefa_id = iniciar_download_tarefa(
+                    empresa=empresa,
+                    tipo=tipo,
+                    data_inicio=data_inicio,
+                    data_fim=data_fim,
+                    pasta_destino=pasta_destino,
+                    usuario=request.user.pessoa if hasattr(request.user, 'pessoa') else None
+                )
+                
+                messages.success(request, f'Download iniciado! Acesse a página de progresso para acompanhar.')
+                return redirect('progresso_download', tarefa_id=tarefa_id)
                     
             except Exception as e:
-                msg = f'❌ Erro no download: {str(e)}'
+                msg = f'❌ Erro: {str(e)}'
     
     return render(request, 'core/download_manual.html', {
         'empresas': empresas,
+        'tarefas_recentes': tarefas_recentes,
         'msg': msg,
         'empresa_selecionada': empresa_selecionada,
-        'precisa_senha': precisa_senha,
+        'precisa_certificado': precisa_certificado,
     })
+
+@login_required
+def progresso_download(request, tarefa_id):
+    """Página de progresso do download"""
+    tarefa = get_object_or_404(TarefaDownload, pk=tarefa_id)
+    
+    # Verifica permissão
+    if not request.user.is_superuser:
+        if not hasattr(request.user, 'pessoa') or tarefa.usuario != request.user.pessoa:
+            return redirect('dashboard')
+    
+    return render(request, 'core/progresso_download.html', {'tarefa': tarefa})
+
+@login_required
+def api_progresso_download(request, tarefa_id):
+    """API para obter progresso via AJAX"""
+    tarefa = get_object_or_404(TarefaDownload, pk=tarefa_id)
+    
+    # Verifica permissão
+    if not request.user.is_superuser:
+        if not hasattr(request.user, 'pessoa') or tarefa.usuario != request.user.pessoa:
+            return JsonResponse({'error': 'Permissão negada'}, status=403)
+    
+    data = {
+        'id': tarefa.pk,
+        'status': tarefa.status,
+        'progresso': tarefa.progresso,
+        'mensagem': tarefa.mensagem,
+        'total_notas': tarefa.total_notas,
+        'notas_baixadas': tarefa.notas_baixadas,
+        'notas_erro': tarefa.notas_erro,
+        'data_criacao': tarefa.data_criacao.strftime('%d/%m/%Y %H:%M'),
+        'data_inicio': tarefa.data_inicio_execucao.strftime('%d/%m/%Y %H:%M') if tarefa.data_inicio_execucao else None,
+        'data_fim': tarefa.data_fim_execucao.strftime('%d/%m/%Y %H:%M') if tarefa.data_fim_execucao else None,
+        'logs': tarefa.logs,
+        'zip_url': tarefa.arquivo_zip.url if tarefa.arquivo_zip else None,
+    }
+    
+    return JsonResponse(data)
+
+@login_required
+def listar_downloads(request):
+    """Lista todos os downloads do usuário"""
+    if request.user.is_superuser:
+        tarefas = TarefaDownload.objects.all().select_related('empresa', 'usuario')
+    elif hasattr(request.user, 'pessoa'):
+        tarefas = TarefaDownload.objects.filter(usuario=request.user.pessoa).select_related('empresa')
+    else:
+        tarefas = TarefaDownload.objects.none()
+    
+    return render(request, 'core/lista_downloads.html', {'tarefas': tarefas})
+
+@login_required
+@csrf_exempt
+def upload_certificado_temporario(request):
+    """
+    Endpoint para receber certificado via AJAX durante o download
+    """
+    if request.method == 'POST':
+        from core.models import Empresa
+        from django.core.files import File
+        import tempfile
+        import os
+        
+        empresa_id = request.POST.get('empresa_id')
+        senha = request.POST.get('senha', '')
+        certificado_file = request.FILES.get('certificado')
+        
+        if not empresa_id or not certificado_file or not senha:
+            return JsonResponse({'status': 'ERRO', 'msg': 'Dados incompletos'})
+        
+        try:
+            empresa = Empresa.objects.get(pk=empresa_id)
+            
+            # Salva o arquivo na empresa
+            empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=True)
+            empresa.certificado_senha = senha
+            
+            # Tenta extrair o thumbprint
+            try:
+                import hashlib
+                from cryptography.hazmat.primitives.serialization import pkcs12
+                from cryptography.hazmat.backends import default_backend
+                
+                with open(empresa.certificado_arquivo.path, 'rb') as f:
+                    pfx_data = f.read()
+                
+                cert = pkcs12.load_key_and_certificates(pfx_data, senha.encode(), default_backend())
+                if cert and cert[1]:
+                    thumbprint = hashlib.sha1(cert[1].public_bytes()).hexdigest().upper()
+                    empresa.certificado_thumbprint = thumbprint
+            except:
+                pass  # Se não conseguir extrair, continua sem thumbprint
+            
+            empresa.save()
+            
+            return JsonResponse({
+                'status': 'OK', 
+                'msg': 'Certificado salvo com sucesso!',
+                'thumbprint': empresa.certificado_thumbprint
+            })
+            
+        except Exception as e:
+            return JsonResponse({'status': 'ERRO', 'msg': str(e)})
+    
+    return JsonResponse({'status': 'ERRO', 'msg': 'Método inválido'})
 
 @login_required
 def download_progress(request, historico_id):

@@ -35,9 +35,9 @@ except:
             return getattr(self.stream, attr)
     sys.stdout = Unbuffered(sys.stdout)
 
-print("\n" + "="*70)
+print("\n" + "="*80)
 print("🔵 SELENIUM_SERVICE.PY CARREGADO")
-print("="*70)
+print("="*80)
 sys.stdout.flush()
 
 class EmissorNacionalSelenium:
@@ -147,8 +147,12 @@ class EmissorNacionalSelenium:
         
         return options
     
-    def iniciar_driver(self):
-        """Inicializa o ChromeDriver com configurações apropriadas"""
+    def iniciar_driver(self, forcar_visivel=False):
+        """
+        Inicializa o ChromeDriver com configurações apropriadas
+        Args:
+            forcar_visivel: Se True, força modo visível mesmo com cookies
+        """
         print("\n🚀 Iniciando ChromeDriver...")
         sys.stdout.flush()
         
@@ -175,17 +179,17 @@ class EmissorNacionalSelenium:
         }
         options.add_experimental_option("prefs", prefs)
         
-        # Decide modo headless baseado nos cookies
-        if self.cookies_path and os.path.exists(self.cookies_path):
+        # DECISÃO INTELIGENTE: Modo headless só se tiver cookies E não forçar visível
+        if not forcar_visivel and self.cookies_path and os.path.exists(self.cookies_path):
             self.headless_mode = True
             options.add_argument('--headless=new')
             options.add_argument('--no-sandbox')
             options.add_argument('--disable-dev-shm-usage')
             options.add_argument('--window-size=1920,1080')
-            print("   🔒 Modo automático ativado (já tem cookies salvos)")
+            print("   🔒 Modo automático ativado (tentando usar cookies)")
         else:
             self.headless_mode = False
-            print("   👁️ Modo visível (primeira vez - precisa selecionar certificado)")
+            print("   👁️ Modo visível ativado (para login com certificado)")
         
         try:
             service = Service(ChromeDriverManager().install())
@@ -202,7 +206,7 @@ class EmissorNacionalSelenium:
     def salvar_cookies(self):
         """Salva os cookies após login bem-sucedido"""
         if not self.cookies_path or not self.driver:
-            return
+            return False
         
         try:
             with open(self.cookies_path, 'wb') as f:
@@ -228,23 +232,29 @@ class EmissorNacionalSelenium:
             print(f"   📂 Carregando {len(cookies)} cookies...")
             sys.stdout.flush()
             
+            # Primeiro acessa o domínio
             self.driver.get(f"{self.base_url}/EmissorNacional")
             time.sleep(2)
             
+            # Adiciona cookies
             cookies_adicionados = 0
             for cookie in cookies:
                 try:
+                    if 'domain' in cookie:
+                        del cookie['domain']
                     self.driver.add_cookie(cookie)
                     cookies_adicionados += 1
-                except:
-                    pass
+                except Exception as e:
+                    print(f"      ⚠️ Erro ao adicionar cookie: {e}")
             
             print(f"   ✅ {cookies_adicionados} cookies adicionados")
             sys.stdout.flush()
             
+            # Atualiza e verifica
             self.driver.refresh()
             time.sleep(3)
             
+            # Verifica se funcionou
             if self.verificar_login_rapido():
                 print(f"✅ Login via cookies! URL: {self.driver.current_url}")
                 sys.stdout.flush()
@@ -270,15 +280,6 @@ class EmissorNacionalSelenium:
         except:
             return False
     
-    def verificar_login(self):
-        """Verifica se está logado acessando área restrita"""
-        try:
-            self.driver.get(f"{self.base_url}/EmissorNacional/Dashboard")
-            time.sleep(2)
-            return self.verificar_login_rapido()
-        except:
-            return False
-    
     def fazer_login(self):
         """
         Faz login no Emissor Nacional com certificado
@@ -297,79 +298,86 @@ class EmissorNacionalSelenium:
             print("   Acessando página de certificado...")
             self.driver.get(f"{self.base_url}/EmissorNacional/Certificado")
             
-            # AGUARDA A JANELA DE CERTIFICADO
-            print("\n   ⏳ Aguardando seleção do certificado...")
+            # IMPORTANTE: A JANELA DE CERTIFICADO APARECE AQUI
+            print("\n   ⏳ AGUARDANDO SELEÇÃO DO CERTIFICADO...")
             print("   🔍 O Chrome abriu uma janela para selecionar o certificado.")
-            print("   👆 Selecione o certificado e clique em OK.")
-            print("   ⏱️ Aguardando até 30 segundos...")
+            print("   👆 Selecione o certificado desejado e clique em OK.")
+            print("   ⏱️ Aguardando até 60 segundos...")
             sys.stdout.flush()
             
-            for i in range(30):
+            # Aguarda até 60 segundos para o usuário selecionar o certificado
+            for i in range(60):
                 time.sleep(1)
+                
+                # Verifica se já está logado (a janela fechou e estamos na área logada)
                 if self.verificar_login_rapido():
                     print(f"✅ Login bem-sucedido após {i+1} segundos!")
                     sys.stdout.flush()
+                    
+                    # SALVA COOKIES PARA SEMPRE
                     self.salvar_cookies()
+                    print("💾 Cookies salvos permanentemente!")
+                    sys.stdout.flush()
                     return True
                 
+                # Mostra progresso a cada 5 segundos
                 if i % 5 == 0:
-                    print(f"   ⏳ Aguardando... {30-i} segundos restantes")
+                    print(f"   ⏳ Aguardando... {60-i} segundos restantes")
                     sys.stdout.flush()
-            
-            # Se não conseguiu, tenta o link normal
-            print("\n   🔄 Tentando clicar no link de certificado...")
-            self.driver.get(f"{self.base_url}/EmissorNacional")
-            time.sleep(2)
-            
-            try:
-                link_cert = self.driver.find_element(By.PARTIAL_LINK_TEXT, "Certificado")
-                link_cert.click()
-                print("   ✅ Link clicado")
-            except:
-                try:
-                    link_cert = self.driver.find_element(By.XPATH, "//a[contains(@href, 'Certificado')]")
-                    link_cert.click()
-                    print("   ✅ Link clicado")
-                except:
-                    print("   ⚠️ Link não encontrado")
-                    self.driver.get(f"{self.base_url}/EmissorNacional/Certificado")
-            
-            # Aguarda novamente
-            print("\n   ⏳ Aguardando seleção do certificado...")
-            for i in range(30):
-                time.sleep(1)
-                if self.verificar_login_rapido():
-                    print(f"✅ Login bem-sucedido após {i+1} segundos!")
-                    sys.stdout.flush()
-                    self.salvar_cookies()
-                    return True
             
             print("❌ Tempo esgotado - login não confirmado")
             screenshot_path = os.path.join(self.download_path, 'erro_login_final.png')
             self.driver.save_screenshot(screenshot_path)
             print(f"   Screenshot salvo: {screenshot_path}")
+            sys.stdout.flush()
             return False
             
         except Exception as e:
             print(f"❌ Erro no login: {e}")
+            sys.stdout.flush()
             traceback.print_exc()
             return False
     
     def garantir_login(self):
         """
         Garante que está logado, tentando reconectar se necessário
+        Se cookies falharem, reinicia driver em modo visível
         """
         print("\n🔐 Verificando login...")
         sys.stdout.flush()
         
+        # TENTATIVA 1: Usar cookies no modo atual
         if self.cookies_path and os.path.exists(self.cookies_path):
             print("   📂 Cookies encontrados, tentando usar...")
+            sys.stdout.flush()
+            
             if self.carregar_cookies():
+                print("✅ Login via cookies bem-sucedido!")
+                sys.stdout.flush()
                 return True
             else:
-                print("   ⚠️ Cookies não funcionaram, fará login normal")
+                print("   ⚠️ Cookies não funcionaram")
+                sys.stdout.flush()
         
-        return self.fazer_login()
+        # SE ESTÁ EM MODO HEADLESS, PRECISA REINICIAR EM MODO VISÍVEL
+        if self.headless_mode:
+            print("   🔄 Modo headless não consegue fazer login. Reiniciando em modo visível...")
+            sys.stdout.flush()
+            
+            # Fecha driver atual
+            self.fechar()
+            
+            # Reinicia em modo visível
+            if not self.iniciar_driver(forcar_visivel=True):
+                raise Exception("Não foi possível reiniciar ChromeDriver em modo visível")
+            
+            # Tenta login novamente (agora com janela)
+            return self.fazer_login()
+        else:
+            # Já está em modo visível, tenta login direto
+            print("   🔑 Iniciando processo de login...")
+            sys.stdout.flush()
+            return self.fazer_login()
     
     def buscar_notas(self, tipo, data_inicio, data_fim):
         """Busca notas em um período específico"""
@@ -397,16 +405,19 @@ class EmissorNacionalSelenium:
             url_busca = f"{url}?executar=1&busca=&datainicio={data_inicio_encoded}&datafim={data_fim_encoded}"
             
             print(f"   URL: {url_busca}")
+            sys.stdout.flush()
             self.driver.get(url_busca)
             
             WebDriverWait(self.driver, 15).until(
                 EC.presence_of_element_located((By.TAG_NAME, "body"))
             )
             time.sleep(2)
+            
             return self.driver.page_source
             
         except Exception as e:
             print(f"❌ Erro ao buscar notas: {e}")
+            sys.stdout.flush()
             traceback.print_exc()
             raise
     
@@ -418,19 +429,29 @@ class EmissorNacionalSelenium:
         links = []
         
         try:
+            # Links de PDF
             pdf_links = self.driver.find_elements(By.XPATH, "//a[contains(@href, '/Notas/Download/DANFSe/')]")
             for link in pdf_links:
                 href = link.get_attribute('href')
                 numero = href.split('/')[-1]
-                links.append({'numero': numero, 'url': href, 'tipo': 'PDF'})
+                links.append({
+                    'numero': numero,
+                    'url': href,
+                    'tipo': 'PDF'
+                })
                 print(f"   📄 PDF: {numero}")
                 sys.stdout.flush()
             
+            # Links de XML
             xml_links = self.driver.find_elements(By.XPATH, "//a[contains(@href, '/Notas/Download/NFSe/')]")
             for link in xml_links:
                 href = link.get_attribute('href')
                 numero = href.split('/')[-1]
-                links.append({'numero': numero, 'url': href, 'tipo': 'XML'})
+                links.append({
+                    'numero': numero,
+                    'url': href,
+                    'tipo': 'XML'
+                })
                 print(f"   📄 XML: {numero}")
                 sys.stdout.flush()
             
@@ -439,6 +460,7 @@ class EmissorNacionalSelenium:
             
         except Exception as e:
             print(f"❌ Erro ao extrair links: {e}")
+            sys.stdout.flush()
             traceback.print_exc()
         
         return links
@@ -470,6 +492,7 @@ class EmissorNacionalSelenium:
                 
             except Exception as e:
                 print(f"   ❌ Erro: {link['numero']} - {e}")
+                sys.stdout.flush()
                 if len(self.driver.window_handles) > 1:
                     self.driver.close()
                 self.driver.switch_to.window(self.driver.window_handles[0])
@@ -499,6 +522,7 @@ class EmissorNacionalSelenium:
             return arquivos
         except Exception as e:
             print(f"❌ Erro ao listar arquivos: {e}")
+            sys.stdout.flush()
             return []
     
     def fechar(self):
@@ -603,6 +627,10 @@ def baixar_com_selenium(empresa, tipo, data_inicio, data_fim, pasta_destino=None
         if cliente:
             cliente.fechar()
 
+
+# ============================================
+# TESTE DIRETO
+# ============================================
 
 if __name__ == "__main__":
     print("="*80)
