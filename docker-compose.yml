@@ -1,0 +1,57 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: L@ise1301
+      POSTGRES_DB: nfse_prod
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+
+  web:
+    build: .
+    command: /app/entrypoint.sh gunicorn nfse_downloader.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    env_file:
+      - ./.env
+    environment:
+      - DJANGO_SETTINGS_MODULE=nfse_downloader.settings_prod
+      - CREATE_PROD_SUPERUSER=1
+      - PROD_SUPERUSER_USERNAME=Sferna123
+      - PROD_SUPERUSER_EMAIL=sferna@example.com
+      # set PROD_SUPERUSER_PASSWORD if you want to set a plaintext password
+      # - PROD_SUPERUSER_PASSWORD=YourPasswordHere
+    depends_on:
+      - db
+    ports:
+      - "8000:8000"
+    restart: always
+
+  nginx:
+    image: nginx:stable
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - staticfiles:/vol/static:ro
+      - media:/vol/media:ro
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - web
+    restart: always
+
+  # Optional admin UI (uncomment if you want a web DB admin):
+  #adminer:
+  #  image: adminer
+  #  restart: always
+  #  ports:
+  #    - 8080:8080
+
+volumes:
+  postgres_data:
+  staticfiles:
+  media:

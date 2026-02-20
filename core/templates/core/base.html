@@ -25,91 +25,89 @@
     <div class="d-flex position-relative">
         <!-- Menu Lateral -->
         <div id="sidebar" class="sidebar sidebar-expanded">
-            <div class="menu-toggle" onclick="toggleMenu()">
-                <i class="bi bi-chevron-left" id="menuIcon"></i>
-            </div>
-            
-            <div class="d-flex flex-column h-100">
-                <!-- Logo -->
-                <div class="sidebar-logo">
-                    <span>Hautomatize</span>
+                {% if request.user.is_authenticated %}
+                <!-- Menu Lateral -->
+                <div id="sidebar" class="sidebar sidebar-expanded">
+                    <div class="d-flex flex-column h-100">
+                        <!-- Logo/Botão -->
+                        <div class="sidebar-logo" onclick="toggleMenu()" style="cursor:pointer;">
+                            <span id="logoH">H</span>
+                            <span class="d-none d-md-inline ms-2">automatize</span>
+                        </div>
+                        <!-- Itens do Menu -->
+                        <ul class="nav flex-column flex-grow-1">
+                            <li class="nav-item">
+                                <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+                                    <i class="bi bi-house-door"></i>
+                                    <span class="nav-text">Principal</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/conversor' in request.path %}active{% endif %}" href="{% url 'conversor_index' %}">
+                                    <i class="bi bi-arrow-left-right"></i>
+                                    <span class="nav-text">Conversor</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/empresas' in request.path %}active{% endif %}" href="{% url 'empresa_list' %}">
+                                    <i class="bi bi-building"></i>
+                                    <span class="nav-text">Empresas</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/dashboard' in request.path %}active{% endif %}" href="{% url 'dashboard' %}">
+                                    <i class="bi bi-bar-chart"></i>
+                                    <span class="nav-text">Dashboard</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/agendamentos' in request.path %}active{% endif %}" href="{% url 'agendamento_list' %}">
+                                    <i class="bi bi-clock"></i>
+                                    <span class="nav-text">Programar</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/download' in request.path %}active{% endif %}" href="{% url 'download_manual' %}">
+                                    <i class="bi bi-cloud-download"></i>
+                                    <span class="nav-text">Download Rápido</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/certificados' in request.path %}active{% endif %}" href="{% url 'certificado_list' %}">
+                                    <i class="bi bi-shield-lock"></i>
+                                    <span class="nav-text">Certificados</span>
+                                </a>
+                            </li>
+                            <li class="nav-item mt-auto">
+                                <a class="nav-link {% if '/configuracao' in request.path %}active{% endif %}" href="{% url 'configuracao' %}">
+                                    <i class="bi bi-gear"></i>
+                                    <span class="nav-text">Configurações</span>
+                                </a>
+                            </li>
+                            {% if request.user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
+                                    <i class="bi bi-people"></i>
+                                    <span class="nav-text">Usuários</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{% url 'perfil' %}">
+                                    <i class="bi bi-person-circle"></i>
+                                    <span class="nav-text">{{ request.user.get_full_name|default:request.user.username }}</span>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/logout/">
+                                    <i class="bi bi-box-arrow-right"></i>
+                                    <span class="nav-text">Sair</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-                
-                <!-- Itens do Menu -->
-                <ul class="nav flex-column flex-grow-1">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
-                            <i class="bi bi-house-door"></i>
-                            <span class="nav-text">Principal</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
-    <a class="nav-link {% if '/conversor' in request.path %}active{% endif %}" href="{% url 'conversor_index' %}">
-        <i class="bi bi-arrow-left-right"></i>
-        <span class="nav-text">Conversor</span>
-    </a>
-</li>
-
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/empresas' in request.path %}active{% endif %}" href="{% url 'empresa_list' %}">
-                            <i class="bi bi-building"></i>
-                            <span class="nav-text">Empresas</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/dashboard' in request.path %}active{% endif %}" href="{% url 'dashboard' %}">
-                            <i class="bi bi-bar-chart"></i>
-                            <span class="nav-text">Dashboard</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/agendamentos' in request.path %}active{% endif %}" href="{% url 'agendamento_list' %}">
-                            <i class="bi bi-clock"></i>
-                            <span class="nav-text">Programar</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/download' in request.path %}active{% endif %}" href="{% url 'download_manual' %}">
-                            <i class="bi bi-cloud-download"></i>
-                            <span class="nav-text">Download Rápido</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/certificados' in request.path %}active{% endif %}" href="{% url 'certificado_list' %}">
-                            <i class="bi bi-shield-lock"></i>
-                            <span class="nav-text">Certificados</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item mt-auto">
-                        <a class="nav-link {% if '/configuracao' in request.path %}active{% endif %}" href="{% url 'configuracao' %}">
-                            <i class="bi bi-gear"></i>
-                            <span class="nav-text">Configurações</span>
-                        </a>
-                    </li>
-                    
-                    {% if request.user.is_superuser %}
-                    <li class="nav-item">
-                        <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
-                            <i class="bi bi-people"></i>
-                            <span class="nav-text">Usuários</span>
-                        </a>
-                    </li>
-                    {% endif %}
-                    
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'perfil' %}">
-                            <i class="bi bi-person-circle"></i>
-                            <span class="nav-text">{{ request.user.get_full_name|default:request.user.username }}</span>
-                        </a>
-                    </li>
-                    
-                    <li class="nav-item">
+                {% endif %}
                         <a class="nav-link" href="/logout/">
                             <i class="bi bi-box-arrow-right"></i>
                             <span class="nav-text">Sair</span>
@@ -147,19 +145,18 @@
         // Função para toggle do menu
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar');
-            const menuIcon = document.getElementById('menuIcon');
-            
+            const logoH = document.getElementById('logoH');
             if (sidebar.classList.contains('sidebar-expanded')) {
                 sidebar.classList.remove('sidebar-expanded');
                 sidebar.classList.add('sidebar-collapsed');
-                menuIcon.classList.remove('bi-chevron-left');
-                menuIcon.classList.add('bi-chevron-right');
+                logoH.style.transform = 'rotate(-90deg)';
+                logoH.style.color = 'var(--amarelo-deep)';
                 localStorage.setItem('sidebarState', 'collapsed');
             } else {
                 sidebar.classList.remove('sidebar-collapsed');
                 sidebar.classList.add('sidebar-expanded');
-                menuIcon.classList.remove('bi-chevron-right');
-                menuIcon.classList.add('bi-chevron-left');
+                logoH.style.transform = 'rotate(0deg)';
+                logoH.style.color = 'var(--verde-deep)';
                 localStorage.setItem('sidebarState', 'expanded');
             }
         }
@@ -168,13 +165,12 @@
         document.addEventListener('DOMContentLoaded', function() {
             const sidebarState = localStorage.getItem('sidebarState');
             const sidebar = document.getElementById('sidebar');
-            const menuIcon = document.getElementById('menuIcon');
-            
+            const logoH = document.getElementById('logoH');
             if (sidebarState === 'collapsed') {
                 sidebar.classList.remove('sidebar-expanded');
                 sidebar.classList.add('sidebar-collapsed');
-                menuIcon.classList.remove('bi-chevron-left');
-                menuIcon.classList.add('bi-chevron-right');
+                logoH.style.transform = 'rotate(-90deg)';
+                logoH.style.color = 'var(--amarelo-deep)';
             }
         });
     </script>

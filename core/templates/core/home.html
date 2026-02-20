@@ -1,0 +1,40 @@
+
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4 text-center text-success-gradient">Bem-vindo ao Hautomatize</h2>
+    <div class="cards-grid">
+        <a href="{% url 'conversor_index' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-arrow-left-right me-2"></i> Conversor</div>
+            <div class="card-body">Converta arquivos e notas fiscais rapidamente.</div>
+        </a>
+        <a href="{% url 'empresa_list' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-building me-2"></i> Empresas</div>
+            <div class="card-body">Gerencie empresas cadastradas.</div>
+        </a>
+        <a href="{% url 'agendamento_list' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-clock me-2"></i> Programar</div>
+            <div class="card-body">Agende tarefas automáticas.</div>
+        </a>
+        <a href="{% url 'download_manual' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-cloud-download me-2"></i> Download Rápido</div>
+            <div class="card-body">Baixe notas fiscais manualmente.</div>
+        </a>
+        <a href="{% url 'certificado_list' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-shield-lock me-2"></i> Certificados</div>
+            <div class="card-body">Gerencie certificados digitais.</div>
+        </a>
+        <a href="{% url 'configuracao' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-gear me-2"></i> Configurações</div>
+            <div class="card-body">Ajuste preferências do sistema.</div>
+        </a>
+        {% if request.user.is_superuser %}
+        <a href="{% url 'pessoa_list' %}" class="card text-decoration-none animate-fade-in">
+            <div class="card-header"><i class="bi bi-people me-2"></i> Usuários</div>
+            <div class="card-body">Administre usuários do sistema.</div>
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

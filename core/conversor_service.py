@@ -1,7 +1,4 @@
-"""
-Serviço de conversão de arquivos integrado ao HDowloader
-Suporte especial para PDF → OFX
-"""
+
 import os
 import re
 import subprocess
@@ -21,15 +18,57 @@ except ImportError:
     except ImportError:
         HAS_PYPDF2 = False
 
+# Novo: tenta importar pdfminer.six para fallback
+try:
+    from pdfminer.high_level import extract_text as pdfminer_extract_text
+    HAS_PDFMINER = True
+except ImportError:
+    HAS_PDFMINER = False
+
 try:
     from PIL import Image
     HAS_PIL = True
 except ImportError:
     HAS_PIL = False
 
+# project root for bundled utilities
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+POPPLER_PATH = PROJECT_ROOT  # if poppler exes reside here
 
+# OCR: tenta importar pytesseract/pdf2image
+try:
+    import pytesseract
+    from pdf2image import convert_from_path
+    HAS_OCR = True
+except ImportError:
+    HAS_OCR = False
+"""
+Serviço de conversão de arquivos integrado ao HDowloader
+Suporte especial para PDF → OFX
+"""
 class ConversorService:
+    # Caminho do tesseract (ajuste conforme necessário)
+    # Tesseract executable (installed location)
+    TESSERACT_CMD = r'C:\Users\Player\AppData\Local\Programs\Tesseract-OCR\tesseract.exe'
+
     """Serviço para conversão de arquivos"""
+
+    @classmethod
+    def _converter_txt_para_ofx(cls, txt_path, ofx_path):
+        """Converte extrato TXT para OFX (usando o mesmo parser de texto do PDF)"""
+        try:
+            with open(txt_path, 'r', encoding='utf-8') as f:
+                texto = f.read()
+            transacoes = cls._extrair_transacoes(texto)
+            if not transacoes:
+                return None, "Nenhuma transação encontrada no TXT"
+            sucesso = cls._gerar_ofx(transacoes, ofx_path)
+            if sucesso:
+                return ofx_path, None
+            else:
+                return None, "Erro ao gerar arquivo OFX"
+        except Exception as e:
+            return None, f"Erro na conversão TXT→OFX: {str(e)}"
     
     # Formatos suportados por categoria
     FORMATOS = {
@@ -57,6 +96,11 @@ class ConversorService:
         # PDF pode ser convertido para vários formatos
         if formato_origem == 'pdf':
             return ['ofx', 'txt', 'html', 'jpg', 'png']
+        
+        # Arquivo ZIP: não sabemos o conteúdo, mas assumimos conversão em lote
+        if formato_origem == 'zip':
+            # opções genéricas que fazem sentido para a maioria dos usos (ex.: PDFs dentro do ZIP)
+            return ['ofx', 'pdf', 'txt', 'html', 'jpg', 'png', 'csv']
         
         # OFX pode ser convertido para PDF/TXT
         if formato_origem == 'ofx':
@@ -98,15 +142,68 @@ class ConversorService:
         
         formato_origem = os.path.splitext(arquivo_path)[1].lower().replace('.', '')
         nome_base = os.path.splitext(os.path.basename(arquivo_path))[0]
+        # se o arquivo for um ZIP, descompacta e processa cada membro separadamente
+        if formato_origem == 'zip':
+            import zipfile, glob
+            if not output_dir:
+                output_dir = tempfile.gettempdir()
+            with tempfile.TemporaryDirectory() as td:
+                with zipfile.ZipFile(arquivo_path, 'r') as z:
+                    z.extractall(td)
+                resultados = []
+                erros = []
+                for member in glob.glob(os.path.join(td, '*')):
+                    r,e = cls.converter(member, formato_destino, td)
+                    if r:
+                        resultados.append(r)
+                    else:
+                        erros.append((member,e))
+                if resultados:
+                    zip_out = os.path.join(output_dir, f"{nome_base}_converted.zip")
+                    with zipfile.ZipFile(zip_out, 'w') as z2:
+                        for res in resultados:
+                            z2.write(res, os.path.basename(res))
+                    return zip_out, None
+                return None, 'Nenhum arquivo convertido dentro do ZIP'
         
         if not output_dir:
             output_dir = tempfile.gettempdir()
         
         output_path = os.path.join(output_dir, f"{nome_base}.{formato_destino}")
         
-        # PDF → OFX (nosso foco principal)
+        # PDF → OFX (primeiro PDF → TXT, depois TXT → OFX, transparente para o usuário)
         if formato_origem == 'pdf' and formato_destino == 'ofx':
-            return cls._converter_pdf_para_ofx(arquivo_path, output_path)
+            # 1. Converte PDF para TXT temporário
+            nome_base = os.path.splitext(os.path.basename(arquivo_path))[0]
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as tmp_txt:
+                txt_path = tmp_txt.name
+            _, err_txt = cls._converter_pdf_para_txt(arquivo_path, txt_path)
+            if err_txt:
+                return None, f'Erro ao converter PDF para TXT: {err_txt}'
+            # 2. Converte TXT para OFX
+            ofx_path, err_ofx = cls._converter_txt_para_ofx(txt_path, output_path)
+            # Remove TXT temporário
+            try:
+                os.remove(txt_path)
+            except Exception:
+                pass
+            return ofx_path, err_ofx
+            @classmethod
+            def _converter_txt_para_ofx(cls, txt_path, ofx_path):
+                """Converte extrato TXT para OFX (usando o mesmo parser de texto do PDF)"""
+                try:
+                    with open(txt_path, 'r', encoding='utf-8') as f:
+                        texto = f.read()
+                    transacoes = cls._extrair_transacoes(texto)
+                    if not transacoes:
+                        return None, "Nenhuma transação encontrada no TXT"
+                    sucesso = cls._gerar_ofx(transacoes, ofx_path)
+                    if sucesso:
+                        return ofx_path, None
+                    else:
+                        return None, "Erro ao gerar arquivo OFX"
+                except Exception as e:
+                    return None, f"Erro na conversão TXT→OFX: {str(e)}"
         
         # PDF → TXT
         elif formato_origem == 'pdf' and formato_destino == 'txt':
@@ -159,33 +256,87 @@ class ConversorService:
     
     @classmethod
     def _extrair_texto_pdf(cls, pdf_path):
-        """Extrai texto de PDF"""
+        """Extrai texto de PDF usando múltiplos métodos (PyPDF2, pdftotext, pdfminer, OCR)"""
         texto = ""
-        
+        # 1. PyPDF2
         if HAS_PYPDF2:
             try:
                 with open(pdf_path, 'rb') as f:
                     reader = PdfReader(f)
                     for page in reader.pages:
-                        texto += page.extract_text() + "\n"
+                        t = page.extract_text()
+                        if t:
+                            texto += t + "\n"
                 if texto.strip():
                     return texto
-            except:
+            except Exception:
                 pass
-        
-        # Fallback para pdftotext
+        # 2. pdftotext (use system or bundled copy)
         try:
-            result = subprocess.run(
-                ['pdftotext', pdf_path, '-'],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            if result.returncode == 0:
-                return result.stdout
-        except:
+            pdftotext_cmd = shutil.which('pdftotext')
+            if not pdftotext_cmd:
+                candidate = os.path.join(PROJECT_ROOT, 'pdftotext.exe')
+                if os.path.exists(candidate):
+                    pdftotext_cmd = candidate
+            if pdftotext_cmd:
+                result = subprocess.run(
+                    [pdftotext_cmd, pdf_path, '-'],
+                    capture_output=True,
+                    text=True,
+                    timeout=30
+                )
+                if result.returncode == 0 and result.stdout.strip():
+                    return result.stdout
+        except Exception:
             pass
-        
+        # 3. pdfminer.six
+        if HAS_PDFMINER:
+            try:
+                texto = pdfminer_extract_text(pdf_path)
+                if texto and texto.strip():
+                    return texto
+            except Exception:
+                pass
+        # 4. OCR (pytesseract/pdf2image or pymupdf render) - aprimorado
+        if HAS_OCR:
+            try:
+                # Força caminho do tesseract se existir
+                import pytesseract
+                if os.path.exists(cls.TESSERACT_CMD):
+                    pytesseract.pytesseract.tesseract_cmd = cls.TESSERACT_CMD
+                # primeiro tenta com pdf2image/poppler se disponível
+                for dpi in [300, 400, 600]:
+                    try:
+                        imagens = convert_from_path(pdf_path, dpi=dpi, poppler_path=POPPLER_PATH)
+                        texto_ocr = ""
+                        for img in imagens:
+                            img_gray = img.convert('L')
+                            img_bin = img_gray.point(lambda x: 0 if x < 180 else 255, '1')
+                            texto_ocr += pytesseract.image_to_string(img_gray, lang='por') + "\n"
+                            texto_ocr += pytesseract.image_to_string(img_bin, lang='por') + "\n"
+                        if texto_ocr.strip():
+                            return texto_ocr
+                    except Exception:
+                        continue
+                # se não conseguiu, tenta renderizando via PyMuPDF
+                try:
+                    import fitz
+                    doc = fitz.open(pdf_path)
+                    texto_ocr = ""
+                    for page in doc:
+                        pix = page.get_pixmap(dpi=300)
+                        from PIL import Image
+                        img = Image.frombytes('RGB', [pix.width, pix.height], pix.samples)
+                        img_gray = img.convert('L')
+                        img_bin = img_gray.point(lambda x: 0 if x < 180 else 255, '1')
+                        texto_ocr += pytesseract.image_to_string(img_gray, lang='por') + "\n"
+                        texto_ocr += pytesseract.image_to_string(img_bin, lang='por') + "\n"
+                    if texto_ocr.strip():
+                        return texto_ocr
+                except Exception:
+                    pass
+            except Exception:
+                pass
         return texto
     
     @classmethod

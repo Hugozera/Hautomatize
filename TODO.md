@@ -22,7 +22,7 @@ Resumo das tarefas pedidas pelo usuário, com status e prioridades.
 ## Sprint 4 — Conversor / DataLearn
 - [x] DataLearn básico (layouts bancários ao converter PDF→OFX) — status: feito
 - [ ] Conversor assíncrono (fila/Celery) + progresso real — implementar
-- [ ] Conversor bulk (múltiplos arquivos) — implementar
+- [x] Conversor bulk (múltiplos arquivos) — implementado
 - [ ] Melhorar cobertura de formatos (LibreOffice, ImageMagick, PIL) — implementar
 
 ## Sprint 5 — Dashboards & Relatórios

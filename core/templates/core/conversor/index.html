@@ -2,13 +2,13 @@
 {% load static %}
 
 {% block content %}
-<div class="container-fluid px-0">
+<div class="container py-4">
     <!-- Cabeçalho -->
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
         <div>
-            <h1 class="h2 mb-2">
-                <i class="bi bi-arrow-left-right text-success me-2"></i>Conversor Universal de Arquivos
-            </h1>
+            <h2 class="mb-2 text-success-gradient">
+                <i class="bi bi-arrow-left-right me-2"></i>Conversor Universal de Arquivos
+            </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>
@@ -37,9 +37,9 @@
                         <i class="bi bi-cloud-arrow-up" style="font-size: 4rem; color: var(--verde-deep);"></i>
                         <h5 class="mt-3">Arraste arquivos ou clique para selecionar</h5>
                         <p class="text-muted">Suporta PDF, OFX, imagens, documentos e mais</p>
-                        <input type="file" id="fileInput" style="display: none;">
-                        <button class="btn btn-success mt-2" onclick="document.getElementById('fileInput').click()">
-                            <i class="bi bi-folder2-open me-2"></i>Selecionar Arquivo
+                        <input type="file" id="fileInput" style="display: none;" multiple>
+                        <button class="btn btn-success mt-2" id="btnSelect">
+                            <i class="bi bi-folder2-open me-2"></i>Selecionar Arquivo(s)
                         </button>
                     </div>
 
@@ -55,6 +55,9 @@
                             </div>
                         </div>
                     </div>
+
+                    <!-- Painel de arquivos selecionados -->
+                    <div id="painelArquivos" class="mt-3"></div>
                 </div>
             </div>
 
@@ -83,7 +86,7 @@
                     </div>
 
                     <div class="mt-4 text-center">
-                        <button class="btn btn-success btn-lg px-5" id="btnConverter" disabled onclick="iniciarConversao()">
+                        <button class="btn btn-success btn-lg px-5" id="btnConverter" disabled>
                             <i class="bi bi-arrow-left-right me-2"></i>CONVERTER ARQUIVO
                         </button>
                     </div>
@@ -206,64 +209,106 @@
         </div>
     </div>
 </div>
+{% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 <script>
+// Variáveis globais
 let arquivoSelecionado = null;
 let conversaoId = null;
+let arquivosOriginais = [];
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
-// Upload area click
-document.getElementById('uploadArea').addEventListener('click', function() {
-    document.getElementById('fileInput').click();
+// Event Listeners
+document.addEventListener('DOMContentLoaded', function() {
+    const uploadArea = document.getElementById('uploadArea');
+    const fileInput = document.getElementById('fileInput');
+    const btnSelect = document.getElementById('btnSelect');
+    const btnConverter = document.getElementById('btnConverter');
+    const formatoDestino = document.getElementById('formatoDestino');
+
+    // Upload area click
+    uploadArea.addEventListener('click', function(e) {
+        if (e.target === this || e.target.id === 'btnSelect') {
+            fileInput.click();
+        }
+    });
+
+    // Drag and drop
+    uploadArea.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        this.style.borderColor = 'var(--verde-deep)';
+        this.style.backgroundColor = 'rgba(76, 175, 80, 0.05)';
+    });
+
+    uploadArea.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#ddd';
+        this.style.backgroundColor = '';
+    });
+
+    uploadArea.addEventListener('drop', function(e) {
+        e.preventDefault();
+        this.style.borderColor = '#ddd';
+        this.style.backgroundColor = '';
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            processarArquivos(files);
+        }
+    });
+
+    // Botão selecionar arquivo
+    btnSelect.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fileInput.click();
+    });
+
+    // File input change
+    fileInput.addEventListener('change', function(e) {
+        if (this.files.length > 0) {
+            processarArquivos(this.files);
+            // Limpar o input para permitir selecionar os mesmos arquivos novamente
+            this.value = '';
+        }
+    });
+
+    // Botão converter
+    btnConverter.addEventListener('click', iniciarConversao);
+
+    // Select de formato destino
+    formatoDestino.addEventListener('change', function() {
+        btnConverter.disabled = !this.value;
+    });
 });
 
-// Drag and drop
-document.getElementById('uploadArea').addEventListener('dragover', function(e) {
-    e.preventDefault();
-    this.style.borderColor = 'var(--verde-deep)';
-    this.style.backgroundColor = 'rgba(76, 175, 80, 0.05)';
-});
-
-document.getElementById('uploadArea').addEventListener('dragleave', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#ddd';
-    this.style.backgroundColor = '';
-});
-
-document.getElementById('uploadArea').addEventListener('drop', function(e) {
-    e.preventDefault();
-    this.style.borderColor = '#ddd';
-    this.style.backgroundColor = '';
+// Função principal para processar arquivos
+function processarArquivos(files) {
+    // Resetar estados anteriores
+    arquivosOriginais = [];
     
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        handleFileSelect(files[0]);
+    if (files.length === 1) {
+        // Arquivo único
+        const file = files[0];
+        arquivoSelecionado = file;
+        arquivosOriginais = [file.name];
+        atualizarInterfaceArquivoUnico(file);
+    } else {
+        // Múltiplos arquivos - compactar em ZIP
+        arquivosOriginais = Array.from(files).map(f => f.name);
+        compactarMultiplosArquivos(files);
     }
-});
+}
 
-// File input change
-document.getElementById('fileInput').addEventListener('change', function(e) {
-    if (this.files.length > 0) {
-        handleFileSelect(this.files[0]);
-    }
-});
-
-// Enable/disable converter button when destination format changes
-const formatoDestinoSelect = document.getElementById('formatoDestino');
-formatoDestinoSelect.addEventListener('change', function() {
-    document.getElementById('btnConverter').disabled = !this.value;
-});
-
-function handleFileSelect(file) {
-    // Client-side size validation
+// Função para atualizar interface com arquivo único
+function atualizarInterfaceArquivoUnico(file) {
+    // Validar tamanho
     if (file.size > MAX_FILE_SIZE) {
         mostrarErro('Arquivo muito grande. Limite: 50MB');
         return;
     }
 
-    arquivoSelecionado = file;
-    
     // Mostrar info do arquivo
     document.getElementById('arquivoNome').textContent = file.name;
     document.getElementById('arquivoTamanho').textContent = formatFileSize(file.size);
@@ -274,14 +319,83 @@ function handleFileSelect(file) {
     document.getElementById('arquivoInfo').classList.remove('d-none');
     document.getElementById('formatoOrigem').value = ext.toUpperCase();
     
-    // Buscar formatos de destino
+    // Mostrar painel
+    document.getElementById('painelArquivos').innerHTML = `<b>Arquivo selecionado:</b> ${file.name}`;
+    
+    // Buscar formatos disponíveis
+    buscarFormatosDestino(ext);
+}
+
+// Função para compactar múltiplos arquivos
+function compactarMultiplosArquivos(fileList) {
+    // Verificar tamanho total
+    let totalSize = 0;
+    Array.from(fileList).forEach(f => totalSize += f.size);
+    
+    if (totalSize > MAX_FILE_SIZE) {
+        mostrarErro('Tamanho combinado dos arquivos excede o limite de 50MB');
+        return;
+    }
+
+    const primeiraExtensao = fileList[0].name.split('.').pop().toLowerCase();
+    
+    // Mostrar mensagem de processamento
+    document.getElementById('painelArquivos').innerHTML = 
+        '<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i>Compactando arquivos... Aguarde</div>';
+    
+    // Desabilitar elementos durante compactação
+    document.getElementById('formatoDestino').disabled = true;
+    document.getElementById('btnConverter').disabled = true;
+    
+    // Criar arquivo ZIP
+    const zip = new JSZip();
+    Array.from(fileList).forEach(f => zip.file(f.name, f));
+    
+    zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: { level: 6 }
+    }).then(blob => {
+        const zfile = new File([blob], 'arquivos_compactados.zip', { type: 'application/zip' });
+        arquivoSelecionado = zfile;
+        
+        // Mostrar info do arquivo ZIP
+        document.getElementById('arquivoNome').textContent = zfile.name;
+        document.getElementById('arquivoTamanho').textContent = formatFileSize(zfile.size);
+        document.getElementById('arquivoTipo').textContent = 'ZIP';
+        document.getElementById('arquivoInfo').classList.remove('d-none');
+        document.getElementById('formatoOrigem').value = primeiraExtensao.toUpperCase();
+        
+        // Mostrar lista de arquivos originais
+        document.getElementById('painelArquivos').innerHTML = 
+            '<b>Arquivos compactados:</b><ul>' + 
+            arquivosOriginais.map(n => `<li>${n}</li>`).join('') + 
+            '</ul>' +
+            '<small class="text-muted">Os arquivos foram compactados em ZIP para processamento</small>';
+        
+        // Buscar formatos para a extensão original
+        buscarFormatosDestino(primeiraExtensao);
+        
+    }).catch(error => {
+        mostrarErro('Erro ao compactar arquivos: ' + error.message);
+    });
+}
+
+// Função para buscar formatos de destino
+function buscarFormatosDestino(ext) {
+    const select = document.getElementById('formatoDestino');
+    const btnConverter = document.getElementById('btnConverter');
+    
+    select.innerHTML = '<option value="">Carregando formatos...</option>';
+    select.disabled = true;
+    btnConverter.disabled = true;
+    
     fetch(`/conversor/formatos/?ext=${ext}`)
         .then(response => {
             if (!response.ok) throw new Error('Não foi possível obter formatos');
             return response.json();
         })
         .then(data => {
-            const select = document.getElementById('formatoDestino');
             select.innerHTML = '<option value="">Selecione um formato</option>';
             
             if (Array.isArray(data.formatos) && data.formatos.length > 0) {
@@ -293,34 +407,33 @@ function handleFileSelect(file) {
                 });
                 select.disabled = false;
 
-                // Se houver apenas um formato disponível, seleciona e habilita o botão
                 if (data.formatos.length === 1) {
                     select.value = data.formatos[0];
-                    document.getElementById('btnConverter').disabled = false;
-                } else {
-                    // aguarda o usuário escolher
-                    document.getElementById('btnConverter').disabled = true;
+                    btnConverter.disabled = false;
                 }
             } else {
                 select.innerHTML = '<option value="">Nenhum formato disponível</option>';
                 select.disabled = true;
-                document.getElementById('btnConverter').disabled = true;
+                btnConverter.disabled = true;
                 mostrarErro('Nenhum formato de conversão disponível para este arquivo');
             }
         })
         .catch(err => {
-            document.getElementById('formatoDestino').disabled = true;
-            document.getElementById('btnConverter').disabled = true;
+            select.innerHTML = '<option value="">Erro ao carregar formatos</option>';
+            select.disabled = true;
+            btnConverter.disabled = true;
             mostrarErro('Erro ao buscar formatos: ' + err.message);
         });
 }
 
+// Função para formatar tamanho do arquivo
 function formatFileSize(bytes) {
     if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
-    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
 }
 
+// Função para iniciar conversão
 function iniciarConversao() {
     const formatoDestino = document.getElementById('formatoDestino').value;
     if (!arquivoSelecionado || !formatoDestino) return;
@@ -333,7 +446,7 @@ function iniciarConversao() {
     formData.append('arquivo', arquivoSelecionado);
     formData.append('formato_destino', formatoDestino);
     
-    // Upload
+    // Upload do arquivo
     fetch('{% url "upload_arquivo" %}', {
         method: 'POST',
         body: formData,
@@ -343,7 +456,9 @@ function iniciarConversao() {
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.erro || err.mensagem || response.statusText); });
+            return response.json().then(err => { 
+                throw new Error(err.erro || err.mensagem || response.statusText); 
+            });
         }
         return response.json();
     })
@@ -360,6 +475,7 @@ function iniciarConversao() {
     });
 }
 
+// Função para verificar status da conversão
 function verificarStatus() {
     if (!conversaoId) return;
     
@@ -374,7 +490,7 @@ function verificarStatus() {
         }
     }, 500);
     
-    // Iniciar conversão (chamada síncrona ao servidor)
+    // Iniciar conversão
     fetch(`/conversor/processar/${conversaoId}/`, {
         method: 'POST',
         headers: {
@@ -383,7 +499,9 @@ function verificarStatus() {
     })
     .then(response => {
         if (!response.ok) {
-            return response.json().then(err => { throw new Error(err.erro || err.mensagem || response.statusText); });
+            return response.json().then(err => { 
+                throw new Error(err.erro || err.mensagem || response.statusText); 
+            });
         }
         return response.json();
     })
@@ -400,7 +518,7 @@ function verificarStatus() {
         } else if (data.status === 'erro') {
             mostrarErro(data.erro || 'Erro na conversão');
         } else {
-            // Ainda processando (fallback)
+            // Ainda processando
             setTimeout(verificarStatus, 2000);
         }
     })
@@ -410,16 +528,18 @@ function verificarStatus() {
     });
 }
 
+// Função para mostrar mensagens de erro
 function mostrarErro(mensagem) {
-    // Exibir mensagem de erro no card de progresso
+    const card = document.getElementById('progressoCard');
+    card.classList.remove('d-none');
+
     document.getElementById('statusMensagem').textContent = 'Erro: ' + mensagem;
     document.getElementById('progressBar').classList.remove('bg-success');
     document.getElementById('progressBar').classList.add('bg-danger');
     document.getElementById('btnConverter').disabled = false;
     
-    // Manter o card visível por alguns segundos para o usuário ver o erro
     setTimeout(() => {
-        document.getElementById('progressoCard').classList.add('d-none');
+        card.classList.add('d-none');
         document.getElementById('progressBar').classList.remove('bg-danger');
         document.getElementById('progressBar').classList.add('bg-success');
     }, 3000);
@@ -439,6 +559,16 @@ function mostrarErro(mensagem) {
     border-color: var(--verde-deep);
     background-color: rgba(76, 175, 80, 0.05);
 }
+#painelArquivos {
+    max-height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+}
+#painelArquivos ul {
+    margin-bottom: 0;
+    padding-left: 20px;
+}
 </style>
-{% endblock %}
 {% endblock %}

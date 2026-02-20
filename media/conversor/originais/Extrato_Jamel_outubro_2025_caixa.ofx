@@ -1,0 +1,1311 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:USASCII
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS>
+        <CODE>0
+        <SEVERITY>INFO
+      </STATUS>
+      <DTSERVER>20260219143149
+      <LANGUAGE>POR
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <BANKMSGSRSV1>
+    <STMTTRNRS>
+      <STMTRS>
+        <BANKTRANLIST>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251103
+            <TRNAMT>349.95
+            <FITID>2025110334995
+            <NAME>Data  - 08:05 Mês Outubro
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251031
+            <TRNAMT>13.00
+            <FITID>202510311300
+            <NAME>Lançamentos Nr. Doc Histórico/Complemento Favorecido CPF/CNPJ Valor Saldo - 16:35:24 311635 CRED PIX CHAVE Talesa Laís Alves *  € 20,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251031
+            <TRNAMT>0.11
+            <FITID>2025103111
+            <NAME>- 16:35:24 311635 TAR PIX  D 20,23C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251031
+            <TRNAMT>0.00
+            <FITID>202510310
+            <NAME>- 00:00:00 000000 SALDO DIA   C 20,23C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251030
+            <TRNAMT>503.61
+            <FITID>2025103050361
+            <NAME>- 08:45:54 300845 PIX ENVIADO Supervi **7/0**+* 9,40 D 88,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251030
+            <TRNAMT>112.21
+            <FITID>2025103011221
+            <NAME>- 10:07:05 301007 DEB PIX CHAVE Drogacerta **2/0**+* 80,00 D 8,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251030
+            <TRNAMT>0.71
+            <FITID>2025103071
+            <NAME>- 10:07:05 301007 TAR PIX  D 7,34C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251030
+            <TRNAMT>0.00
+            <FITID>202510300
+            <NAME>- 00:00:00 000000 SALDO DIA   C 7,34 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>341.99
+            <FITID>2025102934199
+            <NAME>- 08:28:11 290828 PIX ENVIADO Panificadora Esmer **6/0**+* 20,50 D 228,55 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>134.22
+            <FITID>2025102913422
+            <NAME>- 12:11:45 291211 PIX ENVIADO Posto Nota 10 **7/0**+* 100,00 D 128,55 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>836.78
+            <FITID>2025102983678
+            <NAME>- 14:49:27 291449 DEB PIX CHAVE Vilmar Cardoso Da ***,836, 78,00 D 50,55 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>0.69
+            <FITID>2025102969
+            <NAME>- 14:49:27 291449 TAR PIX   D 49,86 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>20.00
+            <FITID>202510292000
+            <NAME>- 16:59:52 291659 CRED PIX CHAVE Werley Felix Domin 763,A451 TAA  C 69,86 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>0.17
+            <FITID>2025102917
+            <NAME>- 16:59:52 291659 TAR PIX  D 69,69 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>162.26
+            <FITID>2025102916226
+            <NAME>- 19:50:47 291950 CRED PIX CHAVE Marcelo Henrique P ***,2++* 28,00 C 97,69 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>0.24
+            <FITID>2025102924
+            <NAME>- 19:50:47 291950 TAR PIX   D 97,A5 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251029
+            <TRNAMT>0.00
+            <FITID>202510290
+            <NAME>- 00:00:00 000000 SALDO DIA   € 97,45 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>19.00
+            <FITID>202510281900
+            <NAME>- 09:36:49 280936 CRED PIX CHAVE Ana Cláudia Ferrei TAA  C 196,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>0.16
+            <FITID>2025102816
+            <NAME>- 09:36:49 280936 TAR PIX   D 195,90 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>13.00
+            <FITID>202510281300
+            <NAME>- 11:11:08 281111 PIX ENVIADO Jorge Luiz Da Silv 261%  D 182,90 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>75.00
+            <FITID>202510287500
+            <NAME>- 13:47:55 281347 CRED PIX CHAVE Mariana Verderosi *** ***  C 257,90 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>0.66
+            <FITID>2025102866
+            <NAME>- 13:47:55 281347 TAR PIX   D 257,24 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>541.30
+            <FITID>2025102854129
+            <NAME>- 14:15:27 281415 PIX ENVIADO Delmir Souza Silva AAA 1 15,00 D 242,24 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>22.00
+            <FITID>202510282200
+            <NAME>- 14:43:27 281443 CRED PIX CHAVE Maria Aparecida Ba  C 264,24 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>0.19
+            <FITID>2025102819
+            <NAME>- 14:43:27 281443 TAR PIX   D 264,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>15.00
+            <FITID>202510281500
+            <NAME>- 14:46:06 281446 PIX ENVIADO Devânia Maria Dos ***  D 249,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251028
+            <TRNAMT>0.00
+            <FITID>202510280
+            <NAME>CAIXA - 00:00:00 000000 SALDO DIA  € 249,05 C  € 249,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>112.21
+            <FITID>2025102511221
+            <NAME>- 12: 16: 23 251216 PIX RECEBIDO M M Investimentos **2/0**+* 120,00 C 1.016,89 C M M Investimentos **2/0**+* 120,00 C 1.016,89 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>982.85
+            <FITID>2025102598285
+            <NAME>- 12: 17 251217 DEB PIX CHAVE Jose Pereira Gomes *** 1*** 1.000,00 D 16,89 € Jose Pereira Gomes *** 1*** 1.000,00 D 16,89 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>8.50
+            <FITID>20251025850
+            <NAME>- 12: 2 251217 TAR PIX  D 8,39 C  D 8,39 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>856.50
+            <FITID>2025102585650
+            <NAME>- 13: 251324 CRED PIX CHAVE Marisa Soares do A ***,1*+*+* 25,00 C 33,39 C Marisa Soares do A ***,1*+*+* 25,00 C 33,39 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>0.22
+            <FITID>2025102522
+            <NAME>- 13: 251324 TAR PIX D 33,17 C D 33,17 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>14.00
+            <FITID>202510251400
+            <NAME>- 16: 58: 251658 CRED PIX CHAVE Larissa Alexandre  € Larissa Alexandre  €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>0.12
+            <FITID>2025102512
+            <NAME>- 16: 58: 251658 TAR PIX D 47,05 € D 47,05 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251025
+            <TRNAMT>921.06
+            <FITID>2025102592106
+            <NAME>- 19: 17 251910 PIX RECEBIDO Exstart Soc Unipes **7/0**+* 38,00 C 85,05 C Exstart Soc Unipes **7/0**+* 38,00 C 85,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>75.00
+            <FITID>202510277500
+            <NAME>- O5: 19 202509 MENSALIDADE CESTA SERVICO  D 10,05 C  D 10,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>27.00
+            <FITID>202510272700
+            <NAME>- 13: 33: 42 271333 CRED PIX CHAVE Regiane Silva Dias *%  C 37,05 C Regiane Silva Dias *%  C 37,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>0.24
+            <FITID>2025102724
+            <NAME>- 13: 33: 42 271333 TAR PIX  D 36,81 C  D 36,81 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>114.50
+            <FITID>2025102711450
+            <NAME>- 19: 45: 58 271945 CRED PIX CHAVE Graciele Da Silva  C 151,31 € Graciele Da Silva  C 151,31 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>1.01
+            <FITID>20251027101
+            <NAME>- 19: 45: 58 271945 TAR PIX  D 150,30 C  D 150,30 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>27.00
+            <FITID>202510272700
+            <NAME>- 21: 27: 272127 CRED PIX CHAVE Claudia Caroca Da  C 177,30 € Claudia Caroca Da  C 177,30 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>0.24
+            <FITID>2025102724
+            <NAME>- 21: 27: 272127 TAR PIX  D 177,06 C  D 177,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251027
+            <TRNAMT>0.00
+            <FITID>202510270
+            <NAME>- 00: 00o: oo 000000 SALDO DIA  € 177,06 C  € 177,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>686.07
+            <FITID>2025102468607
+            <NAME>- 13: 12: 38 241312 CRED PIX CHAVE Evelyn Monique Ros ***,1*+*+* 14,80 € 111,76 € Evelyn Monique Ros ***,1*+*+* 14,80 € 111,76 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>0.13
+            <FITID>2025102413
+            <NAME>- 13: 12: 38 241312 TAR PIX D 111,63C€C D 111,63C€C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>996.90
+            <FITID>2025102499690
+            <NAME>- 17: 41 241741 PIX RECEBIDO AMCC Telecom Lt **2/0*** 142,90 C 254,53 C AMCC Telecom Lt **2/0*** 142,90 C 254,53 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>299.92
+            <FITID>2025102429992
+            <NAME>- 17: 42: 21 241742 PIX RECEBIDO Amec Construtora E **2/0*** 2.605,84 C 2.860,37 C Amec Construtora E **2/0*** 2.605,84 C 2.860,37 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>1.00
+            <FITID>20251024100
+            <NAME>- 18: 48: 20 241848 DEB PIX CHAVE Weliton Martins Ra  D 1.860,37 C Weliton Martins Ra  D 1.860,37 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>8.50
+            <FITID>20251024850
+            <NAME>- 18: 48: 20 241848 TAR PIX  D 1.851,87 C  D 1.851,87 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>1.00
+            <FITID>20251024100
+            <NAME>- 18: 50: 241850 DEB PIX CHAVE Núbia Lorena Cardo F4%  D 851,87 C Núbia Lorena Cardo F4%  D 851,87 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>8.50
+            <FITID>20251024850
+            <NAME>- 18: 50: 241850 TAR PIX  D 843,37 C  D 843,37 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>995.35
+            <FITID>2025102499535
+            <NAME>- 20: 10: o2 242010 CRED PIX CHAVE Matheus Pires Barr ***,1++* 54,00 C 897,37 € Matheus Pires Barr ***,1++* 54,00 C 897,37 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>0.48
+            <FITID>2025102448
+            <NAME>- 20: 10: o3 242010 TAR PIX D 896,89 C D 896,89 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251024
+            <TRNAMT>0.00
+            <FITID>202510240
+            <NAME>- 00: 0o: oo 000000 SALDO DIA  C 896,89 C  C 896,89 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251023
+            <TRNAMT>34.50
+            <FITID>202510233450
+            <NAME>- 13: 29: 25 231329 CRED PIX CHAVE Milene Barbosa de AAA TAA  C 82,39 C Milene Barbosa de AAA TAA  C 82,39 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251023
+            <TRNAMT>0.30
+            <FITID>2025102330
+            <NAME>- 13: 29: 25 231329 TAR PIX  D 82,09 C  D 82,09 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251023
+            <TRNAMT>15.00
+            <FITID>202510231500
+            <NAME>- 16: 57: 231657 CRED PIX CHAVE Michele Matos Fern  C 97,09 C Michele Matos Fern  C 97,09 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251023
+            <TRNAMT>0.13
+            <FITID>2025102313
+            <NAME>CAIXA - 16:57:39 231657 TAR PIX  D 96,96 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251023
+            <TRNAMT>0.00
+            <FITID>202510230
+            <NAME>- 00: 00o: 00 000000 SALDO DIA   € 96,96 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251022
+            <TRNAMT>785.25
+            <FITID>2025102278525
+            <NAME>- 09: 220907 DEB PIX CHAVE A3 Comunicacao **5/0*** 200,00 D 29,84 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251022
+            <TRNAMT>1.78
+            <FITID>20251022178
+            <NAME>- 09: 07: 220907 TAR PIX   D 28,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251022
+            <TRNAMT>835.38
+            <FITID>2025102283538
+            <NAME>- 19: 25: 221925 CRED PIX CHAVE Cristiane Rosa Da ***,1*+*+* 20,00 C 48,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251022
+            <TRNAMT>0.17
+            <FITID>2025102217
+            <NAME>- 19: 25: 221925 TAR PIX  D 47,89 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251022
+            <TRNAMT>0.00
+            <FITID>202510220
+            <NAME>- 00: 0o: 000000 SALDO DIA   C 47,89 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>150.00
+            <FITID>2025102115000
+            <NAME>- 09: 21: 52 210921 DEB PIX CHAVE Joao Victor Fernan  D 495,88 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>1.33
+            <FITID>20251021133
+            <NAME>- 09: :52 210921 TAR PIX  D 494,55 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>185.00
+            <FITID>2025102118500
+            <NAME>- 09: :o7 210923 DEB PIX CHAVE Jorge Luiz Da Silv *%  D 309,55 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>1.64
+            <FITID>20251021164
+            <NAME>- 09: :o7 210923 TAR PIX   D 307,91 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>876.52
+            <FITID>2025102187652
+            <NAME>- 10: 211011 CRED PIX CHAVE Washington Gomes D ***,1++* 65,00 C 372,91 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>0.57
+            <FITID>2025102156
+            <NAME>- 10: 211011 TAR PIX   D 372,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>500.99
+            <FITID>2025102150099
+            <NAME>- 12: 211254 PIX ENVIADO Valdenir Jose Pire **3/0*** 43,00 D 329,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>543.91
+            <FITID>2025102154391
+            <NAME>- 15: 211502 PIX ENVIADO Carrefour Comercio **5/0**+* 156,90 D 172,44 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>12.90
+            <FITID>202510211290
+            <NAME>- 15: 17 211550 CRED PIX CHAVE Eliane Dos Santos *A  € 185,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>0.11
+            <FITID>2025102111
+            <NAME>- 15: 17 211550 TAR PIX  D 185,23 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>21.00
+            <FITID>202510212100
+            <NAME>- 16: :29 211603 CRED PIX CHAVE Evelyn Monique Ros  C 206,23 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>0.18
+            <FITID>2025102118
+            <NAME>- 16: :29 211603 TAR PIX   D 206,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>24.00
+            <FITID>202510212400
+            <NAME>- 19: 211954 CRED PIX CHAVE Jamilly Rodrigues AAA  C 230,05 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>0.21
+            <FITID>2025102121
+            <NAME>- 19: 54: 211954 TAR PIX   D 229,84 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251021
+            <TRNAMT>0.00
+            <FITID>202510210
+            <NAME>- 00: 0o: 000000 SALDO DIA   C 229,84 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251019
+            <TRNAMT>30.00
+            <FITID>202510193000
+            <NAME>- 19: 59: 191959 CRED PIX CHAVE Velusa Paula Ferre *%  C 138,35 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251019
+            <TRNAMT>0.26
+            <FITID>2025101926
+            <NAME>- 19: 191959 TAR PIX   D 138,09 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>112.21
+            <FITID>2025102011221
+            <NAME>- 10: :54 201050 PIX RECEBIDO M M Investimentos **2/0**+* 50,00 C 188,09 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>742.80
+            <FITID>2025102074280
+            <NAME>- 10: :o9 201054 PIX ENVIADO Dfal Telecom **7/0*** 145,96 D 4213C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>427.10
+            <FITID>2025102042710
+            <NAME>- 11: 14: 42 201114 PIX RECEBIDO Tecnologia Bancari **2/0*** 521,51 € 563,64 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>420.00
+            <FITID>2025102042000
+            <NAME>- 11: 28: 29 201128 DEB PIX CHAVE Luciano Barbosa de XX Q78,A4 20,00 D 543,64 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>0.17
+            <FITID>2025102017
+            <NAME>- 11: 28: 29 201128 TAR PIX  D 543,47 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>606.05
+            <FITID>2025102060604
+            <NAME>- 12: 24: oo 201224 DEB PIX CHAVE João Paulo Marques ***,1++* 15,00 D 528,47 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>0.13
+            <FITID>2025102013
+            <NAME>CAIXA - 12:24: 0oo 201224 TAR PIX D 528,34 C D 528,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>18.00
+            <FITID>202510201800
+            <NAME>- 19:44: 19 201944 CRED PIX CHAVE Alysson Henrique P  C 546,34 C Alysson Henrique P  C 546,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>0.16
+            <FITID>2025102016
+            <NAME>- 19:44: 19 201944 TAR PIX  D 546,18 C  D 546,18 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>68.40
+            <FITID>202510206840
+            <NAME>- 20:08: 55 202008 CRED PIX CHAVE Ingrid Campos Alve FX  C 614,58 C Ingrid Campos Alve FX  C 614,58 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>0.60
+            <FITID>2025102060
+            <NAME>- 20:08: 55 202008 TAR PIX  D 613,98 C  D 613,98 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251020
+            <TRNAMT>0.00
+            <FITID>202510200
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 613,98 C  € 613,98 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>112.21
+            <FITID>2025101711221
+            <NAME>- 09:14: 47 170914 DEB PIX CHAVE Drogacerta **2/0*** 140,00 D 7,80 C Drogacerta **2/0*** 140,00 D 7,80 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>1.24
+            <FITID>20251017124
+            <NAME>- 09:14: 47 170914 TAR PIX  D 6,56 C  D 6,56 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>59.86
+            <FITID>202510175986
+            <NAME>- 09:17: 10 170917 CRED PIX CHAVE Larissa Santana Al ***,1*+*+* 16,00 € 22,56 C Larissa Santana Al ***,1*+*+* 16,00 € 22,56 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>0.14
+            <FITID>2025101714
+            <NAME>- 09:17: 170917 TAR PIX  D 22,42C  D 22,42C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>33.55
+            <FITID>202510173354
+            <NAME>- 09:19: 170919 PIX ENVIADO 99 Tecnologia Ltda **2/0**+* 1221 D 10,21 € 99 Tecnologia Ltda **2/0**+* 1221 D 10,21 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>168.53
+            <FITID>2025101716853
+            <NAME>- 10:01: 20 171001 CRED PIX CHAVE Diones Junio Nogue 1% 28,00 C 38,21 € Diones Junio Nogue 1% 28,00 C 38,21 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>0.24
+            <FITID>2025101724
+            <NAME>- 10:01: 20 171001 TAR PIX  D 37,97 €  D 37,97 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>71.17
+            <FITID>202510177117
+            <NAME>- 11:41: 0oo 171141 CRED PIX CHAVE Willian Fernando A AAA O1 TAA 24,00 C 61,97 C Willian Fernando A AAA O1 TAA 24,00 C 61,97 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>0.21
+            <FITID>2025101721
+            <NAME>- 11:41: 00 171141 TAR PIX D 61,76 C D 61,76 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>47.00
+            <FITID>202510174700
+            <NAME>- 20:47: 172047 CRED PIX CHAVE Gabriella Moreira F$X  C 108,76 C Gabriella Moreira F$X  C 108,76 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>0.41
+            <FITID>2025101741
+            <NAME>- 20:47: 172047 TAR PIX  D 108,35 C  D 108,35 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251017
+            <TRNAMT>0.00
+            <FITID>202510170
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 108,35 C  € 108,35 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251016
+            <TRNAMT>30.00
+            <FITID>202510163000
+            <NAME>- 13:06: 44 161306 CRED PIX CHAVE Amanda Pereira Non F$X  C 148,06 C Amanda Pereira Non F$X  C 148,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251016
+            <TRNAMT>0.26
+            <FITID>2025101626
+            <NAME>- 13:06: 44 161306 TAR PIX  D 147,80 C  D 147,80 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251016
+            <TRNAMT>0.00
+            <FITID>202510160
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 147,80 C  € 147,80 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251015
+            <TRNAMT>416.20
+            <FITID>2025101541620
+            <NAME>- 08:12: 150812 PIX RECEBIDO Igreja Torre Forte **1/0**+* 69,00 C 133,19 € Igreja Torre Forte **1/0**+* 69,00 C 133,19 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251015
+            <TRNAMT>15.00
+            <FITID>202510151500
+            <NAME>- 15:28: 151528 DEB PIX CHAVE Alanna Caroline de  D 118,19 € Alanna Caroline de  D 118,19 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251015
+            <TRNAMT>0.13
+            <FITID>2025101513
+            <NAME>- 15:28: 151528 TAR PIX D 118,06 C D 118,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251015
+            <TRNAMT>0.00
+            <FITID>202510150
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 118,06 C  € 118,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>156.94
+            <FITID>2025101315694
+            <NAME>- 14:23: 35 131423 CRED PIX CHAVE Juliana de Paula R ***,1++* 282,80 C 341,14 Juliana de Paula R ***,1++* 282,80 C 341,14
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>2.51
+            <FITID>20251013250
+            <NAME>- 14:23: 35 131423 TAR PIX D 338,63 C D 338,63 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>330.00
+            <FITID>2025101333000
+            <NAME>- 18:54: 22 131854 DEB PIX CHAVE Lizandra Ramalho D F$  D 8,63 C Lizandra Ramalho D F$  D 8,63 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>2.93
+            <FITID>20251013293
+            <NAME>- 18:54: 131854 TAR PIX D 5,70 € D 5,70 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>22.00
+            <FITID>202510132200
+            <NAME>- 19:28: 131928 CRED PIX CHAVE Jamilly Rodrigues AAA  C 27,70 € Jamilly Rodrigues AAA  C 27,70 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>0.19
+            <FITID>2025101319
+            <NAME>- 19:28: 131928 TAR PIX  D 27,51 €  D 27,51 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>37.00
+            <FITID>202510133700
+            <NAME>CAIXA - 19:44: 55 131944 CRED PIX CHAVE Jamilly Rodrigues AAA  C 64,51 C Jamilly Rodrigues AAA  C 64,51 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>0.32
+            <FITID>2025101332
+            <NAME>- 19:44: 55 131944 TAR PIX  D 64,19 C  D 64,19 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251013
+            <TRNAMT>0.00
+            <FITID>202510130
+            <NAME>- 00:00: oo 000000 SALDO DIA  C 64,19 C  C 64,19 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251010
+            <TRNAMT>16.00
+            <FITID>202510101600
+            <NAME>- 20:25: 43 102025 CRED PIX CHAVE Deane Maria Pereir F*  € 19,48 C Deane Maria Pereir F*  € 19,48 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251010
+            <TRNAMT>0.14
+            <FITID>2025101014
+            <NAME>- 20:25: 43 102025 TAR PIX  D 19,34 €  D 19,34 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251010
+            <TRNAMT>0.00
+            <FITID>202510100
+            <NAME>- 00:00: oo 000000 SALDO DIA  C 58,34 C  C 58,34 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251009
+            <TRNAMT>112.21
+            <FITID>2025100911221
+            <NAME>- 09:14: o9 090914 DEB PIX CHAVE Drogacerta **2/0*** 470,00 D 7,66 C Drogacerta **2/0*** 470,00 D 7,66 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251009
+            <TRNAMT>4.18
+            <FITID>20251009418
+            <NAME>- 09:14: o9 090914 TAR PIX D 3,48 C D 3,48 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251009
+            <TRNAMT>0.00
+            <FITID>202510090
+            <NAME>- 00:00: oo 000000 SALDO DIA  € 3,48 C  € 3,48 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>120.00
+            <FITID>2025100812000
+            <NAME>- 10:07: 081007 DEB PIX CHAVE Lizandra Ramalho D F$X  D 6,53 C Lizandra Ramalho D F$X  D 6,53 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>1.06
+            <FITID>20251008106
+            <NAME>- 10:07: 081007 TAR PIX  D 5,47 €  D 5,47 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>558.60
+            <FITID>2025100855860
+            <NAME>- 10:50: 081050 CRED PIX CHAVE Vinicius Da Silva ***,1*+*+* 165,00 € 170,47 C Vinicius Da Silva ***,1*+*+* 165,00 € 170,47 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>1.46
+            <FITID>20251008146
+            <NAME>- 10:50: 081050 TAR PIX  D 169,01 C  D 169,01 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>137.42
+            <FITID>2025100813741
+            <NAME>- 11:15: 081115 CRED PIX CHAVE Isadora Ferreira L FAA 137, 42188 46,00 C 215,01 € Isadora Ferreira L FAA 137, 42188 46,00 C 215,01 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>0.40
+            <FITID>2025100840
+            <NAME>- 11:15: 081115 TAR PIX  D 214,61 €  D 214,61 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>195.40
+            <FITID>2025100819540
+            <NAME>- 12:05: oo 081205 CRED PIX CHAVE Sebastiao Souza Pi AAA  C 410,01 € Sebastiao Souza Pi AAA  C 410,01 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>1.73
+            <FITID>20251008173
+            <NAME>- 12:05: 0oo 081205 TAR PIX D 408,28 C D 408,28 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>70.00
+            <FITID>202510087000
+            <NAME>- 13:49: 081349 CRED PIX CHAVE Jacqueline Melo Li *  C 478,28 C Jacqueline Melo Li *  C 478,28 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>0.62
+            <FITID>2025100862
+            <NAME>- 13:49: 081349 TAR PIX  D 477,66 C  D 477,66 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251008
+            <TRNAMT>0.00
+            <FITID>202510080
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 477,66 C  € 477,66 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251007
+            <TRNAMT>688.12
+            <FITID>2025100768812
+            <NAME>- 18:56: 29 071856 CRED PIX CHAVE Joelma Soares ***,1*+*+* 54,00 C 97,27 € Joelma Soares ***,1*+*+* 54,00 C 97,27 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251007
+            <TRNAMT>0.48
+            <FITID>2025100748
+            <NAME>- 18:56: 29 071856 TAR PIX D 96,79 C D 96,79 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251007
+            <TRNAMT>30.00
+            <FITID>202510073000
+            <NAME>- 19:33: 49 071933 CRED PIX CHAVE Ana Paula de Faria *%  C 126,79 C Ana Paula de Faria *%  C 126,79 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251007
+            <TRNAMT>0.26
+            <FITID>2025100726
+            <NAME>- 19:33: 49 071933 TAR PIX  D 126,53 C  D 126,53 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251007
+            <TRNAMT>0.00
+            <FITID>202510070
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 126,53 C  € 126,53 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>13.74
+            <FITID>202510051374
+            <NAME>- 08:37: 39 050837 CRED PIX CHAVE Camila Leticia Cha * B1 14,00 C 78,80 C Camila Leticia Cha * B1 14,00 C 78,80 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>0.12
+            <FITID>2025100512
+            <NAME>- 08:37: 39 050837 TAR PIX D 78,68 C D 78,68 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>2.00
+            <FITID>20251005200
+            <NAME>- 08:41: 43 050841 CRED PIX CHAVE Camila Leticia Cha AAA *  C 80,68 C Camila Leticia Cha AAA *  C 80,68 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>0.01
+            <FITID>202510051
+            <NAME>- 08:41: 43 050841 TAR PIX  D 80,67 C  D 80,67 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>25.00
+            <FITID>202510052500
+            <NAME>- 17:07: o6 051707 CRED PIX CHAVE Roger ] V B Bolano  C 105,67 C Roger ] V B Bolano  C 105,67 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>0.22
+            <FITID>2025100522
+            <NAME>CAIXA - 17:07: o7 051707 TAR PIX D 105,45 C D 105,45 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>15.00
+            <FITID>202510051500
+            <NAME>- 19:03: o3 051903 CRED PIX CHAVE Jociane Da Silva M  € 120,45 C Jociane Da Silva M  € 120,45 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>0.13
+            <FITID>2025100513
+            <NAME>- 19:03: o3 051903 TAR PIX D 120,32 € D 120,32 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>940.19
+            <FITID>2025100594019
+            <NAME>- 19:03: 20 051903 CRED PIX CHAVE Adriano Da Silva C F* 3++* 27,00 C 147,32 € Adriano Da Silva C F* 3++* 27,00 C 147,32 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251005
+            <TRNAMT>0.24
+            <FITID>2025100524
+            <NAME>- 19:03: 20 051903 TAR PIX  D 147,08 C  D 147,08 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>130.00
+            <FITID>2025100613000
+            <NAME>- 08:54: o7 060854 DEB PIX CHAVE Lizandra Ramalho D  D 17,08 C Lizandra Ramalho D  D 17,08 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>15.93
+            <FITID>202510061593
+            <NAME>- 08:54: 060854 TAR PIX 115D C 115D C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>829.00
+            <FITID>2025100682900
+            <NAME>- 10:08: 061008 PIX RECEBIDO DADOS CONTA Diego Alexandre Ar FAA 171 1518 29,00 C 44,93 C Diego Alexandre Ar FAA 171 1518 29,00 C 44,93 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>0.25
+            <FITID>2025100625
+            <NAME>- 10:08: 19 061008 TAR PIX D 44,68 C D 44,68 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>803.69
+            <FITID>2025100680369
+            <NAME>- 13:09: 12 061309 CRED PIX CHAVE Monaira Laise do N ***,1*+*+* 16,00 C 60,68 C Monaira Laise do N ***,1*+*+* 16,00 C 60,68 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>0.14
+            <FITID>2025100614
+            <NAME>- 13:09: 12 061309 TAR PIX  D 60,54 C  D 60,54 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>25.00
+            <FITID>202510062500
+            <NAME>- 15:57: 30 061557 CRED PIX CHAVE Edinalva Iziliani *%  C 85,54 C Edinalva Iziliani *%  C 85,54 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>0.22
+            <FITID>2025100622
+            <NAME>- 15:57: 061557 TAR PIX D 85,32 C D 85,32 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>80.00
+            <FITID>202510068000
+            <NAME>- 18:30: 061830 DEB PIX CHAVE Marcelo Waliston d TAA  D 5,32 € Marcelo Waliston d TAA  D 5,32 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>0.71
+            <FITID>2025100671
+            <NAME>- 18:30: 061830 TAR PIX D 4,61C€ D 4,61C€
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>39.00
+            <FITID>202510063900
+            <NAME>- 21:33: 062133 CRED PIX CHAVE Jayne Rosa Da Silv *%  C 43,61 € Jayne Rosa Da Silv *%  C 43,61 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>0.34
+            <FITID>2025100634
+            <NAME>- 21:33: 15 062133 TAR PIX  D 43,27 C  D 43,27 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251006
+            <TRNAMT>0.00
+            <FITID>202510060
+            <NAME>- 00:00: 0oo 000000 SALDO DIA  € 43,27 C  € 43,27 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251003
+            <TRNAMT>886.59
+            <FITID>2025100388659
+            <NAME>- 16:44: 031644 CRED PIX CHAVE Fabia Regina de Br *** 1*** 23,00 C 65,00 C Fabia Regina de Br *** 1*** 23,00 C 65,00 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251003
+            <TRNAMT>0.20
+            <FITID>2025100320
+            <NAME>- 16:44: 031644 TAR PIX  D 64,80 C  D 64,80 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251003
+            <TRNAMT>0.00
+            <FITID>202510030
+            <NAME>- 00:00: 000000 SALDO DIA  € 64,80 C  € 64,80 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>400.00
+            <FITID>2025100240000
+            <NAME>- 06:57: 020657 DEB PIX CHAVE Wolney Gomes Dos S *  D 70,88 C Wolney Gomes Dos S *  D 70,88 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>3.56
+            <FITID>20251002356
+            <NAME>- 06:57: 020657 TAR PIX  D 67,32 €  D 67,32 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>30.00
+            <FITID>202510023000
+            <NAME>- 17:57: 021757 CRED PIX CHAVE Paula Juliette Gor  C 97,32 € Paula Juliette Gor  C 97,32 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>0.26
+            <FITID>2025100226
+            <NAME>- 17:57: 021757 TAR PIX  D 97,06 C  D 97,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>921.06
+            <FITID>2025100292106
+            <NAME>- 18:27: o7 021827 PIX RECEBIDO Exstart Soc Unipes **7/0**+* 33,00 C 130,06 C Exstart Soc Unipes **7/0**+* 33,00 C 130,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>779.75
+            <FITID>2025100277975
+            <NAME>- 19:02: 07 021902 DEB PIX CHAVE Mm Goianesia Produ **1/0**+* 120,00 D 10,06 C Mm Goianesia Produ **1/0**+* 120,00 D 10,06 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>1.06
+            <FITID>20251002106
+            <NAME>- 19:02: o7 021902 TAR PIX  D 9,00 C  D 9,00 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>921.06
+            <FITID>2025100292106
+            <NAME>- 20:24: 22 022024 PIX RECEBIDO Exstart Soc Unipes **7/0**+* 33,00 C 42,00 C Exstart Soc Unipes **7/0**+* 33,00 C 42,00 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251002
+            <TRNAMT>0.00
+            <FITID>202510020
+            <NAME>- 00:00: oo 000000 SALDO DIA  € 42,00 C  € 42,00 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251001
+            <TRNAMT>174.42
+            <FITID>2025100117442
+            <NAME>- 14:30: 011430 CRED PIX CHAVE Lucas Sidiao Macha *A 1 83,00 C 432,95C Lucas Sidiao Macha *A 1 83,00 C 432,95C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251001
+            <TRNAMT>0.73
+            <FITID>2025100173
+            <NAME>CAIXA - 14:30:14 011430 TAR PIX  D 432,22 €
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251001
+            <TRNAMT>39.00
+            <FITID>202510013900
+            <NAME>- 20:17:39 012017 CRED PIX CHAVE Daniel Costa de So  C 471,22C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251001
+            <TRNAMT>0.34
+            <FITID>2025100134
+            <NAME>- 20:17:39 012017 TAR PIX   D 470,88 C
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>OTHER
+            <DTPOSTED>20251001
+            <TRNAMT>0.00
+            <FITID>202510010
+            <NAME>- 00:00:00 000000 SALDO DIA   € 470,88 C
+          </STMTTRN>
+        </BANKTRANLIST>
+      </STMTRS>
+    </STMTTRNRS>
+  </BANKMSGSRSV1>
+</OFX>

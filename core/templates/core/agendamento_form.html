@@ -2,17 +2,17 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
-<div class="container" style="max-width: 600px;">
+<div class="container py-4" style="max-width: 600px;">
     <!-- Cabeçalho -->
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
         <div>
-            <h1 class="h2 mb-2">
+            <h2 class="mb-2 text-success-gradient">
                 {% if form.instance.pk %}
-                    <i class="bi bi-pencil-square text-success me-2"></i>Editar Agendamento
+                    <i class="bi bi-pencil-square me-2"></i>Editar Agendamento
                 {% else %}
-                    <i class="bi bi-plus-circle text-success me-2"></i>Novo Agendamento
+                    <i class="bi bi-plus-circle me-2"></i>Novo Agendamento
                 {% endif %}
-            </h1>
+            </h2>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
                     <li class="breadcrumb-item"><a href="/" class="text-decoration-none">Principal</a></li>

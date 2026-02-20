@@ -7,4 +7,16 @@ lxml
 celery
 redis
 django-crispy-forms
+crispy-bootstrap5
 psycopg2-binary
+pywin32
+Pillow
+python-dotenv
+pypdf
+pdfminer.six
+pytesseract
+pdf2image
+pymupdf
+# The following packages are optional/binary tools and should be installed separately:
+# - Tesseract OCR (system executable)
+# - Poppler utils (pdftoppm, pdftotext)

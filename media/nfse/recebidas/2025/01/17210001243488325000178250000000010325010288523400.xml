@@ -1,0 +1,115 @@
+<?xml version="1.0" encoding="utf-8"?>
+<NFSe xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" versao="1.00" xmlns="http://www.sped.fazenda.gov.br/nfse">
+  <infNFSe Id="NFS17210001243488325000178250000000010325010288523400">
+    <xLocEmi>Palmas</xLocEmi>
+    <xLocPrestacao>Palmas</xLocPrestacao>
+    <nNFSe>2500000000103</nNFSe>
+    <cLocIncid>1721000</cLocIncid>
+    <xLocIncid>Palmas</xLocIncid>
+    <xTribNac>Suporte técnico em informática, inclusive instalação, configuração e manutenção de programas de computação e bancos de dados.</xTribNac>
+    <xTribMun>Suporte técnico em informática, inclusive instalação, configuração e manutenção de programas de computação e bancos de dados.</xTribMun>
+    <verAplic>Abrasf_202</verAplic>
+    <ambGer>1</ambGer>
+    <tpEmis>2</tpEmis>
+    <cStat>100</cStat>
+    <dhProc>2025-01-31T18:11:20-03:00</dhProc>
+    <nDFSe>28852340</nDFSe>
+    <emit>
+      <CNPJ>43488325000178</CNPJ>
+      <IM>2427811</IM>
+      <xNome>L ARAUJO SOLUÇOES TECNOLOGICAS LTDA</xNome>
+      <xFant>CERTPALMAS - CERTIFICAÇAO DIGITAL</xFant>
+      <enderNac>
+        <xLgr>Quadra ACNE 11 Rua NE 11</xLgr>
+        <nro>S/N</nro>
+        <xCpl>CONJ. 03 LOTE 15 SALA 02</xCpl>
+        <xBairro>Plano Diretor Norte</xBairro>
+        <cMun>1721000</cMun>
+        <UF>TO</UF>
+        <CEP>77006030</CEP>
+      </enderNac>
+      <fone>6384640637</fone>
+      <email>CERTPALMASCERTIFICACAODIGITAL@GMAIL.COM</email>
+    </emit>
+    <valores>
+      <vCalcDR>0.00</vCalcDR>
+      <vBC>170.00</vBC>
+      <pAliqAplic>2.00</pAliqAplic>
+      <vISSQN>3.40</vISSQN>
+      <vLiq>170.00</vLiq>
+      <xOutInf>Optante do Simples Nacional. Trib. aprox. R$ 22,86 Federal e R$ 8,50 Municipal. Fonte: IBPT [A2A75B]</xOutInf>
+    </valores>
+    <DPS versao="1.00">
+      <infDPS Id="DPS172100024348832500017802025202500000000103">
+        <tpAmb>1</tpAmb>
+        <dhEmi>2025-01-31T18:11:20-03:00</dhEmi>
+        <verAplic>Abrasf_202</verAplic>
+        <serie>2025</serie>
+        <nDPS>202500000000103</nDPS>
+        <dCompet>2025-01-31</dCompet>
+        <tpEmit>1</tpEmit>
+        <cLocEmi>1721000</cLocEmi>
+        <prest>
+          <CNPJ>43488325000178</CNPJ>
+          <IM>2427811</IM>
+          <xNome>L ARAUJO SOLUÇOES TECNOLOGICAS LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>1721000</cMun>
+              <CEP>77006030</CEP>
+            </endNac>
+            <xLgr>Quadra ACNE 11 Rua NE 11</xLgr>
+            <nro>S/N</nro>
+            <xCpl>CONJ. 03 LOTE 15 SALA 02</xCpl>
+            <xBairro>Plano Diretor Norte</xBairro>
+          </end>
+          <fone>6384640637</fone>
+          <email>CERTPALMASCERTIFICACAODIGITAL@GMAIL.COM</email>
+          <regTrib>
+            <opSimpNac>3</opSimpNac>
+            <regEspTrib>0</regEspTrib>
+          </regTrib>
+        </prest>
+        <toma>
+          <CNPJ>59198899000141</CNPJ>
+          <xNome>J A PRESTACAO DE SERVICOS LTDA</xNome>
+          <end>
+            <endNac>
+              <cMun>2602100</cMun>
+              <CEP>55330000</CEP>
+            </endNac>
+            <xLgr>TV SAO SEBASTIAO</xLgr>
+            <nro>07</nro>
+            <xBairro>CENTRO</xBairro>
+          </end>
+          <fone>87981578920</fone>
+          <email>jannyellycordeiroo@gmail.com</email>
+        </toma>
+        <serv>
+          <locPrest>
+            <cLocPrestacao>1721000</cLocPrestacao>
+          </locPrest>
+          <cServ>
+            <cTribNac>010700</cTribNac>
+            <xDescServ>CERTIFICADO DIGITAL PJA1</xDescServ>
+          </cServ>
+        </serv>
+        <valores>
+          <vServPrest>
+            <vServ>170.00</vServ>
+          </vServPrest>
+          <trib>
+            <tribMun>
+              <tribISSQN>1</tribISSQN>
+              <pAliq>2.00</pAliq>
+              <tpRetISSQN>1</tpRetISSQN>
+            </tribMun>
+            <totTrib>
+              <indTotTrib>0</indTotTrib>
+            </totTrib>
+          </trib>
+        </valores>
+      </infDPS>
+    </DPS>
+  </infNFSe>
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1" /><Reference URI="#NFS17210001243488325000178250000000010325010288523400"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature" /><Transform Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315" /></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1" /><DigestValue>fL+WCh7WVgXPifEIN+x9AJKPVhE=</DigestValue></Reference></SignedInfo><SignatureValue>HNCwjxjgbEeL5nNpIfia2ZWCVxUix1Qb/tycanC0lcEHD6T9eOHwRcqGBmW39enIygKs/PsBdpwx9ERTMpTZLo72RtzZsGiRUFdC92U/CtUe8e63JMr6nCfzpL/gKM8LijSYXNpawPM/vCFQhSJ9r20vyfJYIBk7dKs9QAK2jmjKjopRIBceheX4CavB+sjw7b+sVL9qCeh7VY8LsK2NHaAriqpOtz1UrOoDJRbHQkMsMzGsX6NDOc6A3THOOvuPwJX0rq75feOW5WcYQv+LwoA3r4L6f4KEQDxm3BFhArVERz4vmspezirNhlSbHBKL2w6bAom0iFsOrYZXxcQRtg==</SignatureValue><KeyInfo><X509Data><X509Certificate>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</X509Certificate></X509Data></KeyInfo></Signature></NFSe>
