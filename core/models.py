@@ -193,6 +193,27 @@ class ArquivoConversao(models.Model):
     
     class Meta:
         ordering = ['-data_criacao']
+
+
+class LayoutBancario(models.Model):
+    """Layouts aprendidos de extratos bancários por banco.
+    Usado pelo conversor para gerar PDFs com aparência semelhante ao original.
+    """
+    nome = models.CharField(max_length=100, unique=True)
+    identificadores = models.TextField(blank=True, help_text='Palavras-chave separadas por vírgula para detectar o banco no texto do PDF/OFX')
+    template_html = models.TextField(blank=True, help_text='HTML usado como template para gerar o PDF a partir do OFX')
+    exemplo_pdf = models.FileField(upload_to='conversor/layout_examples/', blank=True, null=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    ativo = models.BooleanField(default=True)
+
+    def __str__(self):
+        return self.nome
+
+    class Meta:
+        verbose_name = 'Layout Bancário'
+        verbose_name_plural = 'Layouts Bancários'
+
+
 class NotaFiscal(models.Model):
     TIPO_CHOICES = [
         ('entrada', 'Entrada'),

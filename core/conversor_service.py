@@ -141,6 +141,15 @@ class ConversorService:
             # Gerar OFX
             sucesso = cls._gerar_ofx(transacoes, ofx_path)
             if sucesso:
+                # DATALEARN: detectar banco e treinar layout a partir do PDF original
+                try:
+                    banco_detectado = cls._detectar_banco_por_texto(texto)
+                    if banco_detectado:
+                        cls._treinar_layout_banco(pdf_path, texto, banco_detectado, transacoes=transacoes)
+                except Exception:
+                    # não interromper a conversão se o treinamento falhar
+                    pass
+
                 return ofx_path, None
             else:
                 return None, "Erro ao gerar arquivo OFX"
@@ -317,7 +326,156 @@ class ConversorService:
             
         except Exception:
             return False
-    
+
+    # ------------------------------------------
+    # DATALEARN: detectar/armazenar layout bancário
+    # ------------------------------------------
+    @classmethod
+    def _detectar_banco_por_texto(cls, texto):
+        """Tenta identificar o banco a partir do texto do PDF/OFX (heurística simples)."""
+        if not texto:
+            return None
+        txt = texto.lower()
+        mapeamento = {
+            'banco do brasil': 'Banco do Brasil',
+            'bancodobrasil': 'Banco do Brasil',
+            'bb ': 'Banco do Brasil',
+            'itaú': 'Itaú',
+            'itau': 'Itaú',
+            'bradesco': 'Bradesco',
+            'santander': 'Santander',
+            'caixa': 'Caixa Econômica Federal',
+            'nubank': 'Nubank',
+            'next': 'Next',
+            'banrisul': 'Banrisul'
+        }
+        for k, nome in mapeamento.items():
+            if k in txt:
+                return nome
+        return None
+
+    @classmethod
+    def _treinar_layout_banco(cls, pdf_path, texto, banco_nome, transacoes=None):
+        """Armazena um template HTML simplificado baseado no PDF original.
+        - salva exemplo_pdf
+        - salva template_html com placeholders ({{transactions_rows}})
+        Esse template será usado para gerar PDFs semelhantes a partir de OFX.
+        """
+        try:
+            from django.core.files import File
+            from .models import LayoutBancario
+
+            # Extrair linhas de cabeçalho do PDF (texto recebido pelo extrator)
+            linhas = [l.strip() for l in (texto or '').splitlines() if l.strip()]
+            header_lines = linhas[:8]
+            header_html = '<br>'.join(header_lines)
+
+            # Template HTML básico que tenta espelhar o layout: cabeçalho + tabela de transações
+            template_html = f"""<!doctype html>
+<html>
+<head>
+<meta charset=\"utf-8\"> 
+<style>
+body {{ font-family: Arial, Helvetica, sans-serif; color:#222; margin:20px; }}
+.header {{ text-align:left; margin-bottom:12px; }}
+.header .bank {{ font-weight:700; font-size:18px; color:#1a73e8; }}
+.table-trans {{ width:100%; border-collapse:collapse; margin-top:12px; }}
+.table-trans th, .table-trans td {{ border:1px solid #ddd; padding:6px 8px; font-size:12px; }}
+.table-trans th {{ background:#f7f7f7; text-align:left; }}
+.footer {{ margin-top:16px; font-size:11px; color:#666; }}
+</style>
+</head>
+<body>
+  <div class=\"header\"> 
+    <div class=\"bank\">{banco_nome}</div>
+    <div class=\"meta\">{header_html}</div>
+  </div>
+
+  <table class=\"table-trans\">
+    <thead>
+      <tr><th>Data</th><th>Descrição</th><th class=\"text-end\">Valor (R$)</th></tr>
+    </thead>
+    <tbody>
+      {{transactions_rows}}
+    </tbody>
+  </table>
+
+  <div class=\"footer\">Documento gerado pelo conversor - modelo aprendido ({banco_nome})</div>
+</body>
+</html>"""
+
+            # Salvar ou atualizar o registro
+            layout = LayoutBancario.objects.filter(nome__iexact=banco_nome).first()
+            if not layout:
+                layout = LayoutBancario(nome=banco_nome)
+
+            # atualizar identificadores (merge simples)
+            ids_txt = set([s.strip() for s in (layout.identificadores or '').split(',') if s.strip()])
+            # adiciona algumas palavras-chaves conhecidas a partir do nome
+            ids_txt.update([p.strip() for p in (banco_nome or '').split() if p.strip()])
+            layout.identificadores = ','.join(sorted(ids_txt))
+            layout.template_html = template_html
+
+            # salvar exemplo_pdf (substitui se já existir)
+            try:
+                with open(pdf_path, 'rb') as f:
+                    django_file = File(f)
+                    layout.exemplo_pdf.save(f"exemplo_{layout.nome.lower().replace(' ', '_')}.pdf", django_file, save=False)
+            except Exception:
+                # se falhar ao salvar arquivo, continua apenas com template
+                pass
+
+            layout.ativo = True
+            layout.save()
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def _parse_ofx(cls, ofx_content):
+        """Extrai transações simples de um conteúdo OFX/string."""
+        transacoes = []
+        try:
+            # Encontrar blocos <STMTTRN>...</STMTTRN>
+            blocos = re.findall(r'<STMTTRN>(.*?)</STMTTRN>', ofx_content, flags=re.S | re.I)
+            for bloco in blocos:
+                dt = re.search(r'<DTPOSTED>(\d+)', bloco, flags=re.I)
+                amt = re.search(r'<TRNAMT>([-\d.,]+)', bloco, flags=re.I)
+                nome = re.search(r'<NAME>([^<\n]+)', bloco, flags=re.I)
+
+                data_str = dt.group(1)[:8] if dt else None
+                data_fmt = None
+                if data_str:
+                    try:
+                        data_fmt = datetime.strptime(data_str, '%Y%m%d').strftime('%d/%m/%Y')
+                    except:
+                        data_fmt = data_str
+
+                valor = None
+                if amt:
+                    valor_txt = amt.group(1).replace(',', '.')
+                    try:
+                        valor = float(valor_txt)
+                    except:
+                        valor = 0.0
+
+                descricao = nome.group(1).strip() if nome else ''
+
+                if data_fmt and valor is not None:
+                    transacoes.append({'data': data_fmt, 'valor': valor, 'descricao': descricao})
+        except Exception:
+            pass
+        return transacoes
+
+    @classmethod
+    def _render_transactions_table(cls, transacoes):
+        """Retorna HTML com linhas de transações (cadeia para injeção no template)."""
+        rows = []
+        for t in transacoes:
+            valor_fmt = f"{t['valor']:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+            rows.append(f"<tr><td>{t['data']}</td><td>{t['descricao']}</td><td style=\"text-align:right\">{valor_fmt}</td></tr>")
+        return '\n'.join(rows)
+
     @classmethod
     def _converter_pdf_para_txt(cls, pdf_path, txt_path):
         """Converte PDF para TXT"""
@@ -334,26 +492,51 @@ class ConversorService:
     
     @classmethod
     def _converter_ofx_para_pdf(cls, ofx_path, pdf_path):
-        """Converte OFX para PDF (representação simples)"""
+        """Converte OFX para PDF.
+        Se houver um layout aprendido para o banco presente no OFX, gera o PDF usando esse template;
+        caso contrário, gera uma representação genérica (fallback).
+        """
         try:
-            # Ler OFX
             with open(ofx_path, 'r', encoding='utf-8') as f:
                 conteudo = f.read()
-            
-            # HTML simples
+
+            # Tenta parsear transações e detectar banco
+            transacoes = cls._parse_ofx(conteudo)
+            banco_detectado = cls._detectar_banco_por_texto(conteudo)
+
+            layout = None
+            if banco_detectado:
+                try:
+                    from .models import LayoutBancario
+                    layout = LayoutBancario.objects.filter(nome__iexact=banco_detectado, ativo=True).first()
+                except Exception:
+                    layout = None
+
+            if layout and layout.template_html:
+                # Preenche o template aprendido
+                html = layout.template_html
+                rows = cls._render_transactions_table(transacoes or [])
+                html = html.replace('{{transactions_rows}}', rows)
+                html = html.replace('{{bank_name}}', layout.nome)
+
+                html_path = pdf_path.replace('.pdf', '.html')
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(html)
+
+                return cls._converter_com_libreoffice(html_path, pdf_path, 'pdf')
+
+            # Fallback genérico (exibe o OFX bruto)
             html = f"""<!DOCTYPE html>
 <html>
-<head><meta charset="UTF-8"><title>OFX Convertido</title></head>
+<head><meta charset=\"UTF-8\"><title>OFX Convertido</title></head>
 <body><pre>{conteudo}</pre></body>
 </html>"""
-            
             html_path = pdf_path.replace('.pdf', '.html')
             with open(html_path, 'w', encoding='utf-8') as f:
                 f.write(html)
-            
-            # Converter HTML para PDF (via LibreOffice)
+
             return cls._converter_com_libreoffice(html_path, pdf_path, 'pdf')
-            
+
         except Exception as e:
             return None, str(e)
     

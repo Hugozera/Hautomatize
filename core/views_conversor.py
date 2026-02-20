@@ -39,39 +39,56 @@ def upload_arquivo(request):
     """Upload de arquivo para conversão"""
     if request.method != 'POST':
         return JsonResponse({'erro': 'Método não permitido'}, status=405)
-    
+
     arquivo = request.FILES.get('arquivo')
     formato_destino = request.POST.get('formato_destino')
-    
+
     if not arquivo or not formato_destino:
         return JsonResponse({'erro': 'Arquivo e formato destino são obrigatórios'}, status=400)
-    
+
     # Validar tamanho (limite de 50MB)
     if arquivo.size > 50 * 1024 * 1024:
         return JsonResponse({'erro': 'Arquivo muito grande. Limite: 50MB'}, status=400)
-    
+
     # Determinar formato de origem
     nome_arquivo = arquivo.name
     formato_origem = os.path.splitext(nome_arquivo)[1].lower().replace('.', '')
-    
-    # Criar registro no banco
-    conversao = ArquivoConversao(
-        usuario=request.user.pessoa if hasattr(request.user, 'pessoa') else None,
-        nome_original=nome_arquivo,
-        formato_origem=formato_origem,
-        formato_destino=formato_destino,
-        tamanho_original=arquivo.size,
-        status='pendente'
-    )
-    
-    # Salvar arquivo original
-    conversao.arquivo_original.save(arquivo.name, arquivo, save=True)
-    
-    return JsonResponse({
-        'id': conversao.id,
-        'status': 'pendente',
-        'mensagem': 'Arquivo recebido com sucesso'
-    })
+
+    # Validar se o formato_destino é aceito para o formato de origem
+    formatos_validos = get_formatos_destino(formato_origem)
+    if formato_destino not in formatos_validos:
+        return JsonResponse({'erro': f'Formato destino inválido para {formato_origem}'}, status=400)
+
+    try:
+        # Criar registro no banco (salva primeiro para garantir PK antes de gravar arquivo)
+        conversao = ArquivoConversao(
+            usuario=request.user.pessoa if hasattr(request.user, 'pessoa') else None,
+            nome_original=nome_arquivo,
+            formato_origem=formato_origem,
+            formato_destino=formato_destino,
+            tamanho_original=arquivo.size,
+            status='pendente'
+        )
+        conversao.save()
+
+        # Salvar arquivo original
+        conversao.arquivo_original.save(arquivo.name, arquivo, save=True)
+
+        return JsonResponse({
+            'id': conversao.id,
+            'status': 'pendente',
+            'mensagem': 'Arquivo recebido com sucesso'
+        })
+
+    except Exception as e:
+        # Tentativa de cleanup em caso de falha parcial
+        try:
+            if 'conversao' in locals() and conversao.pk:
+                conversao.arquivo_original.delete(save=False)
+                conversao.delete()
+        except:
+            pass
+        return JsonResponse({'erro': str(e)}, status=500)
 
 
 @login_required

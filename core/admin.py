@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Pessoa, Empresa, Agendamento, HistoricoDownload, NotaFiscal
+from .models import Pessoa, Empresa, Agendamento, HistoricoDownload, NotaFiscal, LayoutBancario
 
 @admin.register(Pessoa)
 class PessoaAdmin(admin.ModelAdmin):
@@ -27,3 +27,10 @@ class NotaFiscalAdmin(admin.ModelAdmin):
     list_display = ("empresa", "numero", "chave_acesso", "data_emissao", "valor", "tipo", "data_download")
     search_fields = ("numero", "chave_acesso")
     list_filter = ("tipo",)
+
+
+@admin.register(LayoutBancario)
+class LayoutBancarioAdmin(admin.ModelAdmin):
+    list_display = ("nome", "ativo", "criado_em")
+    search_fields = ("nome", "identificadores")
+    readonly_fields = ("criado_em",)
