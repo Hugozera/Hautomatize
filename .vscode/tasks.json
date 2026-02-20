@@ -12,6 +12,83 @@
 			"type": "shell",
 			"command": "C:/Python314/python.exe -m django startproject nfse_downloader .",
 			"group": "build"
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "python manage.py test core.tests.test_certificados -q",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run Django tests",
+			"type": "shell",
+			"command": "python manage.py test core.tests.test_certificados",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Run pytest for certificate tests",
+			"type": "shell",
+			"command": "python -m pytest core/tests/test_certificados.py -q",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check pages",
+			"type": "shell",
+			"command": "python manage.py check_pages",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check pages",
+			"type": "shell",
+			"command": "python manage.py check_pages",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check pages",
+			"type": "shell",
+			"command": "python manage.py check_pages",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check pages",
+			"type": "shell",
+			"command": "python manage.py check_pages",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Makemigrations core",
+			"type": "shell",
+			"command": "python manage.py makemigrations core --noinput",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Migrate DB",
+			"type": "shell",
+			"command": "python manage.py migrate --noinput",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Check pages",
+			"type": "shell",
+			"command": "python manage.py check_pages",
+			"isBackground": false,
+			"problemMatcher": []
+		},
+		{
+			"label": "Grant full permissions to user",
+			"type": "shell",
+			"command": "python manage.py grant_all_permissions",
+			"isBackground": false,
+			"problemMatcher": []
 		}
 	]
 }

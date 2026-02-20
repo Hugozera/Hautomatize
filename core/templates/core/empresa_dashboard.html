@@ -1,0 +1,95 @@
+{% extends 'core/base.html' %}
+
+{% block content %}
+<div class="container-fluid px-0">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h1 class="h2 mb-2"><i class="bi bi-bar-chart text-success me-2"></i>Dashboard — {{ empresa.nome_fantasia }}</h1>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="/">Principal</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'empresa_list' %}">Empresas</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Dashboard</li>
+        </ol>
+      </nav>
+    </div>
+    <div>
+      <a href="{% url 'empresa_edit' empresa.pk %}" class="btn btn-outline-success">Editar Empresa</a>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-4">
+      <div class="card p-3">
+        <h6 class="text-muted">Total de Notas</h6>
+        <h3>{{ total_notas }}</h3>
+        <small class="text-muted">Valor total: R$ {{ total_valor|floatformat:2 }}</small>
+      </div>
+    </div>
+    <div class="col-md-8">
+      <div class="card p-3">
+        <h6 class="text-muted">Últimas notas</h6>
+        <div class="list-group mt-2">
+          {% for n in recentes %}
+            <div class="list-group-item d-flex justify-content-between align-items-center">
+              <div>
+                <strong>{{ n.numero }}</strong> — <small>{{ n.data_emissao|date:'d/m/Y' }}</small>
+                <div><small class="text-muted">{{ n.tomador_nome }}</small></div>
+              </div>
+              <div class="text-end">
+                <div>R$ {{ n.valor|floatformat:2 }}</div>
+                {% if n.arquivo_pdf %}
+                <a href="{{ n.arquivo_pdf.url }}" class="btn btn-sm btn-success mt-1" download>Baixar PDF</a>
+                {% endif %}
+                {% if n.arquivo_xml %}
+                <a href="{{ n.arquivo_xml.url }}" class="btn btn-sm btn-outline-secondary mt-1" download>XML</a>
+                {% endif %}
+              </div>
+            </div>
+          {% empty %}
+            <div class="list-group-item text-center text-muted">Nenhuma nota encontrada</div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h6>Top Fornecedores</h6>
+        <ul class="list-group list-group-flush mt-2">
+          {% for t in top_fornecedores %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">{{ t.tomador_nome|default:'(sem nome)' }}
+              <span class="badge bg-success">{{ t.total }}</span>
+            </li>
+          {% empty %}
+            <li class="list-group-item text-muted">Sem dados</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h6>Receita por mês (últimos 12)</h6>
+        <div class="mt-2">
+          <table class="table table-sm mb-0">
+            <thead><tr><th>Mês</th><th>Qtd</th><th>Soma</th></tr></thead>
+            <tbody>
+              {% for m in meses %}
+                <tr>
+                  <td>{{ m.mes|date:'M/Y' }}</td>
+                  <td>{{ m.qtd }}</td>
+                  <td>R$ {{ m.soma|floatformat:2 }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="3" class="text-muted">Sem dados</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

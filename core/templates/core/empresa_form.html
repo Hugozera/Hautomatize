@@ -252,8 +252,34 @@
                         <a href="{{ form.instance.certificado_arquivo.url }}" target="_blank">{{ form.instance.certificado_arquivo.name }}</a>
                     </small>
                     {% endif %}
+
+                    <div class="mt-3 d-flex gap-2">
+                        <button type="button" id="btnRemoveCert" class="btn btn-sm btn-outline-danger">Remover certificado</button>
+                        <small class="text-muted align-self-center">Remover apagará o arquivo e os metadados do certificado.</small>
+                    </div>
                 </div>
                 {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    const btnRemove = document.getElementById('btnRemoveCert');
+    if (btnRemove) {
+        btnRemove.addEventListener('click', function(){
+            if (!confirm('Confirma remoção do certificado desta empresa?')) return;
+            const empresaId = '{{ form.instance.pk }}';
+            fetch(`/empresas/${empresaId}/remover-certificado/`, {
+                method: 'POST',
+                headers: { 'X-CSRFToken': '{{ csrf_token }}' }
+            })
+            .then(r => r.json())
+            .then(j => {
+                if (j.status === 'OK') location.reload(); else alert(j.msg || 'Erro ao remover certificado.');
+            })
+            .catch(err => { alert('Erro ao remover certificado.'); });
+        });
+    }
+});
+</script>
                 
                 <!-- Botões -->
                 <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
@@ -287,10 +313,9 @@ function buscarCNPJ() {
         return;
     }
     
-    const btn = event.target;
-    const originalText = btn.innerHTML;
-    btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Buscando...';
-    btn.disabled = true;
+    const btn = event && event.target ? event.target : document.querySelector('button[onclick="buscarCNPJ()"]');
+    const originalText = btn ? btn.innerHTML : null;
+    if (btn) { btn.innerHTML = '<i class="bi bi-hourglass-split"></i> Buscando...'; btn.disabled = true; }
     
     fetch('{% url "buscar_cnpj" %}', {
         method: 'POST',
@@ -315,6 +340,12 @@ function buscarCNPJ() {
             document.getElementById('id_uf').value = data.uf || '';
             
             showNotification('Dados do CNPJ carregados com sucesso!', 'success');
+
+            // Se o CNPJ trouxe CEP, dispara preenchimento do endereço via API interna
+            const cepVal = (data.cep || '').replace(/\D/g, '');
+            if (cepVal.length === 8) {
+                buscarCEPviaAPI(cepVal);
+            }
         } else {
             alert('CNPJ não encontrado ou erro na consulta.');
         }
@@ -324,39 +355,56 @@ function buscarCNPJ() {
         alert('Erro ao consultar CNPJ. Tente novamente.');
     })
     .finally(() => {
-        btn.innerHTML = originalText;
-        btn.disabled = false;
+        if (btn) { btn.innerHTML = originalText; btn.disabled = false; }
     });
 }
 
-// Função para buscar CEP
-function buscarCEP() {
-    const cep = document.getElementById('id_cep').value.replace(/\D/g, '');
-    
-    if (cep.length !== 8) {
-        alert('CEP inválido! Digite um CEP com 8 dígitos.');
-        return;
-    }
-    
-    fetch(`https://viacep.com.br/ws/${cep}/json/`)
+// Função para buscar CEP via API do servidor (proxy)
+function buscarCEPviaAPI(cep) {
+    const cepVal = cep || document.getElementById('id_cep').value.replace(/\D/g, '');
+    if (!cepVal || cepVal.length !== 8) return;
+
+    fetch('{% url "api_cep" %}?cep=' + cepVal)
         .then(response => response.json())
         .then(data => {
-            if (!data.erro) {
-                document.getElementById('id_logradouro').value = data.logradouro || '';
-                document.getElementById('id_bairro').value = data.bairro || '';
-                document.getElementById('id_municipio').value = data.localidade || '';
-                document.getElementById('id_uf').value = data.uf || '';
-                document.getElementById('id_complemento').value = data.complemento || '';
-                
-                showNotification('Endereço carregado com sucesso!', 'success');
+            if (data.status === 'OK') {
+                const d = data.cep;
+                document.getElementById('id_logradouro').value = d.logradouro || '';
+                document.getElementById('id_bairro').value = d.bairro || '';
+                document.getElementById('id_municipio').value = d.localidade || d.municipio || '';
+                document.getElementById('id_uf').value = d.uf || '';
+                document.getElementById('id_complemento').value = d.complemento || '';
+                showNotification('Endereço carregado via API!', 'success');
             } else {
-                alert('CEP não encontrado.');
+                // fallback: tentar viaCEP público
+                fetch(`https://viacep.com.br/ws/${cepVal}/json/`)
+                    .then(r=>r.json()).then(d=>{ if (!d.erro) { document.getElementById('id_logradouro').value = d.logradouro || ''; document.getElementById('id_bairro').value = d.bairro || ''; document.getElementById('id_municipio').value = d.localidade || ''; document.getElementById('id_uf').value = d.uf || ''; showNotification('Endereço carregado via ViaCEP (fallback).', 'success'); } });
             }
         })
-        .catch(error => {
-            console.error('Erro:', error);
-            alert('Erro ao consultar CEP.');
+        .catch(err => {
+            // fallback público
+            fetch(`https://viacep.com.br/ws/${cepVal}/json/`)
+                .then(r=>r.json()).then(d=>{ if (!d.erro) { document.getElementById('id_logradouro').value = d.logradouro || ''; document.getElementById('id_bairro').value = d.bairro || ''; document.getElementById('id_municipio').value = d.localidade || ''; document.getElementById('id_uf').value = d.uf || ''; showNotification('Endereço carregado via ViaCEP (fallback).', 'success'); } });
         });
+}
+
+// Auto-trigger buscarCNPJ on blur when CNPJ is complete
+document.addEventListener('DOMContentLoaded', function(){
+    const cnpjInput = document.getElementById('id_cnpj');
+    const cepInput = document.getElementById('id_cep');
+    if (cnpjInput) {
+        cnpjInput.addEventListener('blur', function(){
+            const v = this.value.replace(/\D/g, '');
+            if (v.length === 14) buscarCNPJ();
+        });
+    }
+    if (cepInput) {
+        cepInput.addEventListener('blur', function(){
+            const v = this.value.replace(/\D/g, '');
+            if (v.length === 8) buscarCEPviaAPI(v);
+        });
+    }
+});
 }
 
 // Função para extrair dados do certificado

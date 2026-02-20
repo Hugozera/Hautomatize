@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
-from .models import Pessoa, Empresa, Agendamento
+import os
+from .models import Pessoa, Empresa, Agendamento, Role
 
 class PessoaForm(forms.ModelForm):
     username = forms.CharField(max_length=150, required=True, label='Usuário')
@@ -27,6 +28,20 @@ class PessoaForm(forms.ModelForm):
             self.fields['password'].required = True
             self.fields['password_confirm'].required = True
 
+    def clean_username(self):
+        username = self.cleaned_data.get('username')
+        if not username:
+            return username
+        from django.contrib.auth.models import User
+        # Se for edição, ignore o próprio usuário
+        if self.instance and self.instance.pk and getattr(self.instance, 'user', None):
+            if User.objects.filter(username=username).exclude(pk=self.instance.user.pk).exists():
+                raise forms.ValidationError('Nome de usuário já em uso.')
+        else:
+            if User.objects.filter(username=username).exists():
+                raise forms.ValidationError('Nome de usuário já em uso.')
+        return username
+
     def clean(self):
         cleaned = super().clean()
         password = cleaned.get('password')
@@ -43,6 +58,18 @@ class PessoaForm(forms.ModelForm):
             pass
         
         return cleaned
+
+    def clean_foto(self):
+        foto = self.cleaned_data.get('foto')
+        if foto:
+            # Limite 2 MB
+            if getattr(foto, 'size', 0) > 2 * 1024 * 1024:
+                raise forms.ValidationError('Foto muito grande. Tamanho máximo: 2 MB.')
+            # Extensões permitidas
+            ext = os.path.splitext(foto.name)[1].lower()
+            if ext not in ['.jpg', '.jpeg', '.png', '.webp']:
+                raise forms.ValidationError('Formatos permitidos: JPG, PNG, WEBP.')
+        return foto
 
     def save(self, commit=True):
         pessoa = super().save(commit=False)
@@ -121,3 +148,17 @@ class AgendamentoForm(forms.ModelForm):
         self.fields['ativo'].widget.attrs['class'] = 'form-check-input'
         self.fields['notificar_email'].widget.attrs['class'] = 'form-check-input'
         self.fields['compactar_auto'].widget.attrs['class'] = 'form-check-input'
+
+
+class RoleForm(forms.ModelForm):
+    class Meta:
+        model = Role
+        fields = ['name', 'codename', 'descricao', 'permissions', 'pessoas', 'ativo']
+        widgets = {
+            'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'permissions': forms.Textarea(attrs={'rows': 2, 'class': 'form-control', 'placeholder': 'empresa.edit,certificado.manage'}),
+            'pessoas': forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}),
+            'name': forms.TextInput(attrs={'class': 'form-control'}),
+            'codename': forms.TextInput(attrs={'class': 'form-control'}),
+            'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        }

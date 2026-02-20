@@ -52,6 +52,10 @@
                                 <button type="button" class="btn btn-sm btn-outline-primary btn-salvar-cert" data-thumbprint="{{ cert.thumbprint }}">
                                     <i class="bi bi-download"></i> Salvar
                                 </button>
+
+                                <button type="button" class="btn btn-sm btn-info btn-owner ms-2" data-thumbprint="{{ cert.thumbprint }}" title="Ver empresa dona">
+                                    <i class="bi bi-person-badge"></i>
+                                </button>
                             </td>
                         </tr>
                         {% empty %}
@@ -113,6 +117,29 @@
     });
   });
 
+  document.querySelectorAll('.btn-owner').forEach(btn => {
+    btn.addEventListener('click', e => {
+      const thumb = btn.getAttribute('data-thumbprint');
+      fetch(`{% url 'certificado_info' %}?thumbprint=${encodeURIComponent(thumb)}`)
+        .then(r => r.json())
+        .then(j => {
+          let html = '';
+          if (j.empresas && j.empresas.length) {
+            html = '<ul class="list-group">' + j.empresas.map(emp => `\n  <li class="list-group-item d-flex justify-content-between align-items-center">${emp.nome} <span class="badge bg-secondary">${emp.cnpj}</span></li>`).join('') + '\n</ul>';
+          } else {
+            html = '<div class="alert alert-light">Nenhuma empresa vinculada a este certificado.</div>';
+          }
+          // Reutiliza modalSalvarCert para exibir informação (modo leitura)
+          const modalBody = document.querySelector('#modalSalvarCert .modal-body');
+          modalBody.innerHTML = `<div class="mb-2"><strong>Empresas encontradas:</strong></div>${html}`;
+          const modalFooter = document.querySelector('#modalSalvarCert .modal-footer');
+          modalFooter.style.display = 'none';
+          const modal = new bootstrap.Modal(document.getElementById('modalSalvarCert'));
+          modal.show();
+        });
+    });
+  });
+
   document.getElementById('modalSalvarBtn').addEventListener('click', () => {
     const thumb = document.getElementById('modal_thumbprint').value;
     const empresaId = document.getElementById('modal_empresa').value;
@@ -152,4 +179,4 @@
 })();
 </script>
 {% endblock %}
-"@ | Set-Content -Path "certificado_list.html" -Encoding UTF8
+{% endblock %}

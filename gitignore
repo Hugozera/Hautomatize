@@ -1,0 +1,116 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
+poetry.lock
+Pipfile.lock
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+media/
+staticfiles/
+static/
+*.pot
+*.pyc
+__pycache__/
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Media files - TUDO que for enviado pelo usuário
+/media/
+/media/nfse/
+/media/certificados/
+/media/fotos/
+/media/zips/
+/media/conversor/
+!media/.gitkeep
+
+# Banco de dados
+*.sqlite3
+*.db
+*.sql
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Cache
+.cache/
+*.cache
+*.pid
+*.seed
+*.pid.lock
+
+# Testes
+.coverage
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# Pacotes
+*.egg
+*.egg-info/
+dist/
+build/
+*.whl
+*.tar.gz
+*.zip
+!/media/zips/*.zip
+/media/zips/*.zip
+
+# Projeto específico
+media/nfse/**/*.pdf
+media/nfse/**/*.xml
+media/nfse/**/*.raw
+media/nfse/**/*.html
+media/nfse/**/*.png
+media/nfse/**/*.jpg
+media/zips/*.zip
+media/certificados/*.pfx
+media/certificados/*.pem
+media/fotos/*
+
+# Debug files
+debug_*.html
+debug_*.png
+*.raw
+*.vazio
+erro_*.png
+erro_*.html
+pagina_*.png
+
+# Ignorar TODOS os pycache
+**/__pycache__/
+**/*.pyc
+
+# Ignorar TODOS os arquivos de migração (exceto __init__)
+**/migrations/*.py
+!**/migrations/__init__.py
+
+# Templates específicos
+core/templates/core/conversor/debug_*.html

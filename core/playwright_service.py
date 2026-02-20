@@ -131,8 +131,13 @@ class EmissorNacionalPlaywright:
     def fazer_login(self):
         try:
             self.page.goto(f"{self.base_url}/EmissorNacional/Dashboard", timeout=15000)
-            if "Dashboard" in self.page.url:
-                return True
+            self.page.wait_for_load_state("networkidle")
+            # Verifica presença de elemento que só existe quando autenticado
+            try:
+                if self.page.locator("a[href*='/Notas/']").count() > 0:
+                    return True
+            except:
+                pass
         except:
             pass
 
@@ -156,9 +161,19 @@ class EmissorNacionalPlaywright:
 
         for _ in range(20):
             time.sleep(0.5)
-            if "Dashboard" in self.page.url:
-                self.salvar_cookies()
-                return True
+            try:
+                current_url = self.page.url
+            except:
+                current_url = ''
+
+            if "Dashboard" in current_url:
+                # Verifica que a página autenticada contém o link de Notas
+                try:
+                    if self.page.locator("a[href*='/Notas/']").count() > 0:
+                        self.salvar_cookies()
+                        return True
+                except:
+                    pass
 
         return False
 
@@ -256,14 +271,30 @@ def baixar_com_playwright(empresa, tipo, data_inicio, data_fim, pasta_destino=No
         cliente = EmissorNacionalPlaywright(empresa, pasta_destino, headless=headless)
         cliente.iniciar(usar_cookies=True)
 
+        # Tenta login; se aparentemente "sucesso" mas páginas subsequentes redirecionarem,
+        # tentamos novamente sem cookies antes de falhar.
         if not cliente.fazer_login():
-            raise Exception("Falha no login")
+            # tentativa sem cookies
+            cliente.fechar()
+            cliente = EmissorNacionalPlaywright(empresa, pasta_destino, headless=headless)
+            cliente.iniciar(usar_cookies=False)
+            if not cliente.fazer_login():
+                raise Exception("Falha no login")
 
         cliente.acessar_notas(tipo)
         cliente.aplicar_filtro(data_inicio, data_fim)
         links = cliente.extrair_links()
 
         if not links:
+            # Salva HTML e screenshot para diagnóstico
+            try:
+                html_path = os.path.join(pasta_destino, f'pagina_notas_{tipo}.html')
+                with open(html_path, 'w', encoding='utf-8') as f:
+                    f.write(cliente.page.content())
+                screenshot_path = os.path.join(pasta_destino, f'pagina_notas_{tipo}.png')
+                cliente.page.screenshot(path=screenshot_path)
+            except Exception:
+                pass
             return 0, 0, pasta_destino
 
         sucessos = cliente.baixar_notas(links)

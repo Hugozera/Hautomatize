@@ -350,6 +350,55 @@ def criar_sessao_com_arquivo(cert_path, senha):
         raise
 
 # ============================================
+# LISTAR CERTIFICADOS (fallback seguro)
+# ============================================
+
+def listar_certificados_windows():
+    """Retorna lista de certificados disponíveis no repositório do usuário.
+    Implementação resiliente: tenta usar PowerShell/Win32, mas em ambiente sem Windows
+    retorna lista vazia em vez de lançar exceção.
+
+    Returns: list of dict { 'thumbprint': str, 'subject': str }
+    """
+    try:
+        # Tenta usar PowerShell para listar em JSON (Windows)
+        ps = r"Get-ChildItem Cert:\CurrentUser\My | Select-Object Thumbprint, Subject | ConvertTo-Json"
+        result = subprocess.run(['powershell', '-NoProfile', '-Command', ps], capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and result.stdout.strip():
+            import json as _json
+            try:
+                data = _json.loads(result.stdout)
+            except Exception:
+                # Se vier um único objeto, normaliza para lista
+                try:
+                    obj = result.stdout.strip()
+                    # tentar extrair Thumbprint/Subject via regex
+                    matches = re.findall(r"Thumbprint\s*:\s*([A-F0-9]+)\s*Subject\s*:\s*(.+)", result.stdout, flags=re.I)
+                    certs = []
+                    for m in matches:
+                        certs.append({'thumbprint': m[0].strip(), 'subject': m[1].strip()})
+                    return certs
+                except Exception:
+                    return []
+
+            # Normalize to list
+            if isinstance(data, dict):
+                data = [data]
+            certs = []
+            for item in data:
+                thumb = item.get('Thumbprint') or item.get('thumbprint')
+                subj = item.get('Subject') or item.get('subject')
+                if thumb:
+                    certs.append({'thumbprint': thumb.strip(), 'subject': subj or ''})
+            return certs
+    except Exception:
+        pass
+
+    # Fallback genérico: retorna lista vazia
+    return []
+
+
+# ============================================
 # TESTE DE CERTIFICADO
 # ============================================
 

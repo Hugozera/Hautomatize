@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?><NFSe xmlns="http://www.sped.fazenda.gov.br/nfse" versao="1.00">
+<infNFSe Id="NFS35060031254576118000191000000001200626020521268704">
+<xLocEmi>BAURU</xLocEmi>
+<xLocPrestacao>Barueri</xLocPrestacao>
+<nNFSe>12006</nNFSe>
+<cLocIncid>3506003</cLocIncid>
+<xLocIncid>Bauru</xLocIncid>
+<xTribNac>Análise, exame, pesquisa, coleta, compilação e fornecimento de dados e informações de qualquer natureza, inclusive cadastro e similares.</xTribNac>
+<verAplic>SilTecnologia_v1.00</verAplic>
+<ambGer>1</ambGer>
+<tpEmis>2</tpEmis>
+<cStat>100</cStat>
+<dhProc>2026-02-16T00:00:00-03:00</dhProc>
+<nDFSe>52126870</nDFSe>
+<emit>
+<CNPJ>54576118000191</CNPJ>
+<IM>641937</IM>
+<xNome>CTFAC WEB LTDA</xNome>
+<enderNac>
+<xLgr>RUA  JOAQUIM ANACLETO BUENO</xLgr>
+<nro>10</nro>
+<xBairro>JD. CONTORNO, DO</xBairro>
+<cMun>3506003</cMun>
+<UF>SP</UF>
+<CEP>17047281</CEP>
+</enderNac>
+<fone>1433138870</fone>
+<email>META@CONTABILIDADEMETA.COM.BR</email>
+</emit>
+<valores>
+<vBC>155.00</vBC>
+<pAliqAplic>3.46</pAliqAplic>
+<vISSQN>5.36</vISSQN>
+<vLiq>155.00</vLiq>
+</valores>
+<DPS versao="1.00">
+<infDPS Id="DPS350600325457611800019100900000000000012191">
+<tpAmb>1</tpAmb>
+<dhEmi>2026-02-16T00:00:00-03:00</dhEmi>
+<verAplic>SilTecnologia_v1.00</verAplic>
+<serie>00900</serie>
+<nDPS>12191</nDPS>
+<dCompet>2026-02-01</dCompet>
+<tpEmit>1</tpEmit>
+<cLocEmi>3506003</cLocEmi>
+<prest>
+<CNPJ>54576118000191</CNPJ>
+<IM>641937</IM>
+<fone>1433138870</fone>
+<email>META@CONTABILIDADEMETA.COM.BR</email>
+<regTrib>
+<opSimpNac>3</opSimpNac>
+<regApTribSN>1</regApTribSN>
+<regEspTrib>0</regEspTrib>
+</regTrib>
+</prest>
+<toma>
+<CNPJ>17176661000175</CNPJ>
+<xNome>BAZIQUETTO   KOL LTDA</xNome>
+<end>
+<endNac>
+<cMun>5004700</cMun>
+<CEP>79740000</CEP>
+</endNac>
+<xLgr>AV. BRASIL</xLgr>
+<nro>33</nro>
+<xBairro>CENTRO</xBairro>
+</end>
+</toma>
+<serv>
+<locPrest>
+<cLocPrestacao>3505708</cLocPrestacao>
+</locPrest>
+<cServ>
+<cTribNac>170102</cTribNac>
+<xDescServ>COLETA DADOS E PESQUISA DE PRECOS 17176661000175|</xDescServ>
+<cNBS>114011900</cNBS>
+</cServ>
+<infoCompl>
+<xInfComp>Vencto. 25/02/2026|</xInfComp>
+</infoCompl>
+</serv>
+<valores>
+<vServPrest>
+<vServ>155.00</vServ>
+</vServPrest>
+<trib>
+<tribMun>
+<tribISSQN>1</tribISSQN>
+<tpRetISSQN>1</tpRetISSQN>
+</tribMun>
+<tribFed/>
+<totTrib>
+<vTotTrib>
+<vTotTribFed>0.00</vTotTribFed>
+<vTotTribEst>0.00</vTotTribEst>
+<vTotTribMun>5.36</vTotTribMun>
+</vTotTrib>
+</totTrib>
+</trib>
+</valores>
+</infDPS>
+</DPS>
+</infNFSe><Signature xmlns="http://www.w3.org/2000/09/xmldsig#"><SignedInfo><CanonicalizationMethod Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/><SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/><Reference URI="#NFS35060031254576118000191000000001200626020521268704"><Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/><Transform Algorithm="http://www.w3.org/2001/10/xml-exc-c14n#"/></Transforms><DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/><DigestValue>qN1l9zgy4uzJmmEZsEvxp+Hj/zo=</DigestValue></Reference></SignedInfo><SignatureValue>GbANdUXyd/ctRIc3vST2c5II0X1ErHl+mhv2d7e8WbffYASNCK1x1LA4RkUbhi9P+cjnpCaR6CRP&#13;
+GUKhJjm4b7F+LJnIg/gCNTPfuUmc5E4PwqLssjdS/gaKCkuafAZEnDxnvgJ5vopEjPh/WlfT6R8I&#13;
+Jzor+EcWzQkFWl1G1dlxKTHHohHZJwMs7Njj57+wGoH9wuWo1tUZ7SWphJlctd2gs17ZlyLU5LLu&#13;
+4sV4XpA+aCCdBJREDEjKqCTSihkGQ9KuqCleygoEsHkImKp6Dvu0xWux5p5i6HexVLTulBEIkeoC&#13;
+TCTshFdQrDqmjEDm/m5xZ48zVnShWuNu6EXGxg==</SignatureValue><KeyInfo><X509Data><X509Certificate>MIIH0zCCBbugAwIBAgIIW9uz4uf1ydEwDQYJKoZIhvcNAQELBQAwdjELMAkGA1UEBhMCQlIxEzAR&#13;
+BgNVBAoTCklDUC1CcmFzaWwxNjA0BgNVBAsTLVNlY3JldGFyaWEgZGEgUmVjZWl0YSBGZWRlcmFs&#13;
+IGRvIEJyYXNpbCAtIFJGQjEaMBgGA1UEAxMRQUMgU0FGRVdFQiBSRkIgdjUwHhcNMjYwMjAzMjAz&#13;
+MjQzWhcNMjcwMjAzMjAzMjQzWjCB6TELMAkGA1UEBhMCQlIxEzARBgNVBAoTCklDUC1CcmFzaWwx&#13;
+CzAJBgNVBAgTAlNQMQ4wDAYDVQQHEwVCQVVSVTE2MDQGA1UECxMtU2VjcmV0YXJpYSBkYSBSZWNl&#13;
+aXRhIEZlZGVyYWwgZG8gQnJhc2lsIC0gUkZCMRYwFAYDVQQLEw1SRkIgZS1DTlBKIEExMRcwFQYD&#13;
+VQQLEw4xMzAzNjU5MjAwMDE0MzETMBEGA1UECxMKcHJlc2VuY2lhbDEqMCgGA1UEAxMhTVVOSUNJ&#13;
+UElPIERFIEJBVVJVOjQ2MTM3NDEwMDAwMTgwMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKC&#13;
+AQEAtUYO574cs7dMGzTM4JPlCmOHSeHwewUOuwCmnAh05Biu4LnPEqYfm0erxQxOdb2nn0b87tgj&#13;
+RwlFyEIJaKl7FaZXYqJlF2YlmH/cYN8EfRHz8srfEL+fps1r5EL5gaNBhow4Dhwu6UyoT734waE1&#13;
+AtQMSmQefNu69yfwsEsFQUBfoGj4dFBaC+b3rVITvoF7/cUDg+sMPPJJARQyl2PU8siSgMU5md3z&#13;
+9i/Yq/obGyASjcxRje1GvX7EBsRRWpPcfVE3x6zcJK/FYniDW1Z5hhOw+Az4nC4okeWkc7dUOoWB&#13;
+MNCkqdxPQGN5x9PY5cOPTxoBdOWEqnv9pPAQ9PXLUQIDAQABo4IC7zCCAuswHwYDVR0jBBgwFoAU&#13;
+KV5L1UZMu/4Wp2PBHcQm8t3Y8wUwDgYDVR0PAQH/BAQDAgXgMGkGA1UdIARiMGAwXgYGYEwBAgEz&#13;
+MFQwUgYIKwYBBQUHAgEWRmh0dHA6Ly9yZXBvc2l0b3Jpby5hY3NhZmV3ZWIuY29tLmJyL2FjLXNh&#13;
+ZmV3ZWJyZmIvZHBjLWFjc2FmZXdlYnJmYi5wZGYwga4GA1UdHwSBpjCBozBPoE2gS4ZJaHR0cDov&#13;
+L3JlcG9zaXRvcmlvLmFjc2FmZXdlYi5jb20uYnIvYWMtc2FmZXdlYnJmYi9sY3ItYWMtc2FmZXdl&#13;
+YnJmYnY1LmNybDBQoE6gTIZKaHR0cDovL3JlcG9zaXRvcmlvMi5hY3NhZmV3ZWIuY29tLmJyL2Fj&#13;
+LXNhZmV3ZWJyZmIvbGNyLWFjLXNhZmV3ZWJyZmJ2NS5jcmwwgbcGCCsGAQUFBwEBBIGqMIGnMFEG&#13;
+CCsGAQUFBzAChkVodHRwOi8vcmVwb3NpdG9yaW8uYWNzYWZld2ViLmNvbS5ici9hYy1zYWZld2Vi&#13;
+cmZiL2FjLXNhZmV3ZWJyZmJ2NS5wN2IwUgYIKwYBBQUHMAKGRmh0dHA6Ly9yZXBvc2l0b3JpbzIu&#13;
+YWNzYWZld2ViLmNvbS5ici9hYy1zYWZld2VicmZiL2FjLXNhZmV3ZWJyZmJ2NS5wN2IwgbcGA1Ud&#13;
+EQSBrzCBrIEcU1VFTExFTlJPU0lNQEJBVVJVLlNQLkdPVi5CUqAeBgVgTAEDAqAVExNTVUVMTEVO&#13;
+IFNJTFZBIFJPU0lNoBkGBWBMAQMDoBATDjQ2MTM3NDEwMDAwMTgwoDgGBWBMAQMEoC8TLTA3MDcx&#13;
+OTg4MDE3NzEyODUxODQwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMKAXBgVgTAEDB6AOEwwwMDAw&#13;
+MDAwMDAwMDAwHQYDVR0lBBYwFAYIKwYBBQUHAwIGCCsGAQUFBwMEMAkGA1UdEwQCMAAwDQYJKoZI&#13;
+hvcNAQELBQADggIBABFEFKpZrPKEz/MhcvxxPjFBs/UWsd4xIc58kgS+0/uin4+MvpG6LQSRCcS4&#13;
+Coyrd0XsHYpGYEsjav7wvGZOcoc9uXkkoLVPlUxOZ+Y8I4749x+X8NzLRneZ7kpVHBzUIbQeL25J&#13;
+Cvo0FFo9YMpMujx9N5AwdZ4fXGADAttVyXA/WMtDONi7Ep4Q9ITKodlw2doAmBuS7ENPhwnWQmTf&#13;
+LFaWamwUNTWj/V3ubmda9y34x1qFzqxx7TvhrZLJk+gdjFr6OkZ57GChR5u8AohEHJH5NnMJOtPa&#13;
+iyTD+HwwK8MJMUoPwlsjWuKGD8GCowP1RXUplJ0iJUolP1zK4kTl6sUdrwJQ6+/oTlSnHBlH+HLu&#13;
+7wfuUfcWUdbx4Iq4gtjWHfjt+Uze7BRqwiLd0eHfNJIBDaCY8FKiO6nTQzWox7WghbsqTsQzu73d&#13;
+YXvIcuxCWyUkN4qXeXTFBCxuM1uDVSHuJezZcE0BDTlZXGtqiNaUlY9/zdzUfPE9PIH5YHyIxJ/6&#13;
+8k0Z4X75B/g3HG7M4BvNACwO0z6YA9V/yDpvtoU4H1TAJsFWK+c+32QCIjR60FKDauuR86TVqek+&#13;
+EDT7YSbo5vIsJkQc4WZCh5XoeARMBrHPqpEv/50IqvqAi1DZJdztJul6Eh2Tv4smZw33Aqqc0lhl&#13;
+klFYdXkZLHmYE82X</X509Certificate></X509Data></KeyInfo></Signature>
+</NFSe>

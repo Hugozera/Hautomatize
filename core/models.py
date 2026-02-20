@@ -25,6 +25,32 @@ class Pessoa(models.Model):
         verbose_name = 'Pessoa'
         verbose_name_plural = 'Pessoas'
 
+
+class Role(models.Model):
+    """Papel (role) simples para agrupar permissões customizadas.
+
+    - `permissions` armazena códigos separados por vírgula (ex.: "empresa.edit,certificado.manage").
+    - Relacionamento ManyToMany com `Pessoa` permite atribuir papéis a usuários.
+    """
+    name = models.CharField(max_length=100, unique=True)
+    codename = models.CharField(max_length=100, unique=True)
+    descricao = models.TextField(blank=True)
+    permissions = models.TextField(blank=True, help_text='Códigos de permissão separados por vírgula, ex.: empresa.edit,certificado.manage')
+    pessoas = models.ManyToManyField(Pessoa, related_name='roles', blank=True)
+    ativo = models.BooleanField(default=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
+    def perm_list(self):
+        return [p.strip() for p in (self.permissions or '').split(',') if p.strip()]
+
+    class Meta:
+        verbose_name = 'Papel (Role)'
+        verbose_name_plural = 'Papéis (Roles)'
+
+
 class Empresa(models.Model):
     TIPO_CHOICES = [
         ('matriz', 'Matriz'),

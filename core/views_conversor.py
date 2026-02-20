@@ -96,10 +96,10 @@ def processar_conversao(request, conversao_id):
     """Processa a conversão de um arquivo"""
     conversao = get_object_or_404(ArquivoConversao, id=conversao_id)
     
-    # Verificar permissão
-    if not request.user.is_superuser:
-        if not hasattr(request.user, 'pessoa') or conversao.usuario != request.user.pessoa:
-            return JsonResponse({'erro': 'Permissão negada'}, status=403)
+    # Verificar permissão (centralizada)
+    from .permissions import can_use_conversor
+    if not can_use_conversor(request.user, conversao):
+        return JsonResponse({'erro': 'Permissão negada'}, status=403)
     
     # Se já foi convertido, retornar sucesso
     if conversao.status == 'concluido' and conversao.arquivo_convertido:
@@ -177,10 +177,10 @@ def status_conversao(request, conversao_id):
     """Retorna o status de uma conversão"""
     conversao = get_object_or_404(ArquivoConversao, id=conversao_id)
     
-    # Verificar permissão
-    if not request.user.is_superuser:
-        if not hasattr(request.user, 'pessoa') or conversao.usuario != request.user.pessoa:
-            return JsonResponse({'erro': 'Permissão negada'}, status=403)
+    # Verificar permissão (centralizada)
+    from .permissions import can_use_conversor
+    if not can_use_conversor(request.user, conversao):
+        return JsonResponse({'erro': 'Permissão negada'}, status=403)
     
     data = {
         'id': conversao.id,
@@ -223,11 +223,11 @@ def download_arquivo(request, conversao_id):
     """Download do arquivo convertido"""
     conversao = get_object_or_404(ArquivoConversao, id=conversao_id)
     
-    # Verificar permissão
-    if not request.user.is_superuser:
-        if not hasattr(request.user, 'pessoa') or conversao.usuario != request.user.pessoa:
-            messages.error(request, 'Permissão negada')
-            return redirect('conversor_index')
+    # Verificar permissão (centralizada)
+    from .permissions import can_use_conversor
+    if not can_use_conversor(request.user, conversao):
+        messages.error(request, 'Permissão negada')
+        return redirect('conversor_index')
     
     if not conversao.arquivo_convertido:
         messages.error(request, 'Arquivo convertido não encontrado')

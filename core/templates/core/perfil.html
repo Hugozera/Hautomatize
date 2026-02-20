@@ -22,7 +22,7 @@
         <div class="card-body text-center pt-4">
             <!-- Foto -->
             <div class="mb-4">
-                {% if pessoa.foto %}
+                {% if pessoa and pessoa.foto %}
                     <img src="{{ pessoa.foto.url }}" class="rounded-circle border border-3" style="width: 120px; height: 120px; object-fit: cover; border-color: var(--verde-deep) !important;">
                 {% else %}
                     <div class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center" style="width: 120px; height: 120px; border: 3px solid var(--verde-deep);">
@@ -34,7 +34,8 @@
             <!-- Nome -->
             <h3 class="mb-1">{{ request.user.get_full_name|default:request.user.username }}</h3>
             <p class="text-muted mb-3">{{ request.user.email }}</p>
-            
+
+            {% if pessoa %}
             <!-- Informações -->
             <div class="text-start border-top pt-3 mt-3">
                 <div class="row mb-2">
@@ -62,6 +63,30 @@
             </div>
 
             <!-- Agent token -->
+            <div class="mt-4 pt-3 border-top text-start">
+                <h6 class="mb-2">Token do Agente Local</h6>
+                {% if pessoa.client_api_token %}
+                    <div class="input-group mb-2">
+                        <input id="clientTokenInput" type="text" class="form-control" value="{{ pessoa.client_api_token }}" readonly>
+                        <button id="btnCopyToken" class="btn btn-outline-secondary" type="button">Copiar</button>
+                        <button id="btnRegenerateToken" class="btn btn-outline-danger" type="button">Regenerar</button>
+                    </div>
+                    <small class="text-muted d-block">Use este token no agente local (header Authorization: Token &lt;token&gt;).</small>
+                {% else %}
+                    <div class="mb-2">
+                        <button id="btnGenerateToken" class="btn btn-outline-primary">Gerar token para agente local</button>
+                    </div>
+                    <small class="text-muted d-block">Gere um token para permitir que o agente da sua máquina envie NFSe para o servidor.</small>
+                {% endif %}
+            </div>
+            {% else %}
+            <!-- Usuário ainda não possui objeto Pessoa: CTA para criação -->
+            <div class="alert alert-info mt-3">Seu perfil ainda não foi completado. Crie seus dados para acessar todas as funcionalidades.</div>
+            <div class="d-flex gap-2 mt-3">
+                <a href="{% url 'pessoa_create' %}" class="btn btn-success">Completar meu Perfil</a>
+                <a href="{% url 'password_change' %}" class="btn btn-outline-primary">Alterar Senha</a>
+            </div>
+            {% endif %}
             <div class="mt-4 pt-3 border-top text-start">
                 <h6 class="mb-2">Token do Agente Local</h6>
                 {% if pessoa.client_api_token %}

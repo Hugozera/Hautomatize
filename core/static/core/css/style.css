@@ -116,10 +116,35 @@ body {
 }
 
 .sidebar-collapsed .sidebar-logo span {
-    font-size: 1rem;
-    writing-mode: vertical-rl;
-    transform: rotate(180deg);
+    /* mostrar apenas a letra inicial quando o menu está colapsado */
+    text-indent: -9999px; /* esconde texto original */
+    position: relative;
+    display: inline-block;
+    width: 28px;
+    height: 36px;
+    overflow: hidden;
     margin: 0 auto;
+}
+
+.sidebar-collapsed .sidebar-logo span::after {
+    content: 'H';
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    text-indent: 0;
+    font-weight: 700;
+    font-size: 1.2rem;
+    color: var(--verde-deep);
+}
+
+/* Ajuste do conteúdo principal para evitar corte quando o sidebar muda de estado */
+.sidebar-expanded + .main-content {
+    margin-left: 260px;
+}
+
+.sidebar-collapsed + .main-content {
+    margin-left: 80px;
 }
 
 /* ===== BOTÃO TOGGLE ===== */

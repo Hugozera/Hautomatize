@@ -162,6 +162,15 @@
                                     <span class="badge bg-danger">Erro</span>
                                 {% endif %}
                             </td>
+                            <td>
+                                {% if h.arquivo_zip %}
+                                    <a href="{{ h.arquivo_zip.url }}" class="btn btn-sm btn-success" download>
+                                        <i class="bi bi-download"></i> Baixar ZIP
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'download_progress' h.pk %}" class="btn btn-sm btn-outline-primary">Ver</a>
+                                {% endif %}
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>

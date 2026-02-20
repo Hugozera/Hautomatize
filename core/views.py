@@ -9,6 +9,7 @@ import os
 import re
 import hashlib
 from datetime import datetime
+from functools import lru_cache
 
 # ========== IMPORTS DJANGO ==========
 from django.contrib.auth.decorators import login_required, user_passes_test
@@ -17,7 +18,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.forms import modelform_factory
-from django.db import models
+from django.db import models, IntegrityError
 from django.core.files.storage import default_storage
 from django.utils import timezone
 
@@ -32,6 +33,8 @@ from cryptography.hazmat.backends import default_backend
 from .models import Pessoa, Empresa, Agendamento, HistoricoDownload, NotaFiscal
 from .forms import PessoaForm, EmpresaForm, AgendamentoForm
 from .download_service import download_em_massa
+from .certificado_service import listar_certificados_windows
+from django.contrib.auth import logout as django_logout
 import secrets
 
 # ========== VIEWS DE DOWNLOAD ==========
@@ -86,7 +89,22 @@ def download_manual(request):
         else:
             try:
                 empresa = get_object_or_404(Empresa, pk=empresa_id)
-                
+
+                # Permissão para iniciar download desta empresa
+                from .permissions import can_edit_empresa
+                if not can_edit_empresa(request.user, empresa):
+                    msg = 'Permissão negada para iniciar downloads desta empresa.'
+                    return render(request, 'core/download_manual.html', {
+                        'empresas': empresas,
+                        'tarefas_recentes': tarefas_recentes,
+                        'msg': msg,
+                        'empresa_selecionada': empresa,
+                        'precisa_certificado': not empresa.certificado_arquivo,
+                        'tipo': tipo,
+                        'data_inicio': data_inicio,
+                        'data_fim': data_fim,
+                    })
+
                 if not empresa.certificado_arquivo:
                     return render(request, 'core/download_manual.html', {
                         'empresas': empresas,
@@ -203,8 +221,8 @@ def upload_certificado_temporario(request):
         
         try:
             empresa = Empresa.objects.get(pk=empresa_id)
-            
-            # Salva o arquivo na empresa
+
+            # Salva o arquivo na empresa (upload temporário via AJAX durante o download manual)
             empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=True)
             empresa.certificado_senha = senha
             
@@ -274,8 +292,11 @@ def extrair_cnpj_certificado(subject):
     
     return None
 
+@lru_cache(maxsize=256)
 def consultar_cnpj_receita(cnpj):
-    """Consulta CNPJ na API da ReceitaWS"""
+    """Consulta CNPJ na API da ReceitaWS (com cache em memória).
+    Retorna dicionário com os campos já normalizados.
+    """
     try:
         api_url = f'https://www.receitaws.com.br/v1/cnpj/{cnpj}'
         resp = pyrequests.get(api_url, timeout=10)
@@ -336,21 +357,23 @@ def pessoa_create(request):
     if request.method == 'POST':
         form = PessoaForm(request.POST, request.FILES)
         if form.is_valid():
-            # Cria usuário
-            user = User.objects.create_user(
-                username=form.cleaned_data['username'],
-                email=form.cleaned_data['email'],
-                password=form.cleaned_data['password'],
-                first_name=form.cleaned_data['first_name'],
-                last_name=form.cleaned_data['last_name']
-            )
-            
-            # Cria pessoa
-            pessoa = form.save(commit=False)
-            pessoa.user = user
-            pessoa.save()
-            
-            return redirect('pessoa_list')
+            # Cria usuário (protege contra conflito de username)
+            try:
+                user = User.objects.create_user(
+                    username=form.cleaned_data['username'],
+                    email=form.cleaned_data['email'],
+                    password=form.cleaned_data['password'],
+                    first_name=form.cleaned_data['first_name'],
+                    last_name=form.cleaned_data['last_name']
+                )
+            except IntegrityError:
+                form.add_error('username', 'Nome de usuário já existe.')
+            else:
+                # Cria pessoa
+                pessoa = form.save(commit=False)
+                pessoa.user = user
+                pessoa.save()
+                return redirect('pessoa_list')
     else:
         form = PessoaForm()
     
@@ -576,10 +599,10 @@ def empresa_edit(request, pk):
     """Edita uma empresa existente usando EmpresaForm (preenchimento automático)."""
     empresa = get_object_or_404(Empresa, pk=pk)
 
-    # Verifica permissão
-    if not request.user.is_superuser:
-        if not hasattr(request.user, 'pessoa') or request.user.pessoa not in empresa.usuarios.all():
-            return redirect('dashboard')
+    # Verifica permissão (centralizada)
+    from .permissions import can_edit_empresa
+    if not can_edit_empresa(request.user, empresa):
+        return redirect('dashboard')
 
     msg = None
 
@@ -668,6 +691,48 @@ def empresa_edit(request, pk):
         form = EmpresaForm(instance=empresa)
 
     return render(request, 'core/empresa_form.html', {'form': form, 'msg': msg, 'require_pfx': require_pfx})
+
+
+@login_required
+def empresa_dashboard(request, pk):
+    """Dashboard específico por empresa — agrega dados de NotaFiscal para contabilidade."""
+    empresa = get_object_or_404(Empresa, pk=pk)
+
+    # Permissão: superuser ou usuário vinculado (centralizada)
+    from .permissions import can_view_empresa
+    if not can_view_empresa(request.user, empresa):
+        return redirect('dashboard')
+
+    # KPI principais
+    notas = empresa.notas.all()
+    total_notas = notas.count()
+    total_valor = float(notas.aggregate(models.Sum('valor'))['valor__sum'] or 0)
+    recentes = notas.order_by('-data_emissao')[:10]
+
+    # Top fornecedores (tomador_nome)
+    top_fornecedores = (
+        notas.values('tomador_nome')
+             .annotate(total=models.Count('id'), soma=models.Sum('valor'))
+             .order_by('-total')[:10]
+    )
+
+    # Distribuição por mês (últimos 12 meses)
+    from django.db.models.functions import TruncMonth
+    meses = (
+        notas.annotate(mes=TruncMonth('data_emissao'))
+             .values('mes')
+             .annotate(qtd=models.Count('id'), soma=models.Sum('valor'))
+             .order_by('-mes')[:12]
+    )
+
+    return render(request, 'core/empresa_dashboard.html', {
+        'empresa': empresa,
+        'total_notas': total_notas,
+        'total_valor': total_valor,
+        'recentes': recentes,
+        'top_fornecedores': top_fornecedores,
+        'meses': meses,
+    })
 
 @login_required
 def empresa_certificado(request):
@@ -839,6 +904,25 @@ def buscar_cnpj(request):
             return JsonResponse({'status': 'ERRO', 'msg': str(e)})
     
     return JsonResponse({'status': 'ERRO', 'msg': 'Método inválido.'})
+
+
+@login_required
+def api_cep(request):
+    """Proxy seguro para ViaCEP (retorna JSON de endereço)."""
+    cep = (request.GET.get('cep') or '').replace('-', '').strip()
+    if not cep or len(cep) != 8 or not cep.isdigit():
+        return JsonResponse({'status': 'ERRO', 'msg': 'CEP inválido.'})
+    try:
+        resp = pyrequests.get(f'https://viacep.com.br/ws/{cep}/json/', timeout=5)
+        if resp.status_code == 200:
+            data = resp.json()
+            if data.get('erro'):
+                return JsonResponse({'status': 'ERRO', 'msg': 'CEP não encontrado.'})
+            return JsonResponse({'status': 'OK', 'cep': data})
+        return JsonResponse({'status': 'ERRO', 'msg': 'Erro ao consultar CEP.'})
+    except Exception as e:
+        return JsonResponse({'status': 'ERRO', 'msg': str(e)})
+
 
 
 @login_required
@@ -1028,36 +1112,117 @@ def configuracao(request):
     """Página de configurações do sistema"""
     return render(request, 'core/configuracao.html')
 
+
+# ===== Roles UI (apenas superuser) =====
+from django.contrib.auth.decorators import user_passes_test
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def role_list(request):
+    from .models import Role
+    # Cria roles padrão se não existirem (ajuda no primeiro uso)
+    if Role.objects.count() == 0:
+        defaults = [
+            {'name': 'Full Access', 'codename': 'full.access', 'descricao': 'Acesso total', 'permissions': 'empresa.edit,certificado.manage,conversor.use,download.manage', 'ativo': True},
+            {'name': 'Download Manager', 'codename': 'download.manage', 'descricao': 'Gerenciar downloads', 'permissions': 'download.manage,empresa.edit', 'ativo': True},
+            {'name': 'Conversor User', 'codename': 'conversor.use', 'descricao': 'Acessar conversor', 'permissions': 'conversor.use', 'ativo': True},
+        ]
+        for d in defaults:
+            Role.objects.get_or_create(codename=d['codename'], defaults=d)
+
+    roles = Role.objects.all().order_by('name')
+    return render(request, 'core/role_list.html', {'roles': roles})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def role_create(request):
+    from .forms import RoleForm
+    if request.method == 'POST':
+        form = RoleForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('role_list')
+    else:
+        form = RoleForm()
+    return render(request, 'core/role_form.html', {'form': form, 'creating': True})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def role_edit(request, pk):
+    from .models import Role
+    from .forms import RoleForm
+    role = get_object_or_404(Role, pk=pk)
+    if request.method == 'POST':
+        form = RoleForm(request.POST, instance=role)
+        if form.is_valid():
+            form.save()
+            return redirect('role_list')
+    else:
+        form = RoleForm(instance=role)
+    return render(request, 'core/role_form.html', {'form': form, 'creating': False, 'role': role})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def role_delete(request, pk):
+    from .models import Role
+    role = get_object_or_404(Role, pk=pk)
+    if request.method == 'POST':
+        role.delete()
+        return redirect('role_list')
+    return render(request, 'core/role_confirm_delete.html', {'role': role})
+
 @login_required
 def perfil(request):
-    """Perfil do usuário logado"""
+    """Perfil do usuário logado.
+
+    Se o usuário ainda não tiver um objeto Pessoa associado, renderizamos a
+    página de perfil com uma call-to-action para completar o cadastro em vez
+    de redirecionar automaticamente para `pessoa_create`.
+    """
+    # Alguns usuários podem não ter o objeto Pessoa associado.
+    if not hasattr(request.user, 'pessoa'):
+        from django.contrib import messages
+        messages.info(request, 'Complete seu perfil — cadastre os seus dados.')
+        # Renderiza a mesma template, mas sem o objeto `pessoa` — o template
+        # irá mostrar um botão para criar o perfil.
+        return render(request, 'core/perfil.html', {'pessoa': None})
+
     pessoa = request.user.pessoa
-    
+
     if request.method == 'POST':
         # Atualiza dados básicos
         pessoa.user.first_name = request.POST.get('first_name', pessoa.user.first_name)
         pessoa.user.last_name = request.POST.get('last_name', pessoa.user.last_name)
         pessoa.user.email = request.POST.get('email', pessoa.user.email)
-        
+
         # Atualiza senha se fornecida
         senha = request.POST.get('password')
         if senha:
             pessoa.user.set_password(senha)
-        
+
         pessoa.user.save()
-        
+
         # Atualiza dados da pessoa
         pessoa.telefone = request.POST.get('telefone', pessoa.telefone)
-        
+
         # Foto
         if request.FILES.get('foto'):
             pessoa.foto = request.FILES['foto']
-        
+
         pessoa.save()
-        
+
         return redirect('perfil')
-    
+
     return render(request, 'core/perfil.html', {'pessoa': pessoa})
+
+
+@login_required
+def logout_view(request):
+    """Encerra a sessão do usuário e redireciona para a página de login."""
+    from django.contrib import messages
+    django_logout(request)
+    messages.success(request, 'Você foi desconectado com sucesso.')
+    return redirect('login')
 
 # ========== VIEWS DE CERTIFICADOS ==========
 
@@ -1074,6 +1239,28 @@ def certificado_list(request):
         empresas = Empresa.objects.none()
 
     return render(request, 'core/certificado_list.html', {'certificados': certificados, 'empresas': empresas})
+
+
+@login_required
+@csrf_exempt
+def remover_certificado(request, pk):
+    """Remove o certificado (FileField) da empresa informada."""
+    empresa = get_object_or_404(Empresa, pk=pk)
+    # Permissão centralizada
+    from .permissions import can_manage_certificado
+    if not can_manage_certificado(request.user, empresa):
+        return JsonResponse({'status': 'ERRO', 'msg': 'Permissão negada.'}, status=403)
+    try:
+        if empresa.certificado_arquivo:
+            empresa.certificado_arquivo.delete(save=False)
+        empresa.certificado_thumbprint = ''
+        empresa.certificado_emitente = ''
+        empresa.certificado_validade = None
+        empresa.certificado_senha = ''
+        empresa.save()
+        return JsonResponse({'status': 'OK'})
+    except Exception as e:
+        return JsonResponse({'status': 'ERRO', 'msg': str(e)}, status=500)
 
 
 @login_required
@@ -1107,6 +1294,17 @@ def certificado_test(request):
 
 
 @login_required
+def certificado_info(request):
+    """AJAX: retorna empresas que possuem o certificado informado (thumbprint)."""
+    thumb = request.GET.get('thumbprint')
+    empresas = []
+    if thumb:
+        empresas_qs = Empresa.objects.filter(certificado_thumbprint__iexact=thumb)
+        empresas = [{'id': e.pk, 'nome': e.nome_fantasia, 'cnpj': e.cnpj} for e in empresas_qs]
+    return JsonResponse({'empresas': empresas})
+
+
+@login_required
 @csrf_exempt
 def salvar_certificado(request):
     """Exporta o certificado pela thumbprint (loja Windows) e salva o .pfx no model da Empresa selecionada."""
@@ -1120,7 +1318,8 @@ def salvar_certificado(request):
         empresa = get_object_or_404(Empresa, pk=empresa_id)
 
         # Permissão
-        if not request.user.is_superuser and (not hasattr(request.user, 'pessoa') or request.user.pessoa not in empresa.usuarios.all()):
+        from .permissions import can_manage_certificado
+        if not can_manage_certificado(request.user, empresa):
             return JsonResponse({'status': 'ERRO', 'msg': 'Permissão negada.'})
 
         try:
@@ -1166,6 +1365,75 @@ def salvar_certificado(request):
             return JsonResponse({'status': 'ERRO', 'msg': err})
 
     return JsonResponse({'status': 'ERRO', 'msg': 'Método inválido.'})
+
+
+# ========== VIEWS DE CERTIFICADO (CRUD) ==========
+@login_required
+def certificado_edit(request, pk):
+    """Editar / substituir o .pfx associado a uma Empresa."""
+    empresa = get_object_or_404(Empresa, pk=pk)
+    # Permissão: superuser ou usuário vinculado à empresa
+    if not request.user.is_superuser:
+        if not hasattr(request.user, 'pessoa') or request.user.pessoa not in empresa.usuarios.all():
+            from django.contrib import messages
+            messages.error(request, 'Permissão negada.')
+            return redirect('empresa_list')
+
+    msg = None
+    if request.method == 'POST':
+        certificado_file = request.FILES.get('certificado')
+        certificado_senha = request.POST.get('certificado_senha', '')
+
+        if certificado_file:
+            empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=False)
+            empresa.certificado_senha = certificado_senha
+            # Tenta extrair metadados (se falhar, salvamos o arquivo mesmo assim)
+            try:
+                with empresa.certificado_arquivo.open('rb') as f:
+                    pfx_data = f.read()
+                cert = pkcs12.load_key_and_certificates(
+                    pfx_data,
+                    certificado_senha.encode() if certificado_senha else None,
+                    default_backend()
+                )
+                if cert and cert[1]:
+                    empresa.certificado_emitente = cert[1].subject.rfc4514_string()
+                    empresa.certificado_validade = getattr(cert[1], 'not_valid_after', None)
+                    empresa.certificado_thumbprint = hashlib.sha1(cert[1].public_bytes(serialization.Encoding.DER)).hexdigest().upper()
+            except Exception as e:
+                msg = f'Erro ao processar certificado: {str(e)}'
+
+            empresa.save()
+            from django.contrib import messages
+            if msg:
+                messages.warning(request, msg)
+            else:
+                messages.success(request, 'Certificado atualizado com sucesso.')
+
+            return redirect('empresa_edit', pk=pk)
+
+    return render(request, 'core/certificado_edit.html', {'empresa': empresa, 'msg': msg})
+
+
+@login_required
+def certificado_download(request, pk):
+    """Fazer download do .pfx armazenado para a Empresa (apenas usuários autorizados)."""
+    empresa = get_object_or_404(Empresa, pk=pk)
+    # Permissão
+    from .permissions import can_manage_certificado
+    if not can_manage_certificado(request.user, empresa):
+        return JsonResponse({'status': 'ERRO', 'msg': 'Permissão negada.'}, status=403)
+
+    if not empresa.certificado_arquivo:
+        return JsonResponse({'status': 'ERRO', 'msg': 'Empresa não possui certificado.'}, status=404)
+
+    try:
+        from django.http import FileResponse
+        fh = empresa.certificado_arquivo.open('rb')
+        return FileResponse(fh, as_attachment=True, filename=os.path.basename(empresa.certificado_arquivo.name))
+    except Exception as e:
+        return JsonResponse({'status': 'ERRO', 'msg': str(e)}, status=500)
+
 
 # ========== VIEWS DE PROGRESSO ==========
 

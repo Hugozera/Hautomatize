@@ -17,7 +17,10 @@ urlpatterns = [
     path('empresas/nova/', views.empresa_create, name='empresa_create'),
     path('empresas/novo-custom/', views.empresa_create_custom, name='empresa_create_custom'),
     path('empresas/<int:pk>/editar/', views.empresa_edit, name='empresa_edit'),
+    path('empresas/<int:pk>/remover-certificado/', views.remover_certificado, name='remover_certificado'),
+    path('empresas/<int:pk>/dashboard/', views.empresa_dashboard, name='empresa_dashboard'),
     path('empresas/buscar-cnpj/', views.buscar_cnpj, name='buscar_cnpj'),
+    path('api/cep/', views.api_cep, name='api_cep'),
     path('empresas/buscar-certificado/', views.buscar_certificado, name='buscar_certificado'),
     # 👇 ADICIONADO - URL para importar via certificado da loja Windows
     path('empresas/certificado/', views.empresa_certificado, name='empresa_certificado'),
@@ -35,11 +38,21 @@ urlpatterns = [
     path('configuracao/', views.configuracao, name='configuracao'),
     path('perfil/', views.perfil, name='perfil'),
     path('perfil/generate-token/', views.generate_client_token, name='generate_client_token'),
+
+    # Roles (somente superuser)
+    path('roles/', views.role_list, name='role_list'),
+    path('roles/nova/', views.role_create, name='role_create'),
+    path('roles/<int:pk>/editar/', views.role_edit, name='role_edit'),
+    path('roles/<int:pk>/excluir/', views.role_delete, name='role_delete'),
     
     # Certificados
     path('certificados/', views.certificado_list, name='certificado_list'),
     path('certificados/testar/', views.certificado_test, name='certificado_test'),
     path('certificados/salvar/', views.salvar_certificado, name='salvar_certificado'),
+    path('certificados/info/', views.certificado_info, name='certificado_info'),
+    # CRUD/gestão de certificado (por empresa)
+    path('certificados/<int:pk>/editar/', views.certificado_edit, name='certificado_edit'),
+    path('certificados/<int:pk>/baixar/', views.certificado_download, name='certificado_download'),
 
     # API para agente local
     path('api/agent/upload/', views.api_agent_upload, name='api_agent_upload'),
@@ -68,5 +81,5 @@ path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos')
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
-    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
+    path('logout/', views.logout_view, name='logout'),
 ]
