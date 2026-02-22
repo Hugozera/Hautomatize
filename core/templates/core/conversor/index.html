@@ -434,45 +434,129 @@ function formatFileSize(bytes) {
 }
 
 // Função para iniciar conversão
+// Função para iniciar conversão
 function iniciarConversao() {
     const formatoDestino = document.getElementById('formatoDestino').value;
-    if (!arquivoSelecionado || !formatoDestino) return;
+    if (!arquivoSelecionado || !formatoDestino) {
+        mostrarErro('Selecione um arquivo e formato de destino');
+        return;
+    }
     
     // Mostrar progresso
     document.getElementById('progressoCard').classList.remove('d-none');
     document.getElementById('btnConverter').disabled = true;
+    document.getElementById('statusMensagem').textContent = 'Enviando arquivo...';
+    document.getElementById('progressBar').style.width = '10%';
+    document.getElementById('progressBar').textContent = '10%';
     
     const formData = new FormData();
     formData.append('arquivo', arquivoSelecionado);
     formData.append('formato_destino', formatoDestino);
     
+    console.log('Enviando arquivo:', arquivoSelecionado.name);
+    console.log('Formato destino:', formatoDestino);
+    
     // Upload do arquivo
-    fetch('{% url "upload_arquivo" %}', {
+     fetch('{% url "upload_router" %}', {
         method: 'POST',
         body: formData,
         headers: {
             'X-CSRFToken': '{{ csrf_token }}'
         }
     })
-    .then(response => {
+    .then(async response => {
+        const data = await response.json();
         if (!response.ok) {
-            return response.json().then(err => { 
-                throw new Error(err.erro || err.mensagem || response.statusText); 
-            });
+            throw new Error(data.erro || data.mensagem || `Erro ${response.status}`);
         }
-        return response.json();
+        return data;
     })
     .then(data => {
+        console.log('Upload concluído:', data);
         if (data.id) {
             conversaoId = data.id;
+            document.getElementById('progressBar').style.width = '30%';
+            document.getElementById('progressBar').textContent = '30%';
+            document.getElementById('statusMensagem').textContent = 'Processando conversão...';
             verificarStatus();
         } else {
-            mostrarErro(data.erro || data.mensagem || 'Erro no upload');
+            throw new Error(data.erro || 'Erro no upload');
         }
     })
     .catch(error => {
+        console.error('Erro:', error);
         mostrarErro(error.message || 'Erro na conexão');
     });
+}
+
+// Função para verificar status da conversão
+function verificarStatus() {
+    if (!conversaoId) return;
+    
+    let progresso = 30;
+    const interval = setInterval(() => {
+        progresso += 5;
+        if (progresso <= 80) {
+            document.getElementById('progressBar').style.width = progresso + '%';
+            document.getElementById('progressBar').textContent = progresso + '%';
+        }
+    }, 1000);
+    
+    // Iniciar conversão
+    fetch(`/conversor/processar/${conversaoId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(async response => {
+        const data = await response.json();
+        if (!response.ok) {
+            throw new Error(data.erro || data.mensagem || `Erro ${response.status}`);
+        }
+        return data;
+    })
+    .then(data => {
+        clearInterval(interval);
+        
+        if (data.status === 'concluido') {
+            document.getElementById('progressBar').style.width = '100%';
+            document.getElementById('progressBar').textContent = '100%';
+            document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
+            
+            document.getElementById('downloadLink').href = data.url;
+            document.getElementById('resultadoArea').classList.remove('d-none');
+        } else if (data.status === 'erro') {
+            mostrarErro(data.erro || 'Erro na conversão');
+        } else {
+            // Ainda processando
+            setTimeout(verificarStatus, 2000);
+        }
+    })
+    .catch(error => {
+        clearInterval(interval);
+        console.error('Erro:', error);
+        mostrarErro(error.message || 'Erro na conversão');
+    });
+}
+
+// Função para mostrar mensagens de erro
+function mostrarErro(mensagem) {
+    const card = document.getElementById('progressoCard');
+    card.classList.remove('d-none');
+
+    document.getElementById('statusMensagem').textContent = 'Erro: ' + mensagem;
+    document.getElementById('progressBar').classList.remove('bg-success');
+    document.getElementById('progressBar').classList.add('bg-danger');
+    document.getElementById('btnConverter').disabled = false;
+    
+    console.error('Erro:', mensagem);
+    
+    setTimeout(() => {
+        card.classList.add('d-none');
+        document.getElementById('progressBar').classList.remove('bg-danger');
+        document.getElementById('progressBar').classList.add('bg-success');
+    }, 5000);
 }
 
 // Função para verificar status da conversão

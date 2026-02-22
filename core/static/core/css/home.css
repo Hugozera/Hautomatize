@@ -1,0 +1,201 @@
+/* ===== HOME ===== */
+.home-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.home-header h2 {
+    font-size: 2.5rem;
+    font-weight: 700;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+    margin-bottom: 2rem;
+}
+
+/* ===== WIDGETS ===== */
+.widgets-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+}
+
+.widget-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 24px;
+    padding: 1.5rem;
+    box-shadow: var(--sombra-media);
+    transition: var(--transicao-padrao);
+    position: relative;
+    overflow: hidden;
+    text-align: center;
+}
+
+.widget-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradiente-misto);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.widget-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-hover);
+}
+
+.widget-card:hover::before {
+    transform: scaleX(1);
+}
+
+.widget-card h5 {
+    color: var(--cinza-escuro);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.widget-card p {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--verde-deep);
+    margin: 0;
+}
+
+/* ===== CARDS GRID ===== */
+.cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.cards-grid .card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-suave);
+    transition: var(--transicao-padrao);
+    position: relative;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    cursor: pointer;
+}
+
+.cards-grid .card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-hover);
+}
+
+.cards-grid .card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradiente-misto);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.cards-grid .card:hover::before {
+    transform: scaleX(1);
+}
+
+.cards-grid .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.25rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+.cards-grid .card-header i {
+    color: var(--verde-deep);
+    font-size: 1.2rem;
+    transition: var(--transicao-padrao);
+}
+
+.cards-grid .card:hover .card-header i {
+    transform: scale(1.1);
+}
+
+.cards-grid .card-body {
+    padding: 1.25rem !important;
+    color: #6c757d;
+    flex: 1;
+}
+
+/* ===== ANIMAÇÕES ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease forwards;
+}
+
+/* ===== ESTILOS ADICIONAIS ===== */
+.text-success-gradient {
+    background: var(--gradiente-verde);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .home-header h2 {
+        font-size: 2rem;
+    }
+    
+    .widgets-row {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .cards-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .widget-card p {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .home-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .widget-card {
+        padding: 1.25rem;
+    }
+    
+    .cards-grid .card-header {
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+    }
+    
+    .cards-grid .card-body {
+        padding: 1rem !important;
+        font-size: 0.9rem;
+    }
+}

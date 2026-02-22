@@ -1,0 +1,16 @@
+/* estilos específicos para as telas do conversor */
+
+/* Formularios e tabelas mais largos */
+.form-conversao {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* animação leve */
+.animate-card {
+    transition: transform 0.2s;
+}
+.animate-card:hover {
+    transform: translateY(-2px);
+}
+

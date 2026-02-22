@@ -1,0 +1,443 @@
+/* ===== EMPRESAS ===== */
+.empresa-header h1, 
+.empresa-header h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+/* ===== CARD DE EMPRESA ===== */
+.empresa-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.empresa-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+}
+
+.empresa-card .card-body {
+    padding: 1.5rem !important;
+}
+
+/* ===== FORMULÁRIO DE EMPRESA ===== */
+.empresa-form-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.empresa-form-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 30px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+    position: relative;
+}
+
+.empresa-form-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradiente-misto);
+}
+
+.empresa-form-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+.empresa-form-card .card-header i {
+    color: var(--verde-deep);
+    transition: var(--transicao-padrao);
+}
+
+.empresa-form-card:hover .card-header i {
+    transform: scale(1.1);
+}
+
+.empresa-form-card .card-body {
+    padding: 2rem !important;
+}
+
+/* ===== ESTILIZAÇÃO DO FORMULÁRIO ===== */
+.empresa-form-card .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    margin-bottom: 0.5rem;
+}
+
+.empresa-form-card .form-control,
+.empresa-form-card .form-select {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: var(--transicao-padrao);
+}
+
+.empresa-form-card .form-control:focus,
+.empresa-form-card .form-select:focus {
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.empresa-form-card .input-group .btn {
+    border: 2px solid #e0e0e0;
+    border-left: none;
+    border-radius: 0 12px 12px 0;
+}
+
+.empresa-form-card .input-group .btn:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    border-color: var(--verde-deep);
+}
+
+/* ===== FORM SWITCH ===== */
+.form-check-input:checked {
+    background-color: var(--verde-deep);
+    border-color: var(--verde-deep);
+}
+
+/* ===== SEÇÃO DE ENDEREÇO ===== */
+.endereco-section {
+    background: rgba(255, 193, 7, 0.05);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.endereco-section h5 {
+    color: var(--amarelo-deep);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid var(--amarelo-deep);
+}
+
+/* ===== SEÇÃO DE CERTIFICADO ===== */
+.certificado-section {
+    background: rgba(76, 175, 80, 0.05);
+    border-radius: 16px;
+    padding: 1.5rem;
+    margin: 1.5rem 0;
+}
+
+.certificado-section h5 {
+    color: var(--verde-deep);
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+    padding-left: 0.5rem;
+    border-left: 4px solid var(--verde-deep);
+}
+
+.certificado-info {
+    background: white;
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    border: var(--borda-suave);
+}
+
+.certificado-info small {
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* ===== BOTÕES DE AÇÃO ===== */
+.empresa-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: var(--borda-suave);
+}
+
+.empresa-actions .btn {
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    transition: var(--transicao-padrao);
+}
+
+.empresa-actions .btn-success {
+    background: var(--gradiente-verde);
+    border: none;
+}
+
+.empresa-actions .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+}
+
+.empresa-actions .btn-outline-primary {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.empresa-actions .btn-outline-primary:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ===== TABELA DE EMPRESAS ===== */
+.empresa-table-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+}
+
+.empresa-table {
+    margin-bottom: 0;
+}
+
+.empresa-table thead th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem 1.25rem;
+    white-space: nowrap;
+}
+
+.empresa-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.empresa-table tbody tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+.empresa-table .btn-group {
+    gap: 0.25rem;
+}
+
+.empresa-table .btn-group .btn-sm {
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    transition: var(--transicao-padrao);
+}
+
+.empresa-table .btn-group .btn-sm:hover {
+    transform: translateY(-2px);
+}
+
+/* ===== DASHBOARD DA EMPRESA ===== */
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-box {
+    background: var(--gradiente-card);
+    border-radius: 20px;
+    padding: 1.5rem;
+    box-shadow: var(--sombra-suave);
+    transition: var(--transicao-padrao);
+}
+
+.stat-box:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-hover);
+}
+
+.stat-box h6 {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.stat-box h3 {
+    color: var(--verde-deep);
+    font-weight: 700;
+    margin-bottom: 0;
+}
+
+/* Lista de notas recentes */
+.notas-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.nota-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    border-bottom: var(--borda-suave);
+    transition: var(--transicao-padrao);
+}
+
+.nota-item:hover {
+    background: rgba(76, 175, 80, 0.02);
+    transform: translateX(5px);
+}
+
+.nota-info strong {
+    color: var(--cinza-escuro);
+    font-size: 0.95rem;
+}
+
+.nota-info small {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+.nota-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.nota-actions .btn-sm {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+/* Tabelas de top fornecedores e meses */
+.top-table {
+    margin-top: 1rem;
+}
+
+.top-table th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(255, 193, 7, 0.05));
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    font-size: 0.9rem;
+}
+
+.top-table td {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+}
+
+/* ===== FILTROS ===== */
+.filtros-empresa {
+    background: var(--gradiente-card);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--sombra-suave);
+}
+
+.filtros-empresa .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    font-size: 0.9rem;
+}
+
+.filtros-empresa .btn {
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+}
+
+/* ===== IMPORTAR CERTIFICADO ===== */
+.import-cert-card {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.import-cert-card .alert-warning {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 193, 7, 0.05));
+    border: none;
+    border-left: 4px solid var(--amarelo-deep);
+    color: #856404;
+}
+
+/* ===== ESTADO VAZIO ===== */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem !important;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--verde-deep);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+.empty-state h5 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .empresa-header h1,
+    .empresa-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .empresa-form-card .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .empresa-actions {
+        flex-direction: column;
+    }
+    
+    .empresa-actions .btn {
+        width: 100%;
+    }
+    
+    .empresa-table thead th,
+    .empresa-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .dashboard-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .nota-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .nota-actions {
+        width: 100%;
+        justify-content: flex-start;
+    }
+}
+
+@media (max-width: 576px) {
+    .empresa-table .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .empresa-table .btn-group .btn-sm {
+        width: 100%;
+    }
+    
+    .endereco-section,
+    .certificado-section {
+        padding: 1rem;
+    }
+}

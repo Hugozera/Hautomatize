@@ -1,0 +1,398 @@
+/* ===== DOWNLOAD MANUAL ===== */
+.download-header h1, 
+.download-header h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+/* ===== CARD DE DOWNLOAD ===== */
+.download-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 30px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+    position: relative;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.download-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradiente-misto);
+}
+
+.download-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+.download-card .card-header i {
+    color: var(--verde-deep);
+    transition: var(--transicao-padrao);
+}
+
+.download-card:hover .card-header i {
+    transform: scale(1.1);
+}
+
+.download-card .card-body {
+    padding: 2rem !important;
+}
+
+/* ===== FORMULÁRIO DE DOWNLOAD ===== */
+.download-form .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    margin-bottom: 0.5rem;
+}
+
+.download-form .form-control,
+.download-form .form-select {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: var(--transicao-padrao);
+}
+
+.download-form .form-control:focus,
+.download-form .form-select:focus {
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.download-form .input-group .btn {
+    border: 2px solid #e0e0e0;
+    border-left: none;
+    border-radius: 0 12px 12px 0;
+}
+
+.download-form .input-group .btn:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    border-color: var(--verde-deep);
+}
+
+/* ===== INSTRUÇÕES ===== */
+.instrucoes-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-suave);
+    margin-top: 1.5rem;
+}
+
+.instrucoes-card .card-header {
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(76, 175, 80, 0.05));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.5rem;
+}
+
+.instrucoes-card .card-header i {
+    color: var(--amarelo-deep);
+}
+
+.instrucoes-card .card-body {
+    padding: 1.25rem 1.5rem !important;
+}
+
+.instrucoes-card ul {
+    margin-bottom: 0;
+}
+
+.instrucoes-card li {
+    margin-bottom: 0.5rem;
+}
+
+.instrucoes-card code {
+    background: #f4f4f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    color: #d63384;
+}
+
+/* ===== PROGRESSO DO DOWNLOAD ===== */
+.progresso-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    margin-bottom: 1.5rem;
+}
+
+.progresso-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.5rem;
+}
+
+.progresso-card .card-header i {
+    color: var(--verde-deep);
+}
+
+.progresso-card .card-body {
+    padding: 1.5rem !important;
+}
+
+.progresso-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin: 1.5rem 0;
+}
+
+.stat-box {
+    background: white;
+    border-radius: 16px;
+    padding: 1.25rem;
+    text-align: center;
+    box-shadow: var(--sombra-suave);
+    border: var(--borda-suave);
+    transition: var(--transicao-padrao);
+}
+
+.stat-box:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--sombra-hover);
+}
+
+.stat-box h3 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.25rem;
+}
+
+.stat-box .text-success {
+    color: var(--verde-deep) !important;
+}
+
+.stat-box .text-danger {
+    color: #dc3545 !important;
+}
+
+.stat-box small {
+    color: #6c757d;
+    font-size: 0.85rem;
+}
+
+/* ===== LOGS ===== */
+.logs-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    height: 100%;
+}
+
+.logs-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.5rem;
+}
+
+.logs-card .card-body {
+    padding: 0 !important;
+    background-color: #1e1e1e;
+    color: #f8f9fa;
+    font-family: 'Courier New', monospace;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.logs-container {
+    padding: 1rem;
+    font-size: 0.85rem;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    margin: 0;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress-lg {
+    height: 25px;
+    border-radius: 12px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.progress-bar-custom {
+    background: var(--gradiente-verde);
+    transition: width 0.3s ease;
+    font-weight: 600;
+    font-size: 0.9rem;
+    line-height: 25px;
+}
+
+/* ===== MODAL DE CERTIFICADO ===== */
+.modal-certificado {
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-certificado .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.modal-certificado .modal-header {
+    background: var(--gradiente-misto);
+    color: white;
+    border-bottom: none;
+    padding: 1.25rem 1.5rem;
+}
+
+.modal-certificado .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.modal-certificado .modal-body {
+    padding: 1.5rem;
+}
+
+.modal-certificado .modal-footer {
+    border-top: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+/* ===== TABELA DE DOWNLOADS ===== */
+.downloads-table {
+    margin-bottom: 0;
+}
+
+.downloads-table thead th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem 1.25rem;
+    white-space: nowrap;
+}
+
+.downloads-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.downloads-table tbody tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+.downloads-table .progress {
+    height: 10px;
+    min-width: 100px;
+}
+
+.downloads-table .badge {
+    padding: 0.5rem 1rem;
+    border-radius: 30px;
+    font-weight: 500;
+}
+
+.downloads-table .badge.bg-success {
+    background: var(--gradiente-verde) !important;
+}
+
+.downloads-table .badge.bg-primary {
+    background: linear-gradient(135deg, #007bff, #0056b3) !important;
+}
+
+.downloads-table .badge.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+}
+
+.downloads-table .badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+}
+
+.downloads-table .btn-sm {
+    padding: 0.3rem 0.6rem;
+    border-radius: 8px;
+    transition: var(--transicao-padrao);
+}
+
+.downloads-table .btn-sm:hover {
+    transform: translateY(-2px);
+}
+
+/* ===== BOTÃO DE DOWNLOAD ZIP ===== */
+.btn-download-zip {
+    background: var(--gradiente-verde);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    font-weight: 500;
+    transition: var(--transicao-padrao);
+    width: 100%;
+}
+
+.btn-download-zip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+    color: white;
+}
+
+/* ===== SPINNER ===== */
+.spinner-large {
+    width: 4rem;
+    height: 4rem;
+    border-width: 0.25rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .download-header h1,
+    .download-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .download-card .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .progresso-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .downloads-table thead th,
+    .downloads-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .downloads-table .btn-sm {
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .downloads-table .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .downloads-table .btn-group .btn-sm {
+        width: 100%;
+    }
+    
+    .progresso-stats .stat-box {
+        padding: 1rem;
+    }
+    
+    .stat-box h3 {
+        font-size: 1.5rem;
+    }
+}

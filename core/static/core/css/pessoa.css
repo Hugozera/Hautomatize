@@ -1,0 +1,276 @@
+/* ===== PESSOA / PERFIL ===== */
+.pessoa-header h1, 
+.pessoa-header h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+/* ===== FORMULÁRIO DE PESSOA ===== */
+.pessoa-form-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.pessoa-form-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 30px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+    position: relative;
+}
+
+.pessoa-form-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradiente-misto);
+}
+
+.pessoa-form-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+.pessoa-form-card .card-header i {
+    color: var(--verde-deep);
+    transition: var(--transicao-padrao);
+}
+
+.pessoa-form-card:hover .card-header i {
+    transform: scale(1.1);
+}
+
+.pessoa-form-card .card-body {
+    padding: 2rem !important;
+}
+
+/* ===== ESTILIZAÇÃO DO CRISPY FORMS ===== */
+.pessoa-form-card .form-label,
+.pessoa-form-card label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    margin-bottom: 0.5rem;
+    font-size: 0.95rem;
+}
+
+.pessoa-form-card .form-control,
+.pessoa-form-card .form-select,
+.pessoa-form-card textarea,
+.pessoa-form-card input[type="text"],
+.pessoa-form-card input[type="email"],
+.pessoa-form-card input[type="password"],
+.pessoa-form-card input[type="file"] {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: var(--transicao-padrao);
+    font-size: 0.95rem;
+    width: 100%;
+    background-color: white;
+}
+
+.pessoa-form-card .form-control:focus,
+.pessoa-form-card .form-select:focus,
+.pessoa-form-card textarea:focus,
+.pessoa-form-card input:focus {
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    outline: none;
+}
+
+/* ===== FILTROS DA LISTA ===== */
+.filtros-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    margin-bottom: 2rem;
+}
+
+.filtros-card .card-body {
+    padding: 1.5rem !important;
+}
+
+.filtros-card .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    font-size: 0.9rem;
+}
+
+.filtros-card .form-control,
+.filtros-card .form-select {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.6rem 1rem;
+}
+
+.filtros-card .btn {
+    padding: 0.6rem 1rem;
+    border-radius: 12px;
+    width: 100%;
+}
+
+.filtros-card .btn-outline-success {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.filtros-card .btn-outline-success:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.filtros-card .btn-outline-secondary:hover {
+    background: linear-gradient(135deg, #6c757d, #868e96);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ===== TABELA DE USUÁRIOS ===== */
+.usuarios-table-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+}
+
+.usuarios-table {
+    margin-bottom: 0;
+}
+
+.usuarios-table thead th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem 1.25rem;
+    white-space: nowrap;
+}
+
+.usuarios-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.usuarios-table tbody tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+/* ===== AVATAR DO USUÁRIO ===== */
+.usuario-avatar {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.usuario-avatar img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--verde-deep);
+}
+
+.usuario-avatar i {
+    font-size: 2rem;
+    color: var(--verde-deep);
+}
+
+.usuario-avatar span {
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+/* ===== BOTÕES DE AÇÃO ===== */
+.pessoa-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: var(--borda-suave);
+}
+
+.pessoa-actions .btn {
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    transition: var(--transicao-padrao);
+}
+
+.pessoa-actions .btn-success {
+    background: var(--gradiente-verde);
+    border: none;
+}
+
+.pessoa-actions .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+}
+
+.btn-acao {
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+    background: transparent;
+    transition: var(--transicao-padrao);
+}
+
+.btn-acao:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ===== ESTADO VAZIO ===== */
+.empty-state {
+    text-align: center;
+    padding: 3rem 1.5rem !important;
+}
+
+.empty-state i {
+    font-size: 4rem;
+    color: var(--verde-deep);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+.empty-state h5 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .pessoa-header h1,
+    .pessoa-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .pessoa-form-card .card-body {
+        padding: 1.5rem !important;
+    }
+    
+    .pessoa-actions {
+        flex-direction: column;
+    }
+    
+    .usuarios-table thead th,
+    .usuarios-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+}

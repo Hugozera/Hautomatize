@@ -1,7 +1,9 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
+from . import upload_router
+from . import upload_router
 from . import views
-from . import views_conversor  # ← ADICIONE ESTA LINHA!
+from . import views_conversor
 
 urlpatterns = [
     # Dashboard
@@ -22,7 +24,6 @@ urlpatterns = [
     path('empresas/buscar-cnpj/', views.buscar_cnpj, name='buscar_cnpj'),
     path('api/cep/', views.api_cep, name='api_cep'),
     path('empresas/buscar-certificado/', views.buscar_certificado, name='buscar_certificado'),
-    # 👇 ADICIONADO - URL para importar via certificado da loja Windows
     path('empresas/certificado/', views.empresa_certificado, name='empresa_certificado'),
     
     # Agendamentos
@@ -50,7 +51,6 @@ urlpatterns = [
     path('certificados/testar/', views.certificado_test, name='certificado_test'),
     path('certificados/salvar/', views.salvar_certificado, name='salvar_certificado'),
     path('certificados/info/', views.certificado_info, name='certificado_info'),
-    # CRUD/gestão de certificado (por empresa)
     path('certificados/<int:pk>/editar/', views.certificado_edit, name='certificado_edit'),
     path('certificados/<int:pk>/baixar/', views.certificado_download, name='certificado_download'),
 
@@ -63,21 +63,17 @@ urlpatterns = [
     # Histórico
     path('historico/', views.historico, name='historico'),
     path('download/progresso/<int:tarefa_id>/', views.progresso_download, name='progresso_download'),
-path('download/api/progresso/<int:tarefa_id>/', views.api_progresso_download, name='api_progresso_download'),
-path('download/lista/', views.listar_downloads, name='lista_downloads'),
+    path('download/api/progresso/<int:tarefa_id>/', views.api_progresso_download, name='api_progresso_download'),
+    path('download/lista/', views.listar_downloads, name='lista_downloads'),
     
-path('empresas/upload-certificado/', views.upload_certificado_temporario, name='upload_certificado'),
-    path('empresas/upload-certificado/', views.upload_certificado_temporario, name='upload_certificado'),
-   
-   # Conversor de Arquivos
-path('conversor/', views_conversor.conversor_index, name='conversor_index'),
-path('conversor/upload/', views_conversor.upload_arquivo, name='upload_arquivo'),
-path('conversor/processar/<int:conversao_id>/', views_conversor.processar_conversao, name='processar_conversao'),
-path('conversor/status/<int:conversao_id>/', views_conversor.status_conversao, name='status_conversao'),
-path('conversor/historico/', views_conversor.historico_conversoes, name='historico_conversoes'),
-path('conversor/download/<int:conversao_id>/', views_conversor.download_arquivo, name='download_arquivo'),
-path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos'),
-   
+
+    # Conversor de Arquivos
+    path('conversor/', views_conversor.conversor_index, name='conversor_index'),
+    path('upload/', upload_router.upload_router, name='upload_router'),    path('conversor/processar/<int:conversao_id>/', views_conversor.processar_conversao, name='processar_conversao'),
+    path('conversor/status/<int:conversao_id>/', views_conversor.status_conversao, name='status_conversao'),
+    path('conversor/historico/', views_conversor.historico_conversoes, name='historico_conversoes'),
+    path('conversor/download/<int:conversao_id>/', views_conversor.download_arquivo, name='download_arquivo'),
+    path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos'),
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

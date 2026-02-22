@@ -1,0 +1,372 @@
+/* ===== HISTÓRICO DE DOWNLOADS ===== */
+.historico-header h1 {
+    font-size: 2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+/* ===== CARD DE HISTÓRICO ===== */
+.historico-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+}
+
+.historico-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.5rem;
+}
+
+.historico-card .card-body {
+    padding: 1.5rem !important;
+}
+
+/* ===== FILTROS ===== */
+.filtros-historico {
+    background: var(--gradiente-card);
+    border-radius: 16px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--sombra-suave);
+}
+
+.filtros-historico .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.filtros-historico .form-control,
+.filtros-historico .form-select {
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 0.5rem 0.75rem;
+    transition: var(--transicao-padrao);
+}
+
+.filtros-historico .form-control:focus,
+.filtros-historico .form-select:focus {
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.filtros-historico .btn {
+    border-radius: 10px;
+    padding: 0.5rem 1rem;
+    transition: var(--transicao-padrao);
+}
+
+.filtros-historico .btn-outline-success {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.filtros-historico .btn-outline-success:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.filtros-historico .btn-outline-secondary:hover {
+    background: linear-gradient(135deg, #6c757d, #868e96);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ===== TABELA DE HISTÓRICO ===== */
+.historico-table {
+    margin-bottom: 0;
+}
+
+.historico-table thead th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem 1.25rem;
+    white-space: nowrap;
+    font-size: 0.95rem;
+}
+
+.historico-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+    font-size: 0.95rem;
+}
+
+.historico-table tbody tr {
+    transition: var(--transicao-padrao);
+}
+
+.historico-table tbody tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+.historico-table .badge {
+    padding: 0.5rem 1rem;
+    border-radius: 30px;
+    font-weight: 500;
+    font-size: 0.85rem;
+}
+
+.historico-table .badge.bg-primary {
+    background: var(--gradiente-verde) !important;
+}
+
+.historico-table .badge.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+}
+
+.historico-table .badge.bg-success {
+    background: var(--gradiente-verde) !important;
+}
+
+.historico-table .badge.bg-warning {
+    background: var(--gradiente-amarelo) !important;
+    color: var(--cinza-escuro);
+}
+
+.historico-table .badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+}
+
+.historico-table .btn-group {
+    gap: 0.25rem;
+}
+
+.historico-table .btn-group .btn-sm {
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    transition: var(--transicao-padrao);
+}
+
+.historico-table .btn-group .btn-sm:hover {
+    transform: translateY(-2px);
+}
+
+.historico-table .btn-outline-success {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.historico-table .btn-outline-success:hover {
+    background: var(--gradiente-verde);
+    color: white;
+}
+
+.historico-table .btn-outline-primary {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.historico-table .btn-outline-primary:hover {
+    background: var(--gradiente-verde);
+    color: white;
+}
+
+/* ===== DETALHES DO HISTÓRICO ===== */
+.historico-detail {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.historico-detail-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 24px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+}
+
+.historico-detail-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+.historico-detail-card .card-body {
+    padding: 1.5rem !important;
+}
+
+.historico-info {
+    background: rgba(76, 175, 80, 0.05);
+    border-radius: 12px;
+    padding: 1.25rem;
+    margin-bottom: 1.5rem;
+}
+
+.historico-info p {
+    margin-bottom: 0.75rem;
+}
+
+.historico-info p:last-child {
+    margin-bottom: 0;
+}
+
+.historico-info strong {
+    color: var(--cinza-escuro);
+    min-width: 120px;
+    display: inline-block;
+}
+
+/* ===== TABELA DE NOTAS NO DETALHE ===== */
+.notas-table {
+    margin-top: 1.5rem;
+}
+
+.notas-table th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(255, 193, 7, 0.05));
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.notas-table td {
+    padding: 0.75rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.notas-table tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+.notas-table .btn-sm {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.8rem;
+    border-radius: 6px;
+}
+
+/* ===== BOTÃO DE DOWNLOAD ZIP ===== */
+.btn-download-zip {
+    background: var(--gradiente-verde);
+    color: white;
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    font-weight: 500;
+    transition: var(--transicao-padrao);
+}
+
+.btn-download-zip:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+    color: white;
+}
+
+/* ===== PROGRESS BAR ===== */
+.progress {
+    height: 10px;
+    border-radius: 5px;
+    background: #e9ecef;
+    overflow: hidden;
+    margin: 0.5rem 0;
+}
+
+.progress-bar {
+    background: var(--gradiente-verde);
+    border-radius: 5px;
+    transition: width 0.3s ease;
+}
+
+/* ===== ESTADO VAZIO ===== */
+.historico-empty {
+    text-align: center;
+    padding: 3rem 1.5rem !important;
+}
+
+.historico-empty i {
+    font-size: 4rem;
+    color: var(--verde-deep);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+.historico-empty h5 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+.historico-empty .btn-success {
+    background: var(--gradiente-verde);
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    transition: var(--transicao-padrao);
+}
+
+.historico-empty .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .historico-header h1 {
+        font-size: 1.6rem;
+    }
+    
+    .filtros-historico .row {
+        flex-direction: column;
+    }
+    
+    .filtros-historico .col-md-3,
+    .filtros-historico .col-md-2,
+    .filtros-historico .col-md-2,
+    .filtros-historico .col-md-2 {
+        width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    
+    .historico-table thead th,
+    .historico-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .historico-info strong {
+        min-width: 100px;
+        font-size: 0.9rem;
+    }
+    
+    .notas-table {
+        font-size: 0.9rem;
+    }
+    
+    .notas-table th,
+    .notas-table td {
+        padding: 0.5rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .historico-table .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .historico-table .btn-group .btn-sm {
+        width: 100%;
+    }
+    
+    .historico-info p {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .historico-info strong {
+        margin-bottom: 0.25rem;
+    }
+}

@@ -1,0 +1,251 @@
+/* ===== DASHBOARD ===== */
+.dashboard-header h1 {
+    font-size: 2.2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+.dashboard-date-badge {
+    background: rgba(255, 255, 255, 0.9) !important;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
+    border: var(--borda-suave);
+    border-radius: 50px;
+    font-size: 1rem;
+    padding: 0.75rem 1.5rem !important;
+    box-shadow: var(--sombra-suave);
+}
+
+/* ===== CARDS DE ESTATÍSTICAS ===== */
+.stat-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 24px;
+    box-shadow: var(--sombra-media);
+    transition: var(--transicao-padrao);
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-hover);
+}
+
+.stat-card .card-body {
+    padding: 1.5rem !important;
+    width: 100%;
+}
+
+.stat-card .display-4 {
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    margin: 0.5rem 0;
+}
+
+.stat-icon {
+    font-size: 3.5rem !important;
+    margin-bottom: 0.5rem;
+    transition: var(--transicao-padrao);
+}
+
+.stat-card:hover .stat-icon {
+    transform: scale(1.1);
+}
+
+/* ===== CARDS DE EMPRESA ===== */
+.empresa-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-suave);
+    transition: var(--transicao-padrao);
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+.empresa-card:hover {
+    transform: translateY(-5px);
+    box-shadow: var(--sombra-hover);
+}
+
+.empresa-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--gradiente-misto);
+    transform: scaleX(0);
+    transition: transform 0.3s ease;
+}
+
+.empresa-card:hover::before {
+    transform: scaleX(1);
+}
+
+.empresa-card .card-body {
+    padding: 1.5rem !important;
+}
+
+.empresa-icon {
+    font-size: 2.5rem !important;
+    color: var(--verde-deep);
+    transition: var(--transicao-padrao);
+}
+
+.empresa-card:hover .empresa-icon {
+    transform: scale(1.1) rotate(5deg);
+}
+
+.empresa-card .card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+.empresa-card .badge {
+    padding: 0.5rem 1rem;
+    border-radius: 30px;
+    font-weight: 500;
+}
+
+.empresa-card .badge.bg-success {
+    background: var(--gradiente-verde) !important;
+}
+
+.empresa-card .badge.bg-warning {
+    background: var(--gradiente-amarelo) !important;
+    color: var(--cinza-escuro);
+}
+
+/* ===== TABELA DE HISTÓRICO ===== */
+.historico-table {
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.historico-table th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem;
+}
+
+.historico-table td {
+    padding: 1rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.historico-table .badge.bg-primary {
+    background: var(--gradiente-verde) !important;
+}
+
+.historico-table .badge.bg-info {
+    background: linear-gradient(135deg, #17a2b8, #138496) !important;
+}
+
+.historico-table .badge.bg-success {
+    background: var(--gradiente-verde) !important;
+}
+
+.historico-table .badge.bg-warning {
+    background: var(--gradiente-amarelo) !important;
+    color: var(--cinza-escuro);
+}
+
+.historico-table .badge.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+}
+
+/* ===== HEADER DAS SEÇÕES ===== */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 2rem 0 1.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    position: relative;
+    padding-left: 1rem;
+}
+
+.section-header h2::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 24px;
+    background: var(--gradiente-misto);
+    border-radius: 4px;
+}
+
+/* ===== BOTÃO DE DOWNLOAD ===== */
+.btn-download {
+    background: var(--gradiente-verde);
+    color: white;
+    border: none;
+    padding: 0.4rem 1rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: var(--transicao-padrao);
+}
+
+.btn-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .dashboard-header h1 {
+        font-size: 1.8rem;
+    }
+    
+    .dashboard-date-badge {
+        font-size: 0.9rem;
+        padding: 0.5rem 1rem !important;
+    }
+    
+    .stat-card .display-4 {
+        font-size: 2.5rem;
+    }
+    
+    .stat-icon {
+        font-size: 2.5rem !important;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+    
+    .historico-table th,
+    .historico-table td {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .empresa-card .btn-sm {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+    }
+}

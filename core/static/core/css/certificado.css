@@ -1,0 +1,285 @@
+/* ===== CERTIFICADOS ===== */
+.certificado-header h1, 
+.certificado-header h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+/* ===== CARD DE CERTIFICADO ===== */
+.certificado-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+    margin-bottom: 1.5rem;
+}
+
+.certificado-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1rem 1.5rem;
+    font-weight: 600;
+}
+
+.certificado-card .card-body {
+    padding: 1.5rem !important;
+}
+
+/* ===== INFORMAÇÕES DO CERTIFICADO ===== */
+.certificado-info {
+    background: rgba(76, 175, 80, 0.05);
+    border-radius: 12px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.certificado-info p {
+    margin-bottom: 0.5rem;
+}
+
+.certificado-info p:last-child {
+    margin-bottom: 0;
+}
+
+.certificado-info strong {
+    color: var(--cinza-escuro);
+    min-width: 100px;
+    display: inline-block;
+}
+
+/* ===== TABELA DE CERTIFICADOS ===== */
+.certificado-table {
+    margin-bottom: 0;
+}
+
+.certificado-table thead th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem 1.25rem;
+}
+
+.certificado-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.certificado-table tbody tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+.certificado-table code {
+    background: #f4f4f4;
+    padding: 0.3rem 0.6rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    color: #d63384;
+}
+
+/* ===== FORMULÁRIO DE UPLOAD ===== */
+.certificado-form .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    margin-bottom: 0.5rem;
+}
+
+.certificado-form .form-control {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: var(--transicao-padrao);
+}
+
+.certificado-form .form-control:focus {
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.certificado-form .form-text {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+/* Input de arquivo */
+.certificado-form input[type="file"] {
+    padding: 0.5rem;
+    background: var(--off-white);
+    cursor: pointer;
+}
+
+.certificado-form input[type="file"]::file-selector-button {
+    background: var(--gradiente-verde);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    margin-right: 1rem;
+    cursor: pointer;
+    transition: var(--transicao-padrao);
+}
+
+.certificado-form input[type="file"]::file-selector-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* ===== BOTÕES DE AÇÃO ===== */
+.certificado-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.certificado-actions .btn-sm {
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    transition: var(--transicao-padrao);
+}
+
+.certificado-actions .btn-outline-success {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.certificado-actions .btn-outline-success:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.certificado-actions .btn-outline-primary {
+    border: 2px solid var(--amarelo-deep);
+    color: var(--amarelo-deep);
+}
+
+.certificado-actions .btn-outline-primary:hover {
+    background: var(--gradiente-amarelo);
+    color: var(--cinza-escuro);
+    transform: translateY(-2px);
+}
+
+.certificado-actions .btn-info {
+    background: linear-gradient(135deg, #17a2b8, #138496);
+    color: white;
+    border: none;
+}
+
+.certificado-actions .btn-info:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(23, 162, 184, 0.3);
+}
+
+/* ===== MODAL ===== */
+.certificado-modal .modal-content {
+    border: none;
+    border-radius: 24px;
+    overflow: hidden;
+}
+
+.certificado-modal .modal-header {
+    background: var(--gradiente-misto);
+    color: white;
+    border-bottom: none;
+    padding: 1.25rem 1.5rem;
+}
+
+.certificado-modal .modal-header .btn-close {
+    filter: brightness(0) invert(1);
+}
+
+.certificado-modal .modal-body {
+    padding: 1.5rem;
+}
+
+.certificado-modal .modal-footer {
+    border-top: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+/* ===== TESTE DE CERTIFICADO ===== */
+.certificado-test {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.certificado-test select {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.certificado-test .btn-success {
+    background: var(--gradiente-verde);
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    width: 100%;
+}
+
+.certificado-test .btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+}
+
+/* ===== ESTADO VAZIO ===== */
+.certificado-empty {
+    text-align: center;
+    padding: 3rem 1.5rem !important;
+}
+
+.certificado-empty i {
+    font-size: 4rem;
+    color: var(--verde-deep);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .certificado-header h1,
+    .certificado-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .certificado-table thead th,
+    .certificado-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .certificado-actions {
+        flex-direction: column;
+    }
+    
+    .certificado-actions .btn-sm {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+    
+    .certificado-info strong {
+        min-width: 80px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .certificado-card .card-body {
+        padding: 1rem !important;
+    }
+    
+    .certificado-table code {
+        font-size: 0.75rem;
+        padding: 0.2rem 0.4rem;
+    }
+}

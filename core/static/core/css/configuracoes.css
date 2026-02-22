@@ -1,0 +1,138 @@
+/* ===== CONFIGURAÇÕES ===== */
+.config-header h2 {
+    font-size: 2rem;
+    font-weight: 600;
+    background: var(--gradiente-misto);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    display: inline-block;
+}
+
+/* ===== CARDS DE CONFIGURAÇÃO ===== */
+.config-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 24px;
+    box-shadow: var(--sombra-media);
+    transition: var(--transicao-padrao);
+    position: relative;
+    overflow: hidden;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+}
+
+.config-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 6px;
+    background: var(--gradiente-misto);
+    transform: scaleX(0);
+    transition: transform 0.4s ease;
+}
+
+.config-card:hover::before {
+    transform: scaleX(1);
+}
+
+.config-card:hover {
+    transform: translateY(-8px);
+    box-shadow: var(--sombra-hover);
+}
+
+.config-card .card-body {
+    padding: 2rem 1.5rem !important;
+    text-align: center;
+    width: 100%;
+}
+
+.config-card i.bi {
+    font-size: 4rem !important;
+    margin-bottom: 1rem;
+    transition: var(--transicao-padrao);
+}
+
+.config-card:hover i.bi {
+    transform: scale(1.1);
+}
+
+.config-card .card-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    margin: 1rem 0 0.5rem;
+}
+
+.config-card .card-text {
+    color: #6c757d;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1.5rem;
+}
+
+.config-card .btn-outline-success {
+    padding: 0.75rem 2rem;
+    border-radius: 30px;
+    font-weight: 500;
+    border-width: 2px;
+    transition: var(--transicao-padrao);
+}
+
+.config-card .btn-outline-success:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+}
+
+/* Ícones específicos */
+.config-card i.bi-shield-lock {
+    color: var(--verde-deep);
+}
+
+.config-card i.bi-person-circle {
+    color: var(--amarelo-deep);
+}
+
+/* Para superuser - azul personalizado */
+:root {
+    --azul-deep: #2196F3;
+}
+
+.config-card i.bi-shield-lock[style*="azul-deep"] {
+    color: var(--azul-deep);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .config-header h2 {
+        font-size: 1.6rem;
+    }
+    
+    .config-card {
+        min-height: 240px;
+    }
+    
+    .config-card .card-title {
+        font-size: 1.3rem;
+    }
+    
+    .config-card i.bi {
+        font-size: 3.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .config-card {
+        min-height: 220px;
+    }
+    
+    .config-card .btn-outline-success {
+        padding: 0.5rem 1.5rem;
+        font-size: 0.9rem;
+    }
+}

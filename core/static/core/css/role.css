@@ -1,0 +1,260 @@
+/* ===== PAPÉIS (ROLES) ===== */
+.role-header h1, 
+.role-header h3 {
+    font-weight: 600;
+    color: var(--cinza-escuro);
+}
+
+.role-header h3 i {
+    color: var(--verde-deep);
+}
+
+/* ===== CARD DE PAPEL ===== */
+.role-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.role-card .card-header {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: var(--borda-suave);
+    padding: 1.25rem 1.5rem;
+}
+
+.role-card .card-header i {
+    color: var(--verde-deep);
+}
+
+.role-card .card-body {
+    padding: 1.5rem !important;
+}
+
+/* ===== FORMULÁRIO DE PAPEL ===== */
+.role-form .form-label {
+    font-weight: 500;
+    color: var(--cinza-escuro);
+    margin-bottom: 0.5rem;
+}
+
+.role-form .form-control,
+.role-form .form-select,
+.role-form textarea {
+    border: 2px solid #e0e0e0;
+    border-radius: 12px;
+    padding: 0.75rem 1rem;
+    transition: var(--transicao-padrao);
+    width: 100%;
+}
+
+.role-form .form-control:focus,
+.role-form .form-select:focus,
+.role-form textarea:focus {
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+}
+
+.role-form .form-text {
+    color: #6c757d;
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+}
+
+.role-form textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* ===== SELECT MÚLTIPLO ===== */
+.role-form select[multiple] {
+    min-height: 150px;
+    padding: 0.5rem;
+}
+
+.role-form select[multiple] option {
+    padding: 0.5rem;
+    border-radius: 6px;
+    margin: 2px 0;
+}
+
+.role-form select[multiple] option:hover {
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.role-form select[multiple] option:checked {
+    background: var(--gradiente-verde);
+    color: white;
+}
+
+/* ===== TABELA DE PAPÉIS ===== */
+.role-table-card {
+    background: var(--gradiente-card);
+    border: none;
+    border-radius: 20px;
+    box-shadow: var(--sombra-media);
+    overflow: hidden;
+}
+
+.role-table {
+    margin-bottom: 0;
+}
+
+.role-table thead th {
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    border-bottom: none;
+    font-weight: 600;
+    color: var(--cinza-escuro);
+    padding: 1rem 1.25rem;
+    white-space: nowrap;
+}
+
+.role-table tbody td {
+    padding: 1rem 1.25rem;
+    vertical-align: middle;
+    border-bottom: var(--borda-suave);
+}
+
+.role-table tbody tr:hover {
+    background: rgba(76, 175, 80, 0.02);
+}
+
+.role-table code {
+    background: #f4f4f4;
+    padding: 0.2rem 0.4rem;
+    border-radius: 6px;
+    color: #d63384;
+    font-size: 0.85rem;
+}
+
+/* ===== BOTÕES DE AÇÃO ===== */
+.role-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.role-actions .btn-sm {
+    padding: 0.4rem 0.8rem;
+    border-radius: 8px;
+    transition: var(--transicao-padrao);
+}
+
+.role-actions .btn-outline-primary {
+    border: 2px solid var(--verde-deep);
+    color: var(--verde-deep);
+}
+
+.role-actions .btn-outline-primary:hover {
+    background: var(--gradiente-verde);
+    color: white;
+    transform: translateY(-2px);
+}
+
+.role-actions .btn-outline-danger {
+    border: 2px solid #dc3545;
+    color: #dc3545;
+}
+
+.role-actions .btn-outline-danger:hover {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ===== CONFIRMAÇÃO DE EXCLUSÃO ===== */
+.delete-card {
+    max-width: 600px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.delete-card .card-body {
+    padding: 2rem !important;
+}
+
+.delete-card i.bi-exclamation-triangle {
+    font-size: 4rem;
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.delete-card h4 {
+    color: var(--cinza-escuro);
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+
+.delete-card p {
+    color: #6c757d;
+    margin-bottom: 2rem;
+}
+
+.delete-card .btn-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    border: none;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+    transition: var(--transicao-padrao);
+}
+
+.delete-card .btn-danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(220, 53, 69, 0.4);
+}
+
+.delete-card .btn-outline-secondary {
+    border: 2px solid #6c757d;
+    color: #6c757d;
+    padding: 0.75rem 2rem;
+    border-radius: 12px;
+}
+
+.delete-card .btn-outline-secondary:hover {
+    background: linear-gradient(135deg, #6c757d, #868e96);
+    color: white;
+    transform: translateY(-2px);
+}
+
+/* ===== ESTADO VAZIO ===== */
+.role-empty {
+    text-align: center;
+    padding: 3rem 1.5rem !important;
+}
+
+.role-empty i {
+    font-size: 4rem;
+    color: var(--verde-deep);
+    opacity: 0.5;
+    margin-bottom: 1rem;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .role-table thead th,
+    .role-table tbody td {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+    
+    .role-actions {
+        flex-direction: column;
+    }
+    
+    .role-actions .btn-sm {
+        width: 100%;
+    }
+    
+    .delete-card .card-body {
+        padding: 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .role-form .form-control,
+    .role-form .form-select {
+        padding: 0.5rem 0.75rem;
+    }
+}
