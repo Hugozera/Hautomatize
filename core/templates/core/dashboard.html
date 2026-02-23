@@ -6,7 +6,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
         <div>
             <h1 class="h2 mb-2">
-                <i class="bi bi-house-door text-success me-2"></i>Visão Geral
+                <i class="bi bi-speedometer2 text-success me-2"></i>Dashboard
             </h1>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb">
@@ -14,42 +14,86 @@
                 </ol>
             </nav>
         </div>
-        <div>
-            <span class="badge bg-light text-dark p-3">
+        <div class="text-end">
+            <span class="badge bg-light text-dark p-4 me-3" style="font-size:1.5rem;">
                 <i class="bi bi-calendar me-2"></i>
                 {{ now|date:"d/m/Y" }}
+            </span>
+            <span id="clock" class="badge bg-light text-dark p-4" style="font-size:1.5rem;">
+                <i class="bi bi-clock me-2"></i>--:--:--
             </span>
         </div>
     </div>
 
+    <!-- cards de módulos -->
+    <div class="row mb-4">
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{% url 'conversor_index' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
+                <div style="font-size:2.5rem;">🔁</div>
+                <div class="mt-2 fw-bold">Conversor</div>
+            </a>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{% url 'empresa_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
+                <div style="font-size:2.5rem;">🏢</div>
+                <div class="mt-2 fw-bold">Empresas</div>
+            </a>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{% url 'agendamento_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
+                <div style="font-size:2.5rem;">🗓️</div>
+                <div class="mt-2 fw-bold">Agendar</div>
+            </a>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{% url 'download_manual' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
+                <div style="font-size:2.5rem;">☁️</div>
+                <div class="mt-2 fw-bold">Downloads</div>
+            </a>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{% url 'certificado_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
+                <div style="font-size:2.5rem;">🔒</div>
+                <div class="mt-2 fw-bold">Certificados</div>
+            </a>
+        </div>
+        <div class="col-md-2 col-6 mb-3">
+            <a href="{% url 'historico' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
+                <div style="font-size:2.5rem;">📁</div>
+                <div class="mt-2 fw-bold">Histórico</div>
+            </a>
+        </div>
+    </div>
+
+
     <!-- Cards de Estatísticas -->
     <div class="row mb-4">
         <div class="col-md-4 mb-3">
-            <div class="card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
+            <div class="card stat-card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.1s;">
                 <div class="card-body text-center">
-                    <div class="mb-3" style="font-size: 3rem; color: var(--verde-deep);">📄</div>
-                    <h6 class="card-subtitle mb-2 text-muted">Notas baixadas no mês</h6>
-                    <h2 class="display-4 mb-0" style="color: var(--verde-deep); font-weight: 700;">{{ total_mes }}</h2>
+                    <div class="mb-3" style="font-size: 4rem; color: var(--verde-deep);">📄</div>
+                    <h6 class="card-subtitle mb-2 text-muted" style="font-size:1.2rem;">Notas baixadas no mês</h6>
+                    <h2 class="display-4 mb-0" style="color: var(--verde-deep); font-weight: 700; font-size:3rem;">{{ total_mes }}</h2>
                 </div>
             </div>
         </div>
         
         <div class="col-md-4 mb-3">
-            <div class="card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
+            <div class="card stat-card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.2s;">
                 <div class="card-body text-center">
-                    <div class="mb-3" style="font-size: 3rem; color: var(--amarelo-deep);">🏢</div>
-                    <h6 class="card-subtitle mb-2 text-muted">Empresas vinculadas</h6>
-                    <h2 class="display-4 mb-0" style="color: var(--amarelo-deep); font-weight: 700;">{{ empresas|length }}</h2>
+                    <div class="mb-3" style="font-size: 4rem; color: var(--amarelo-deep);">🏢</div>
+                    <h6 class="card-subtitle mb-2 text-muted" style="font-size:1.2rem;">Empresas vinculadas</h6>
+                    <h2 class="display-4 mb-0" style="color: var(--amarelo-deep); font-weight: 700; font-size:3rem;">{{ empresas|length }}</h2>
                 </div>
             </div>
         </div>
         
         <div class="col-md-4 mb-3">
-            <div class="card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
+            <div class="card stat-card shadow-sm h-100 animate__animated animate__fadeInUp" style="animation-delay: 0.3s;">
                 <div class="card-body text-center">
-                    <div class="mb-3" style="font-size: 3rem; color: #6c757d;">⏰</div>
-                    <h6 class="card-subtitle mb-2 text-muted">Agendamentos ativos</h6>
-                    <h2 class="display-4 mb-0" style="color: #6c757d; font-weight: 700;">{{ agendamentos_count|default:"0" }}</h2>
+                    <div class="mb-3" style="font-size: 4rem; color: #6c757d;">⏰</div>
+                    <h6 class="card-subtitle mb-2 text-muted" style="font-size:1.2rem;">Agendamentos ativos</h6>
+                    <h2 class="display-4 mb-0" style="color: #6c757d; font-weight: 700; font-size:3rem;">{{ agendamentos_count|default:"0" }}</h2>
                 </div>
             </div>
         </div>
@@ -127,8 +171,8 @@
 
     <div class="card animate__animated animate__fadeInUp">
         <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
+                <div class="table-responsive table-scrollable">
+                <table class="table table-hover table--compact mb-0">
                     <thead>
                         <tr>
                             <th>Data</th>
@@ -193,4 +237,17 @@
         {% endif %}
     </div>
 </div>
+
+<script>
+// clock update
+function updateClock() {
+    const now = new Date();
+    const pad = n => n.toString().padStart(2,'0');
+    const time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    document.getElementById('clock').textContent = time;
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
 {% endblock %}

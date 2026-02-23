@@ -1,40 +1,84 @@
-
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="container py-5">
-    <h2 class="mb-4 text-center text-success-gradient">Bem-vindo ao Hautomatize</h2>
-    <div class="cards-grid">
-        <a href="{% url 'conversor_index' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-arrow-left-right me-2"></i> Conversor</div>
-            <div class="card-body">Converta arquivos e notas fiscais rapidamente.</div>
-        </a>
-        <a href="{% url 'empresa_list' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-building me-2"></i> Empresas</div>
-            <div class="card-body">Gerencie empresas cadastradas.</div>
-        </a>
-        <a href="{% url 'agendamento_list' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-clock me-2"></i> Programar</div>
-            <div class="card-body">Agende tarefas automáticas.</div>
-        </a>
-        <a href="{% url 'download_manual' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-cloud-download me-2"></i> Download Rápido</div>
-            <div class="card-body">Baixe notas fiscais manualmente.</div>
-        </a>
-        <a href="{% url 'certificado_list' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-shield-lock me-2"></i> Certificados</div>
-            <div class="card-body">Gerencie certificados digitais.</div>
-        </a>
-        <a href="{% url 'configuracao' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-gear me-2"></i> Configurações</div>
-            <div class="card-body">Ajuste preferências do sistema.</div>
-        </a>
-        {% if request.user.is_superuser %}
-        <a href="{% url 'pessoa_list' %}" class="card text-decoration-none animate-fade-in">
-            <div class="card-header"><i class="bi bi-people me-2"></i> Usuários</div>
-            <div class="card-body">Administre usuários do sistema.</div>
-        </a>
-        {% endif %}
+<div class="container-fluid px-0">
+  <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
+    <div>
+      <h1 class="h2 mb-2"><i class="bi bi-house-door text-success me-2"></i>Home</h1>
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item active" aria-current="page">Home</li>
+        </ol>
+      </nav>
     </div>
+    <div class="text-end">
+      <span class="badge bg-light text-dark p-4 me-3" style="font-size:1.5rem;">
+        <i class="bi bi-calendar me-2"></i>{{ now|date:"d/m/Y" }}
+      </span>
+      <span id="clock" class="badge bg-light text-dark p-4" style="font-size:1.5rem;">
+        <i class="bi bi-clock me-2"></i>--:--:--
+      </span>
+    </div>
+  </div>
+
+  <!-- módulo cards -->
+  <div class="row mb-4" id="module-cards" style="--bs-gutter-x:2rem;">
+    <div class="col-md-2 col-6 mb-3">
+      <a href="{% url 'conversor_index' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3 animate-fade-in" style="animation-delay:0.1s;">
+        <div style="font-size:3.5rem;">🔁</div>
+        <div class="mt-2 fw-bold" style="font-size:1.4rem;">Conversor</div>
+        <small class="text-muted d-block mt-1">Converter arquivos entre formatos</small>
+      </a>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+      <a href="{% url 'empresa_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3 animate-fade-in" style="animation-delay:0.2s;">
+        <div style="font-size:3.5rem;">🏢</div>
+        <div class="mt-2 fw-bold" style="font-size:1.4rem;">Empresas</div>
+        <small class="text-muted d-block mt-1">Gerenciar cadastros e certificados</small>
+      </a>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+      <a href="{% url 'agendamento_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3 animate-fade-in" style="animation-delay:0.3s;">
+        <div style="font-size:3.5rem;">🗓️</div>
+        <div class="mt-2 fw-bold" style="font-size:1.4rem;">Agendar</div>
+        <small class="text-muted d-block mt-1">Programar downloads automáticos</small>
+      </a>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+      <a href="{% url 'download_manual' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3 animate-fade-in" style="animation-delay:0.4s;">
+        <div style="font-size:3.5rem;">☁️</div>
+        <div class="mt-2 fw-bold" style="font-size:1.4rem;">Downloads</div>
+        <small class="text-muted d-block mt-1">Baixar NFSe manualmente</small>
+      </a>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+      <a href="{% url 'certificado_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3 animate-fade-in" style="animation-delay:0.5s;">
+        <div style="font-size:3.5rem;">🔒</div>
+        <div class="mt-2 fw-bold" style="font-size:1.4rem;">Certificados</div>
+        <small class="text-muted d-block mt-1">Gerenciar certificados digitais</small>
+      </a>
+    </div>
+    <div class="col-md-2 col-6 mb-3">
+      <a href="{% url 'historico' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3 animate-fade-in" style="animation-delay:0.6s;">
+        <div style="font-size:3.5rem;">📁</div>
+        <div class="mt-2 fw-bold" style="font-size:1.4rem;">Histórico</div>
+        <small class="text-muted d-block mt-1">Ver logs de downloads</small>
+      </a>
+    </div>
+  </div>
+
 </div>
+
+<script>
+// clock update
+function updateClock() {
+    const now = new Date();
+    const pad = n => n.toString().padStart(2,'0');
+    const time = pad(now.getHours()) + ':' + pad(now.getMinutes()) + ':' + pad(now.getSeconds());
+    document.getElementById('clock').textContent = time;
+}
+setInterval(updateClock, 1000);
+updateClock();
+</script>
+
 {% endblock %}

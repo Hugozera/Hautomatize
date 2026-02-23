@@ -17,9 +17,20 @@ class Pessoa(models.Model):
     ativo = models.BooleanField(default=True)
     # Token para agente local (usado pelo cliente-side agent)
     client_api_token = models.CharField(max_length=64, blank=True, null=True)
+    permissions = models.TextField(blank=True, help_text='Códigos de permissão separados por vírgula, ex.: empresa.edit,certificado.manage')
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username
+
+    def perm_list(self):
+        """Retorna lista de códigos atribuídos diretamente à pessoa (mais roles)."""
+        own = [p.strip() for p in (self.permissions or '').split(',') if p.strip()]
+        # acrescentar permissões dos roles vinculados
+        for role in self.roles.all():
+            for p in role.perm_list():
+                if p not in own:
+                    own.append(p)
+        return own
 
     class Meta:
         verbose_name = 'Pessoa'
@@ -81,6 +92,8 @@ class Empresa(models.Model):
     certificado_validade = models.DateField(null=True, blank=True)
     certificado_emitente = models.CharField(max_length=255, blank=True)
     certificado_arquivo = models.FileField(upload_to='certificados/', blank=True, null=True)
+    ultimo_zip = models.FileField(upload_to='empresas/zips/', blank=True, null=True,
+                                   help_text='Último arquivo ZIP gerado para esta empresa')
     
     data_cadastro = models.DateTimeField(auto_now_add=True)
     ultimo_download = models.DateTimeField(null=True, blank=True)
@@ -258,6 +271,8 @@ class NotaFiscal(models.Model):
     arquivo_xml = models.FileField(upload_to='xmls/', blank=True, null=True)
     tipo = models.CharField(max_length=10, choices=TIPO_CHOICES)
     data_download = models.DateTimeField(auto_now_add=True)
+    impostos = models.JSONField(blank=True, null=True,
+                                help_text='Dicionário com valores de impostos extraídos do XML')
 
     def __str__(self):
         return f"{self.numero} - {self.data_emissao}"

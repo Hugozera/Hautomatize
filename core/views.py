@@ -357,22 +357,13 @@ def pessoa_create(request):
     if request.method == 'POST':
         form = PessoaForm(request.POST, request.FILES)
         if form.is_valid():
-            # Cria usuário (protege contra conflito de username)
             try:
-                user = User.objects.create_user(
-                    username=form.cleaned_data['username'],
-                    email=form.cleaned_data['email'],
-                    password=form.cleaned_data['password'],
-                    first_name=form.cleaned_data['first_name'],
-                    last_name=form.cleaned_data['last_name']
-                )
+                # form.save will create the underlying User and Pessoa
+                pessoa = form.save()
             except IntegrityError:
+                # usually means username already exists
                 form.add_error('username', 'Nome de usuário já existe.')
             else:
-                # Cria pessoa
-                pessoa = form.save(commit=False)
-                pessoa.user = user
-                pessoa.save()
                 return redirect('pessoa_list')
     else:
         form = PessoaForm()
@@ -703,17 +694,43 @@ def empresa_dashboard(request, pk):
     if not can_view_empresa(request.user, empresa):
         return redirect('dashboard')
 
-    # KPI principais
+    # filtros de intervalo
+    start = request.GET.get('start')
+    end = request.GET.get('end')
     notas = empresa.notas.all()
+    if start:
+        notas = notas.filter(data_emissao__gte=start)
+    if end:
+        notas = notas.filter(data_emissao__lte=end)
     total_notas = notas.count()
     total_valor = float(notas.aggregate(models.Sum('valor'))['valor__sum'] or 0)
     recentes = notas.order_by('-data_emissao')[:10]
+
+    # impostos agregados
+    impostos_totais = {}
+    for n in notas:
+        if n.impostos:
+            for key, val in n.impostos.items():
+                impostos_totais[key] = impostos_totais.get(key, 0) + (val or 0)
 
     # Top fornecedores (tomador_nome)
     top_fornecedores = (
         notas.values('tomador_nome')
              .annotate(total=models.Count('id'), soma=models.Sum('valor'))
              .order_by('-total')[:10]
+    )
+
+    # consumo por fornecedor completo (utilizado para ABC curve)
+    fornecedores_consumo = (
+        notas.values('tomador_nome')
+             .annotate(qtd=models.Count('id'), soma=models.Sum('valor'))
+             .order_by('-soma')
+    )
+
+    # distribuição por tipo (entrada/saida)
+    tipo_dist = (
+        notas.values('tipo')
+             .annotate(qtd=models.Count('id'), soma=models.Sum('valor'))
     )
 
     # Distribuição por mês (últimos 12 meses)
@@ -731,7 +748,12 @@ def empresa_dashboard(request, pk):
         'total_valor': total_valor,
         'recentes': recentes,
         'top_fornecedores': top_fornecedores,
+        'fornecedores_consumo': fornecedores_consumo,
+        'tipo_dist': tipo_dist,
         'meses': meses,
+        'impostos_totais': impostos_totais,
+        'filter_start': start,
+        'filter_end': end,
     })
 
 @login_required
@@ -1066,18 +1088,24 @@ def buscar_certificado(request):
 # ========== VIEWS DE DASHBOARD E ESTATÍSTICAS ==========
 
 @login_required
+def home(request):
+    """Página inicial (home) com atalhos e informações gerais."""
+    now = timezone.now()
+    return render(request, 'core/home.html', {
+        'now': now,
+    })
+
+
+@login_required
 def dashboard(request):
-    """Dashboard principal"""
-    # Estatísticas do mês
+    """BI/dashboard estatístico de downloads, empresas, etc (acesso via link 'Dashboard')."""
     now = timezone.now()
     total_mes = HistoricoDownload.objects.filter(
         data_inicio__year=now.year,
         data_inicio__month=now.month
     ).aggregate(total=models.Sum('quantidade_sucesso'))['total'] or 0
-    
     # Últimos 10 downloads
     historico = HistoricoDownload.objects.select_related('empresa').order_by('-data_inicio')[:10]
-    
     # Empresas do usuário
     if request.user.is_superuser:
         empresas = Empresa.objects.filter(ativo=True)[:6]
@@ -1085,11 +1113,11 @@ def dashboard(request):
         empresas = request.user.pessoa.empresas.filter(ativo=True)
     else:
         empresas = Empresa.objects.none()
-    
     return render(request, 'core/dashboard.html', {
         'total_mes': total_mes,
         'historico': historico,
-        'empresas': empresas
+        'empresas': empresas,
+        'now': now,
     })
 
 @login_required

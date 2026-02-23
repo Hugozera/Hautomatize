@@ -6,8 +6,10 @@ from . import views
 from . import views_conversor
 
 urlpatterns = [
-    # Dashboard
-    path('', views.dashboard, name='dashboard'),
+    # Home / inicial
+    path('', views.home, name='home'),
+    # Dashboard statistics
+    path('dashboard/', views.dashboard, name='dashboard'),
     
     # Pessoas (Usuários)
     path('pessoas/', views.pessoa_list, name='pessoa_list'),

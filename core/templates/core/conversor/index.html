@@ -33,7 +33,7 @@
                     <span class="fw-semibold">1. Selecione o arquivo</span>
                 </div>
                 <div class="card-body">
-                    <div class="upload-area" id="uploadArea">
+                    <div class="upload-area" id="uploadArea" tabindex="0" role="button" aria-label="Área de upload - pressione Enter para selecionar arquivo">
                         <i class="bi bi-cloud-arrow-up" style="font-size: 4rem; color: var(--verde-deep);"></i>
                         <h5 class="mt-3">Arraste arquivos ou clique para selecionar</h5>
                         <p class="text-muted">Suporta PDF, OFX, imagens, documentos e mais</p>
@@ -228,9 +228,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const btnConverter = document.getElementById('btnConverter');
     const formatoDestino = document.getElementById('formatoDestino');
 
-    // Upload area click
+    // Upload area click (mouse) and keyboard activation
     uploadArea.addEventListener('click', function(e) {
         if (e.target === this || e.target.id === 'btnSelect') {
+            fileInput.click();
+        }
+    });
+    uploadArea.addEventListener('keydown', function(e){
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
             fileInput.click();
         }
     });
@@ -319,8 +325,8 @@ function atualizarInterfaceArquivoUnico(file) {
     document.getElementById('arquivoInfo').classList.remove('d-none');
     document.getElementById('formatoOrigem').value = ext.toUpperCase();
     
-    // Mostrar painel
-    document.getElementById('painelArquivos').innerHTML = `<b>Arquivo selecionado:</b> ${file.name}`;
+    // Mostrar painel (envolve em arquivo visual consistente)
+    document.getElementById('painelArquivos').innerHTML = `<div class="file-item"><b>Arquivo selecionado:</b> ${file.name}</div>`;
     
     // Buscar formatos disponíveis
     buscarFormatosDestino(ext);
@@ -339,9 +345,9 @@ function compactarMultiplosArquivos(fileList) {
 
     const primeiraExtensao = fileList[0].name.split('.').pop().toLowerCase();
     
-    // Mostrar mensagem de processamento
+    // Mostrar mensagem de processamento (envolvida em file-item para consistência visual)
     document.getElementById('painelArquivos').innerHTML = 
-        '<div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i>Compactando arquivos... Aguarde</div>';
+        '<div class="file-item"><div class="alert alert-info"><i class="bi bi-hourglass-split me-2"></i>Compactando arquivos... Aguarde</div></div>';
     
     // Desabilitar elementos durante compactação
     document.getElementById('formatoDestino').disabled = true;
@@ -368,10 +374,10 @@ function compactarMultiplosArquivos(fileList) {
         
         // Mostrar lista de arquivos originais
         document.getElementById('painelArquivos').innerHTML = 
-            '<b>Arquivos compactados:</b><ul>' + 
+            '<div class="file-item"><b>Arquivos compactados:</b><ul>' + 
             arquivosOriginais.map(n => `<li>${n}</li>`).join('') + 
             '</ul>' +
-            '<small class="text-muted">Os arquivos foram compactados em ZIP para processamento</small>';
+            '<small class="text-muted">Os arquivos foram compactados em ZIP para processamento</small></div>';
         
         // Buscar formatos para a extensão original
         buscarFormatosDestino(primeiraExtensao);
@@ -646,8 +652,8 @@ function mostrarErro(mensagem) {
 #painelArquivos {
     max-height: 200px;
     overflow-y: auto;
-    padding: 10px;
-    background-color: #f8f9fa;
+    padding: 6px 0;
+    background: transparent; /* use surface colors from global CSS */
     border-radius: 8px;
 }
 #painelArquivos ul {

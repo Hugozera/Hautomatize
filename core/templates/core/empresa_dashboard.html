@@ -18,6 +18,20 @@
     </div>
   </div>
 
+  <!-- filtro por data -->
+  <form method="get" class="mb-3 row g-2 align-items-end">
+    <div class="col-auto">
+      <label class="form-label">De</label>
+      <input type="date" name="start" class="form-control" value="{{ filter_start|default_if_none:'' }}">
+    </div>
+    <div class="col-auto">
+      <label class="form-label">Até</label>
+      <input type="date" name="end" class="form-control" value="{{ filter_end|default_if_none:'' }}">
+    </div>
+    <div class="col-auto">
+      <button class="btn btn-outline-success">Filtrar</button>
+    </div>
+  </form>
   <div class="row mb-4">
     <div class="col-md-4">
       <div class="card p-3">
@@ -41,7 +55,7 @@
                 {% if n.arquivo_pdf %}
                 <a href="{{ n.arquivo_pdf.url }}" class="btn btn-sm btn-success mt-1" download>Baixar PDF</a>
                 {% endif %}
-                {% if n.arquivo_xml %}
+                        <div class="table-responsive table-scrollable">
                 <a href="{{ n.arquivo_xml.url }}" class="btn btn-sm btn-outline-secondary mt-1" download>XML</a>
                 {% endif %}
               </div>
@@ -73,7 +87,7 @@
       <div class="card p-3">
         <h6>Receita por mês (últimos 12)</h6>
         <div class="mt-2">
-          <table class="table table-sm mb-0">
+          <table class="table table-sm table--compact mb-0">
             <thead><tr><th>Mês</th><th>Qtd</th><th>Soma</th></tr></thead>
             <tbody>
               {% for m in meses %}
@@ -91,5 +105,63 @@
       </div>
     </div>
   </div>
+  <!-- adicional: resumo de consumo por fornecedor completo e distribuição por tipo -->
+  <div class="row mt-4">
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h6>Consumo por fornecedor (ABC)</h6>
+        <div class="mt-2">
+          <table class="table table-sm table--compact mb-0">
+            <thead><tr><th>Fornecedor</th><th>Qtd</th><th>Valor</th></tr></thead>
+            <tbody>
+              {% for f in fornecedores_consumo %}
+              <tr>
+                <td>{{ f.tomador_nome|default:'(sem nome)' }}</td>
+                <td>{{ f.qtd }}</td>
+                <td>R$ {{ f.soma|floatformat:2 }}</td>
+              </tr>
+              {% empty %}
+              <tr><td colspan="3" class="text-muted">Sem dados</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card p-3">
+        <h6>Distribuição por tipo</h6>
+        <ul class="list-group list-group-flush mt-2">
+          {% for t in tipo_dist %}
+          <li class="list-group-item d-flex justify-content-between">
+            {{ t.tipo }}
+            <span>{{ t.qtd }} (R$ {{ t.soma|floatformat:2 }})</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">Sem dados</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
 </div>
+  <!-- imposto breakdown -->
+  <div class="row mt-4">
+    <div class="col-md-12">
+      <div class="card p-3">
+        <h6>Impostos acumulados</h6>
+        <ul class="list-group list-group-flush mt-2">
+          {% for nome, valor in impostos_totais.items %}
+          <li class="list-group-item d-flex justify-content-between">
+            {{ nome }}
+            <span>R$ {{ valor|floatformat:2 }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">Nenhum imposto registrado</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
 {% endblock %}

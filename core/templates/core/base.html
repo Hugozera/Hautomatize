@@ -22,92 +22,82 @@
     <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
 </head>
 <body>
+    <a href="#mainContent" class="skip-to-content">Ir para o conteúdo</a>
     <div class="d-flex position-relative">
         <!-- Menu Lateral -->
+        {% if request.user.is_authenticated %}
         <div id="sidebar" class="sidebar sidebar-expanded">
-                {% if request.user.is_authenticated %}
-                <!-- Menu Lateral -->
-                <div id="sidebar" class="sidebar sidebar-expanded">
-                    <div class="d-flex flex-column h-100">
-                        <!-- Logo/Botão -->
-                        <div class="sidebar-logo" onclick="toggleMenu()" style="cursor:pointer;">
-                            <span id="logoH">H</span>
-                            <span class="d-none d-md-inline ms-2">automatize</span>
-                        </div>
-                        <!-- Itens do Menu -->
-                        <ul class="nav flex-column flex-grow-1">
-                            <li class="nav-item">
-                                <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
-                                    <i class="bi bi-house-door"></i>
-                                    <span class="nav-text">Principal</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/conversor' in request.path %}active{% endif %}" href="{% url 'conversor_index' %}">
-                                    <i class="bi bi-arrow-left-right"></i>
-                                    <span class="nav-text">Conversor</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/empresas' in request.path %}active{% endif %}" href="{% url 'empresa_list' %}">
-                                    <i class="bi bi-building"></i>
-                                    <span class="nav-text">Empresas</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/dashboard' in request.path %}active{% endif %}" href="{% url 'dashboard' %}">
-                                    <i class="bi bi-bar-chart"></i>
-                                    <span class="nav-text">Dashboard</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/agendamentos' in request.path %}active{% endif %}" href="{% url 'agendamento_list' %}">
-                                    <i class="bi bi-clock"></i>
-                                    <span class="nav-text">Programar</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/download' in request.path %}active{% endif %}" href="{% url 'download_manual' %}">
-                                    <i class="bi bi-cloud-download"></i>
-                                    <span class="nav-text">Download Rápido</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/certificados' in request.path %}active{% endif %}" href="{% url 'certificado_list' %}">
-                                    <i class="bi bi-shield-lock"></i>
-                                    <span class="nav-text">Certificados</span>
-                                </a>
-                            </li>
-                            <li class="nav-item mt-auto">
-                                <a class="nav-link {% if '/configuracao' in request.path %}active{% endif %}" href="{% url 'configuracao' %}">
-                                    <i class="bi bi-gear"></i>
-                                    <span class="nav-text">Configurações</span>
-                                </a>
-                            </li>
-                            {% if request.user.is_superuser %}
-                            <li class="nav-item">
-                                <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
-                                    <i class="bi bi-people"></i>
-                                    <span class="nav-text">Usuários</span>
-                                </a>
-                            </li>
-                            {% endif %}
-                            <li class="nav-item">
-                                <a class="nav-link" href="{% url 'perfil' %}">
-                                    <i class="bi bi-person-circle"></i>
-                                    <span class="nav-text">{{ request.user.get_full_name|default:request.user.username }}</span>
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link" href="/logout/">
-                                    <i class="bi bi-box-arrow-right"></i>
-                                    <span class="nav-text">Sair</span>
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
+            <div class="d-flex flex-column h-100">
+                <!-- Logo/Botão -->
+                <div class="sidebar-logo" onclick="toggleMenu()" style="cursor:pointer;">
+                    <span id="logoH">H</span>
+                    <span id="logoText" class="d-none d-md-inline ms-2">automatize</span>
                 </div>
-                {% endif %}
+                <!-- Itens do Menu -->
+                <ul class="nav flex-column flex-grow-1">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="/">
+                            <i class="bi bi-house-door"></i>
+                            <span class="nav-text">Principal</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/conversor' in request.path %}active{% endif %}" href="{% url 'conversor_index' %}">
+                            <i class="bi bi-arrow-left-right"></i>
+                            <span class="nav-text">Conversor</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/empresas' in request.path %}active{% endif %}" href="{% url 'empresa_list' %}">
+                            <i class="bi bi-building"></i>
+                            <span class="nav-text">Empresas</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/dashboard' in request.path %}active{% endif %}" href="{% url 'dashboard' %}">
+                            <i class="bi bi-bar-chart"></i>
+                            <span class="nav-text">Dashboard</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/agendamentos' in request.path %}active{% endif %}" href="{% url 'agendamento_list' %}">
+                            <i class="bi bi-clock"></i>
+                            <span class="nav-text">Programar</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/download' in request.path %}active{% endif %}" href="{% url 'download_manual' %}">
+                            <i class="bi bi-cloud-download"></i>
+                            <span class="nav-text">Download Rápido</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/certificados' in request.path %}active{% endif %}" href="{% url 'certificado_list' %}">
+                            <i class="bi bi-shield-lock"></i>
+                            <span class="nav-text">Certificados</span>
+                        </a>
+                    </li>
+                    <li class="nav-item mt-auto">
+                        <a class="nav-link {% if '/configuracao' in request.path %}active{% endif %}" href="{% url 'configuracao' %}">
+                            <i class="bi bi-gear"></i>
+                            <span class="nav-text">Configurações</span>
+                        </a>
+                    </li>
+                    {% if request.user.is_superuser %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
+                            <i class="bi bi-people"></i>
+                            <span class="nav-text">Usuários</span>
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'perfil' %}">
+                            <i class="bi bi-person-circle"></i>
+                            <span class="nav-text">{{ request.user.get_full_name|default:request.user.username }}</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="/logout/">
                             <i class="bi bi-box-arrow-right"></i>
                             <span class="nav-text">Sair</span>
@@ -116,9 +106,15 @@
                 </ul>
             </div>
         </div>
-        
+        {% endif %}
         <!-- Conteúdo Principal -->
         <div class="main-content" id="mainContent">
+            <!-- Mobile menu button -->
+            <div class="d-md-none mb-3">
+                <button class="btn btn-outline-secondary" id="mobileMenuBtn" aria-label="Abrir menu" onclick="toggleMenu()">
+                    <i class="bi bi-list"></i>
+                </button>
+            </div>
             <!-- Mensagens -->
             {% if messages %}
                 {% for message in messages %}
@@ -146,19 +142,56 @@
         function toggleMenu() {
             const sidebar = document.getElementById('sidebar');
             const logoH = document.getElementById('logoH');
+            const logoText = document.getElementById('logoText');
+            const full = 'automatize';
             if (sidebar.classList.contains('sidebar-expanded')) {
                 sidebar.classList.remove('sidebar-expanded');
                 sidebar.classList.add('sidebar-collapsed');
-                logoH.style.transform = 'rotate(-90deg)';
                 logoH.style.color = 'var(--amarelo-deep)';
+                animateText(false, logoText, full);
+                // small logo bounce to indicate toggle
+                const logoWrap = document.querySelector('.sidebar-logo');
+                if (logoWrap) {
+                    logoWrap.classList.add('logo-animate');
+                    setTimeout(()=>logoWrap.classList.remove('logo-animate'), 650);
+                }
                 localStorage.setItem('sidebarState', 'collapsed');
             } else {
                 sidebar.classList.remove('sidebar-collapsed');
                 sidebar.classList.add('sidebar-expanded');
-                logoH.style.transform = 'rotate(0deg)';
                 logoH.style.color = 'var(--verde-deep)';
+                animateText(true, logoText, full);
+                const logoWrap = document.querySelector('.sidebar-logo');
+                if (logoWrap) {
+                    logoWrap.classList.add('logo-animate');
+                    setTimeout(()=>logoWrap.classList.remove('logo-animate'), 650);
+                }
                 localStorage.setItem('sidebarState', 'expanded');
             }
+        }
+
+        // typing animation helper
+        function animateText(expand, elem, text) {
+            if (!elem) return;
+            let i = expand ? 0 : elem.textContent.length;
+            clearInterval(elem._anim);
+            elem._anim = setInterval(() => {
+                if (expand) {
+                    if (i <= text.length) {
+                        elem.textContent = text.slice(0, i);
+                        i++;
+                    } else {
+                        clearInterval(elem._anim);
+                    }
+                } else {
+                    if (i >= 0) {
+                        elem.textContent = text.slice(0, i);
+                        i--;
+                    } else {
+                        clearInterval(elem._anim);
+                    }
+                }
+            }, 50);
         }
         
         // Carregar estado do menu
@@ -166,15 +199,100 @@
             const sidebarState = localStorage.getItem('sidebarState');
             const sidebar = document.getElementById('sidebar');
             const logoH = document.getElementById('logoH');
+            const logoText = document.getElementById('logoText');
             if (sidebarState === 'collapsed') {
                 sidebar.classList.remove('sidebar-expanded');
                 sidebar.classList.add('sidebar-collapsed');
-                logoH.style.transform = 'rotate(-90deg)';
                 logoH.style.color = 'var(--amarelo-deep)';
+                if (logoText) logoText.textContent = '';
+            } else {
+                if (logoText) logoText.textContent = 'automatize';
             }
+
+            // Dark mode persistence for fixed bottom toggle
+            const darkToggle = document.getElementById('dark-toggle-fixed');
+            const saved = localStorage.getItem('darkMode');
+            if (saved === '1') {
+                document.body.classList.add('dark-mode');
+                if (darkToggle) darkToggle.textContent = '☀️';
+            }
+            if (darkToggle) {
+                darkToggle.addEventListener('click', function() {
+                    const enabled = !document.body.classList.contains('dark-mode');
+                    document.body.classList.toggle('dark-mode', enabled);
+                    this.classList.toggle('dark', enabled);
+                    localStorage.setItem('darkMode', enabled ? '1' : '0');
+                    this.textContent = enabled ? '☀️' : '🌙';
+                });
+            }
+
+            // Wrap tables in a scrollable container on small screens for responsiveness
+            if (window.innerWidth < 768) {
+                document.querySelectorAll('table').forEach(tbl => {
+                    if (!tbl.closest('.table-scrollable')) {
+                        const wrap = document.createElement('div');
+                        wrap.className = 'table-scrollable';
+                        tbl.parentNode.insertBefore(wrap, tbl);
+                        wrap.appendChild(tbl);
+                    }
+                });
+            }
+
+            // Close sidebar when tapping main content on small screens
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.addEventListener('click', function() {
+                    if (window.innerWidth < 992) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (sidebar && sidebar.classList.contains('sidebar-expanded')) {
+                            sidebar.classList.remove('sidebar-expanded');
+                        }
+                    }
+                });
+            }
+
+            // Inject data-label attributes into table cells for mobile stacked view
+            function applyTableLabels() {
+                if (window.innerWidth > 520) return;
+                document.querySelectorAll('table').forEach(table => {
+                    const headers = Array.from(table.querySelectorAll('thead th')).map(h => h.textContent.trim());
+                    if (!headers.length) return;
+                    table.querySelectorAll('tbody tr').forEach(row => {
+                        Array.from(row.children).forEach((cell, idx) => {
+                            if (!cell.hasAttribute('data-label')) {
+                                const label = headers[idx] || '';
+                                cell.setAttribute('data-label', label);
+                            }
+                        });
+                    });
+                });
+            }
+
+            applyTableLabels();
+            window.addEventListener('resize', function(){ applyTableLabels(); });
         });
     </script>
     
     {% block extra_js %}{% endblock %}
+    <!-- fixed dark mode button -->
+    <button id="dark-toggle-fixed" class="btn btn-primary" style="position:fixed;bottom:20px;right:20px;z-index:2000;width:50px;height:50px;border-radius:50%;font-size:1.5rem;">🌞</button>
+    <script>
+      (function(){
+        const btn = document.getElementById('dark-toggle-fixed');
+        if (!btn) return;
+        const apply = enabled=>{
+          document.body.classList.toggle('dark-mode', enabled);
+          btn.classList.toggle('dark', enabled);
+          btn.textContent = enabled ? '☀️' : '🌙';
+        };
+        let enabled = localStorage.getItem('darkMode') === '1';
+        apply(enabled);
+        btn.addEventListener('click', ()=>{
+          enabled = !enabled;
+          apply(enabled);
+          localStorage.setItem('darkMode', enabled ? '1' : '0');
+        });
+      })();
+    </script>
 </body>
 </html>

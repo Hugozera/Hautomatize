@@ -77,6 +77,7 @@ class DownloadTask(threading.Thread):
             
             # Nome do arquivo ZIP
             nome_zip = f"nfse_{self.empresa.pk}_{self.tipo}_{self.data_inicio}_a_{self.data_fim}.zip"
+            # primeiro caminho dentro da pasta geral de zips (para compatibilidade histórica)
             caminho_zip = os.path.join('media', 'zips', nome_zip)
             os.makedirs(os.path.dirname(caminho_zip), exist_ok=True)
             
@@ -89,11 +90,18 @@ class DownloadTask(threading.Thread):
                         zipf.write(caminho_completo, arquivo)
                         self.log(f"   Adicionado: {arquivo}")
             
-            # Salva referência no modelo
+            # Salva referência no modelo da tarefa
             from django.core.files import File
             with open(caminho_zip, 'rb') as f:
                 tarefa.arquivo_zip.save(nome_zip, File(f), save=True)
-            
+
+            # Também guarda cópia no registro da empresa para acesso direto
+            try:
+                with open(caminho_zip, 'rb') as f:
+                    self.empresa.ultimo_zip.save(nome_zip, File(f), save=True)
+            except Exception as e:
+                self.log(f"⚠️ Falha ao salvar ZIP na empresa: {e}")
+
             self.log(f"✅ ZIP criado: {caminho_zip}")
             
         except Exception as e:
@@ -128,6 +136,10 @@ class DownloadTask(threading.Thread):
             # Cria ZIP
             self.criar_zip()
             
+            # Dispara parsing assíncrono dos XMLs baixados (sem bloquear esta thread)
+            parser = XMLParseThread(self.pasta_destino, self.empresa.pk)
+            parser.start()
+            
             # Finaliza
             self.atualizar_status('concluido', 100, f"Download concluído! {baixadas}/{total} notas")
             self.log(f"✅ Tarefa concluída! {baixadas}/{total} notas baixadas")
@@ -137,6 +149,68 @@ class DownloadTask(threading.Thread):
             self.atualizar_status('erro', 0, str(e))
             import traceback
             traceback.print_exc()
+
+
+
+
+class XMLParseThread(threading.Thread):
+    """Thread que percorre a pasta de XMLs e extrai dados para o banco."""
+    def __init__(self, pasta, empresa_pk):
+        super().__init__()
+        self.pasta = pasta
+        self.empresa_pk = empresa_pk
+
+    def run(self):
+        # está rodando em background; qualquer exceção não deve interromper o processo
+        try:
+            from .models import NotaFiscal, Empresa
+            from xml.etree import ElementTree as ET
+            empresa = Empresa.objects.get(pk=self.empresa_pk)
+            # cria um historico mínimo para ligar as notas se não existir
+            from .models import HistoricoDownload
+            hist, _ = HistoricoDownload.objects.get_or_create(
+                empresa=empresa,
+                defaults={
+                    'tipo_nota': 'entrada',
+                    'data_inicio': timezone.now(),
+                    'data_fim': timezone.now(),
+                    'periodo_busca_inicio': timezone.now().date(),
+                    'periodo_busca_fim': timezone.now().date(),
+                }
+            )
+            for nome in os.listdir(self.pasta):
+                if nome.lower().endswith('.xml'):
+                    path = os.path.join(self.pasta, nome)
+                    try:
+                        tree = ET.parse(path)
+                        root = tree.getroot()
+                        # placeholder: extrair impostos e demais informações
+                        impostos = {}
+                        # TODO: implementar parser real conforme schema XML
+                        # Exemplo:
+                        # for imp in root.findall('.//Imposto'):
+                        #     impostos[imp.attrib.get('Tipo')] = float(imp.text or 0)
+                        # atualiza ou cria nota fiscal correspondente
+                        chave = root.findtext('.//chave') or ''
+                        # when creating note use safe defaults for required fields
+                        nota, created = NotaFiscal.objects.get_or_create(
+                            chave_acesso=chave,
+                            empresa=empresa,
+                            defaults={
+                                'arquivo_xml': f'xmls/{nome}',
+                                'numero': chave or nome,
+                                'data_emissao': timezone.now().date(),
+                                'valor': 0,
+                                'tipo': 'entrada',
+                                'historico': hist,
+                            }
+                        )
+                        nota.impostos = impostos
+                        nota.save()
+                    except Exception as e:
+                        print(f"Erro ao parsear XML {nome}: {e}")
+        except Exception as e:
+            print(f"Falha na thread de parsing de XML: {e}")
 
 
 def iniciar_download_tarefa(empresa, tipo, data_inicio, data_fim, pasta_destino, usuario=None):

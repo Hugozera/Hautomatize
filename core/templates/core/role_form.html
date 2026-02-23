@@ -1,7 +1,7 @@
 {% extends 'core/base.html' %}
 
 {% block content %}
-<div class="container" style="max-width:800px;">
+<div class="container" style="max-width:900px;">
   <div class="card">
     <div class="card-body">
       <h3 class="mb-3">{% if creating %}Novo Papel{% else %}Editar Papel{% endif %}</h3>
@@ -20,7 +20,7 @@
         <div class="mb-3">
           <label class="form-label">Permissões</label>
           {{ form.permissions }}
-          <div class="form-text">Lista separada por vírgula de códigos (ex.: <code>empresa.edit,certificado.manage</code>).</div>
+          <div class="form-text">Marque as permissões que este papel deve conceder.</div>
         </div>
         <div class="mb-3">
           <label class="form-label">Usuários (Pessoa)</label>
