@@ -37,7 +37,7 @@
             <form method="post">
                 {% csrf_token %}
                 
-                <div class="mb-4">
+                    <div class="mb-4">
                     <label class="form-label fw-semibold">
                         <i class="bi bi-fingerprint me-1 text-success"></i>Certificados Disponíveis
                     </label>
@@ -56,19 +56,15 @@
                         Selecione o certificado digital instalado na loja do Windows.
                     </div>
 
-                    <!-- Salvar .pfx em empresa existente -->
+                    <!-- Removida seleção de empresas: o certificado será importado e salvo automaticamente na empresa criada/associada -->
                     <div class="mb-2">
-                        <label class="form-label">Salvar .pfx em empresa existente</label>
-                        <div class="input-group">
-                            <select id="select_empresa_para_salvar" class="form-select">
-                                <option value="">Selecione a empresa...</option>
-                                {% for e in empresas %}
-                                    <option value="{{ e.pk }}">{{ e.nome_fantasia }} — {{ e.cnpj }}</option>
-                                {% endfor %}
-                            </select>
-                            <button type="button" id="btnSalvarThumbprint" class="btn btn-outline-primary">Salvar .pfx</button>
+                        <p class="small text-muted mb-1">Ao importar, o sistema criará/associará a empresa automaticamente e salvará o arquivo `.pfx`.</p>
+                        <div class="d-flex justify-content-start gap-2">
+                            <button type="button" id="btnSalvarThumbprint" class="btn btn-primary btn-sm">
+                                <i class="bi bi-shield-lock me-1"></i>Importar e Salvar Certificado
+                            </button>
+                            <a href="{%% url 'empresa_list' %%}" class="btn btn-outline-secondary btn-sm">Ver empresas</a>
                         </div>
-                        <div class="form-text">Exporta o `.pfx` da loja do Windows e salva no cadastro da empresa selecionada.</div>
                     </div>
                 </div>
                 
@@ -89,6 +85,8 @@
         </div>
     </div>
 </div>
+
+{% endblock %}
 
 {% block extra_js %}
 <script>

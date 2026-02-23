@@ -144,8 +144,8 @@
                     <i class="bi bi-journal-text fs-4 me-2" style="color: var(--verde-deep);"></i>
                     <span class="fw-semibold">Logs da Operação</span>
                 </div>
-                <div class="card-body" style="max-height: 500px; overflow-y: auto; background-color: #f8f9fa;">
-                    <pre id="logsContainer" style="font-size: 0.8rem; white-space: pre-wrap; word-wrap: break-word; margin: 0; padding: 0;">{{ tarefa.logs|default:"" }}</pre>
+                <div class="card-body" style="max-height: 500px; overflow-y: auto; background-color: var(--surface-2);">
+                    <pre id="logsContainer" style="font-size: 0.8rem; white-space: pre-wrap; word-wrap: break-word; margin: 0; padding: 1rem; color: var(--muted);">{{ tarefa.logs|default:"" }}</pre>
                 </div>
                 <div class="card-footer bg-transparent text-end">
                     <small class="text-muted">Atualizado em tempo real</small>

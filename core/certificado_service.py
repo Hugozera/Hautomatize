@@ -162,6 +162,16 @@ def exportar_certificado_powershell(thumbprint, senha):
         limpar_arquivo_temporario(temp_path)
         raise
 
+
+def exportar_certificado_pfx(thumbprint):
+    """
+    Wrapper que exporta um certificado PFX gerando uma senha temporária.
+    Retorna tupla (pfx_path, senha)
+    """
+    senha = gerar_senha_temporaria(12)
+    pfx_path = exportar_certificado_powershell(thumbprint, senha)
+    return pfx_path, senha
+
 # ============================================
 # CONVERSÃO PFX PARA PEM (COM OPENSSL)
 # ============================================

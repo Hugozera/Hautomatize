@@ -206,54 +206,113 @@ def upload_certificado_temporario(request):
     """
     Endpoint para receber certificado via AJAX durante o download
     """
-    if request.method == 'POST':
-        from core.models import Empresa
-        from django.core.files import File
-        import tempfile
-        import os
-        
-        empresa_id = request.POST.get('empresa_id')
-        senha = request.POST.get('senha', '')
-        certificado_file = request.FILES.get('certificado')
-        
-        if not empresa_id or not certificado_file or not senha:
-            return JsonResponse({'status': 'ERRO', 'msg': 'Dados incompletos'})
-        
-        try:
-            empresa = Empresa.objects.get(pk=empresa_id)
+    if request.method != 'POST':
+        return JsonResponse({'status': 'ERRO', 'msg': 'Método inválido'})
 
-            # Salva o arquivo na empresa (upload temporário via AJAX durante o download manual)
-            empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=True)
-            empresa.certificado_senha = senha
-            
-            # Tenta extrair o thumbprint
+    from core.models import Empresa
+    from django.core.files import File
+    import os
+
+    # Debug dump of request internals to find uploaded file location
+    try:
+        print('DEBUG request dict keys:', list(request.__dict__.keys()))
+        print('DEBUG has _files:', hasattr(request, '_files'))
+        if hasattr(request, '_files'):
+            print('DEBUG _files:', request._files)
+        print('DEBUG has _post:', hasattr(request, '_post'))
+        if hasattr(request, '_post'):
+            print('DEBUG _post keys:', list(request._post.keys()))
+    except Exception as e:
+        print('DEBUG request introspect failed:', repr(e))
+
+    # Try to parse multipart body first (avoids request.body after request.POST issue)
+    empresa_id = None
+    senha = ''
+    certificado_file = None
+
+    content_type = request.META.get('CONTENT_TYPE', '')
+    if content_type.startswith('multipart/form-data'):
+        try:
+            import io
+            from django.http.multipartparser import MultiPartParser
+            from django.core.files.base import ContentFile
+            # Read raw stream to inspect content then parse from BytesIO
+            stream = getattr(request, '_stream', None) or getattr(request, 'stream', None)
             try:
-                import hashlib
-                from cryptography.hazmat.primitives.serialization import pkcs12
-                from cryptography.hazmat.backends import default_backend
-                
-                with open(empresa.certificado_arquivo.path, 'rb') as f:
-                    pfx_data = f.read()
-                
-                cert = pkcs12.load_key_and_certificates(pfx_data, senha.encode(), default_backend())
-                if cert and cert[1]:
-                    thumbprint = hashlib.sha1(cert[1].public_bytes()).hexdigest().upper()
-                    empresa.certificado_thumbprint = thumbprint
-            except:
-                pass  # Se não conseguir extrair, continua sem thumbprint
-            
-            empresa.save()
-            
-            return JsonResponse({
-                'status': 'OK', 
-                'msg': 'Certificado salvo com sucesso!',
-                'thumbprint': empresa.certificado_thumbprint
-            })
-            
+                raw = stream.read()
+                print('DEBUG upload_certificado_temporario raw length:', len(raw))
+                print('DEBUG upload_certificado_temporario raw preview:', raw[:400])
+            except Exception as e:
+                raw = None
+                print('DEBUG failed to read raw stream:', repr(e))
+            parser = MultiPartParser(request.META, io.BytesIO(raw) if raw is not None else stream, request.upload_handlers)
+            post_data, files_data = parser.parse()
+            try:
+                print('DEBUG multipart parse sizes post:', len(post_data), 'files:', len(files_data))
+            except Exception:
+                pass
+            empresa_id = post_data.get('empresa_id') or post_data.get('empresa')
+            senha = post_data.get('senha') or ''
+            if files_data and files_data.get('certificado'):
+                up = files_data.get('certificado')
+                # up may be an UploadedFile or list; handle both
+                try:
+                    filename = up.name
+                    certificado_file = up
+                except Exception:
+                    # assume first item
+                    filename = up[0].name
+                    certificado_file = up[0]
+                print('DEBUG parsed certificado via MultiPartParser, filename:', filename)
         except Exception as e:
-            return JsonResponse({'status': 'ERRO', 'msg': str(e)})
-    
-    return JsonResponse({'status': 'ERRO', 'msg': 'Método inválido'})
+            print('DEBUG multipart initial parse failed:', repr(e))
+
+    # Fallback to Django parsing
+    if not empresa_id:
+        empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
+    if not senha:
+        senha = request.POST.get('senha', '')
+    if not certificado_file:
+        certificado_file = request.FILES.get('certificado')
+
+    if not empresa_id or not certificado_file or not senha:
+        return JsonResponse({'status': 'ERRO', 'msg': 'Dados incompletos'})
+
+    try:
+        empresa = Empresa.objects.get(pk=empresa_id)
+
+        # Salva o arquivo na empresa (upload temporário via AJAX durante o download manual)
+        empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=True)
+        empresa.certificado_senha = senha
+
+        # Tenta extrair o thumbprint
+        try:
+            import hashlib
+            from cryptography.hazmat.primitives.serialization import pkcs12
+            from cryptography.hazmat.backends import default_backend
+
+            with open(empresa.certificado_arquivo.path, 'rb') as f:
+                pfx_data = f.read()
+
+            cert = pkcs12.load_key_and_certificates(pfx_data, senha.encode(), default_backend())
+            if cert and cert[1]:
+                thumbprint = hashlib.sha1(cert[1].public_bytes()).hexdigest().upper()
+                empresa.certificado_thumbprint = thumbprint
+        except Exception as inner_e:
+            print('DEBUG upload_certificado_temporario thumbprint extraction failed:', repr(inner_e))
+            pass  # Se não conseguir extrair, continua sem thumbprint
+
+        empresa.save()
+
+        return JsonResponse({
+            'status': 'OK',
+            'msg': 'Certificado salvo com sucesso!',
+            'thumbprint': empresa.certificado_thumbprint
+        })
+
+    except Exception as e:
+        print('DEBUG upload_certificado_temporario exception:', repr(e))
+        return JsonResponse({'status': 'ERRO', 'msg': str(e)})
 
 @login_required
 def download_progress(request, historico_id):
@@ -829,6 +888,23 @@ def empresa_certificado(request):
                     empresa.usuarios.add(request.user.pessoa)
                 
                 msg = f"Empresa {'cadastrada' if created else 'já existente'}: {empresa.nome_fantasia}"
+                # Se a empresa não tem PFX salvo, tente exportar e salvar o .pfx automaticamente
+                try:
+                    if not empresa.certificado_arquivo:
+                        from .certificado_service import exportar_certificado_pfx
+                        pfx_path, senha_export = exportar_certificado_pfx(thumbprint)
+                        from django.core.files import File as DjangoFile
+                        with open(pfx_path, 'rb') as pf:
+                            empresa.certificado_arquivo.save(os.path.basename(pfx_path), DjangoFile(pf), save=False)
+                        empresa.certificado_senha = senha_export or ''
+                        empresa.save()
+                        try:
+                            os.remove(pfx_path)
+                        except Exception:
+                            pass
+                except Exception as e:
+                    # não interrompe o fluxo principal se export falhar
+                    print('DEBUG auto-save pfx failed:', repr(e))
                 
             except Exception as e:
                 msg = f'Erro: {str(e)}'
@@ -1340,10 +1416,20 @@ def salvar_certificado(request):
         thumbprint = request.POST.get('thumbprint')
         empresa_id = request.POST.get('empresa_id')
 
-        if not thumbprint or not empresa_id:
+        if not thumbprint:
             return JsonResponse({'status': 'ERRO', 'msg': 'Parâmetros insuficientes.'})
 
-        empresa = get_object_or_404(Empresa, pk=empresa_id)
+        empresa = None
+        if empresa_id:
+            empresa = get_object_or_404(Empresa, pk=empresa_id)
+        else:
+            # se não informou empresa, tenta usar a empresa única do usuário
+            if hasattr(request.user, 'pessoa'):
+                empresas_user = list(request.user.pessoa.empresas.all())
+                if len(empresas_user) == 1:
+                    empresa = empresas_user[0]
+        if not empresa:
+            return JsonResponse({'status': 'ERRO', 'msg': 'Empresa não informada e não foi possível determinar uma empresa destino.'})
 
         # Permissão
         from .permissions import can_manage_certificado
@@ -1352,7 +1438,7 @@ def salvar_certificado(request):
 
         try:
             from .certificado_service import exportar_certificado_pfx
-            pfx_path = exportar_certificado_pfx(thumbprint)
+            pfx_path, senha_export = exportar_certificado_pfx(thumbprint)
 
             # Salva arquivo no FileField da empresa
             from django.core.files import File as DjangoFile
@@ -1369,7 +1455,7 @@ def salvar_certificado(request):
                 empresa.certificado_validade = getattr(cert[1], 'not_valid_after', None)
                 empresa.certificado_thumbprint = hashlib.sha1(cert[1].public_bytes(serialization.Encoding.DER)).hexdigest().upper()
 
-            empresa.certificado_senha = ''
+            empresa.certificado_senha = senha_export or ''
             empresa.save()
 
             # remove temporário
@@ -1409,8 +1495,48 @@ def certificado_edit(request, pk):
 
     msg = None
     if request.method == 'POST':
-        certificado_file = request.FILES.get('certificado')
-        certificado_senha = request.POST.get('certificado_senha', '')
+        certificado_file = None
+        certificado_senha = None
+
+        # Try parsing multipart body first (to avoid accessing request.body after stream was read)
+        content_type = request.META.get('CONTENT_TYPE', '')
+        if content_type.startswith('multipart/form-data'):
+            try:
+                import io
+                from django.http.multipartparser import MultiPartParser
+                # Read raw stream to inspect content then parse from BytesIO
+                stream = getattr(request, '_stream', None) or getattr(request, 'stream', None)
+                try:
+                    raw = stream.read()
+                    print('DEBUG certificado_edit raw length:', len(raw))
+                    print('DEBUG certificado_edit raw preview:', raw[:400])
+                except Exception as e:
+                    raw = None
+                    print('DEBUG failed to read raw stream in certificado_edit:', repr(e))
+                parser = MultiPartParser(request.META, io.BytesIO(raw) if raw is not None else stream, request.upload_handlers)
+                post_data, files_data = parser.parse()
+                try:
+                    print('DEBUG certificado_edit multipart parse sizes post:', len(post_data), 'files:', len(files_data))
+                except Exception:
+                    pass
+                certificado_senha = post_data.get('certificado_senha')
+                if files_data and files_data.get('certificado'):
+                    up = files_data.get('certificado')
+                    try:
+                        certificado_file = up
+                        filename = up.name
+                    except Exception:
+                        certificado_file = up[0]
+                        filename = up[0].name
+                    print('DEBUG parsed certificado via MultiPartParser in certificado_edit, filename:', filename)
+            except Exception as e:
+                print('DEBUG certificado_edit multipart fallback failed:', repr(e))
+
+        # Fallback: use standard Django parsing if not parsed above
+        if not certificado_senha:
+            certificado_senha = request.POST.get('certificado_senha', '')
+        if not certificado_file:
+            certificado_file = request.FILES.get('certificado')
 
         if certificado_file:
             empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=False)

@@ -29,7 +29,13 @@
             <tr>
               <td>{{ r.name }}</td>
               <td><code>{{ r.codename }}</code></td>
-              <td>{{ r.permissions }}</td>
+              <td>
+                {% for p in r.perm_list %}
+                  <span class="badge bg-secondary me-1">{{ p }}</span>
+                {% empty %}
+                  <span class="text-muted">—</span>
+                {% endfor %}
+              </td>
               <td>{{ r.pessoas.count }}</td>
               <td>
                 <a href="{% url 'role_edit' r.pk %}" class="btn btn-sm btn-outline-primary">Editar</a>

@@ -55,6 +55,7 @@ urlpatterns = [
     path('certificados/info/', views.certificado_info, name='certificado_info'),
     path('certificados/<int:pk>/editar/', views.certificado_edit, name='certificado_edit'),
     path('certificados/<int:pk>/baixar/', views.certificado_download, name='certificado_download'),
+    path('certificados/upload/', views.upload_certificado_temporario, name='upload_certificado'),
 
     # API para agente local
     path('api/agent/upload/', views.api_agent_upload, name='api_agent_upload'),

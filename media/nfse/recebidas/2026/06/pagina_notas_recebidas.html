@@ -9,15 +9,16 @@
     <script type="text/javascript">
         window.UrlBase = "https://www.nfse.gov.br/emissornacional/";
         window.UrlRest = "https://restnfseprod.srv.cd.serpro";
-        window.sessionStorage.setItem("accessToken", 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRobWV0aG9kIjoiTkVOSFVNIiwidW5pcXVlX25hbWUiOiJBVVRPIFBPU1RPIFBFUkVRVUVURSBQQUxNQVMgTFREQSIsImluc2NyaWNhbyI6IjU2MTAyNTQxMDAwMTg1IiwidGlwb19pbnNjcmljYW8iOiJDTlBKIiwibm9tZSI6IkFVVE8gUE9TVE8gUEVSRVFVRVRFIFBBTE1BUyBMVERBIiwicm9sZSI6IkNPTlRSSUJVSU5URSIsIm5iZiI6MTc3MTgwOTk1NSwiZXhwIjoxNzcxODk5OTU1LCJpYXQiOjE3NzE4MDk5NTUsImlzcyI6Imh0dHA6Ly93d3cuc2VycHJvLmdvdi5iciJ9.FlJNvGDwpzNI023lyFGbWEZ34J6HH3JGLsGI70HsDuI');
+        window.sessionStorage.setItem("accessToken", 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdXRobWV0aG9kIjoiTkVOSFVNIiwidW5pcXVlX25hbWUiOiJCQVpJUVVFVFRPICYgS09MIExUREEiLCJpbnNjcmljYW8iOiIxNzE3NjY2MTAwMDE3NSIsInRpcG9faW5zY3JpY2FvIjoiQ05QSiIsIm5vbWUiOiJCQVpJUVVFVFRPICYgS09MIExUREEiLCJyb2xlIjoiQ09OVFJJQlVJTlRFIiwibmJmIjoxNzcxODEwMDIyLCJleHAiOjE3NzE5MDAwMjIsImlhdCI6MTc3MTgxMDAyMiwiaXNzIjoiaHR0cDovL3d3dy5zZXJwcm8uZ292LmJyIn0.Pw4HWHq_1G-2APz5KSQCxFjdv35i6-Qva8IpV29XrK8');
     </script>
     <script src="/EmissorNacional/Scripts/Base?v=9aYlZCGNwOnQ9M-uWKF6qWROrguA9sBYeGWayB9cXLg1"></script><style type="text/css">.dropdown-submenu:hover>.dropdown-menu{display:none}</style>
 
     
-    <script src="/EmissorNacional/Areas/Notas/Scripts/Emitidas.js"></script>
+    <script src="/EmissorNacional/Areas/Notas/Scripts/Recebidas.js"></script>
     <script src="/EmissorNacional/Areas/DPS/Scripts/AssinadorSerpro.js"></script>
     <script src="/EmissorNacional/Areas/Notas/Scripts/AssinaturaPedRegEventoBase.js"></script>
-    <script src="/EmissorNacional/Areas/Notas/Scripts/AssinaturaPedRegEventoCancelamento.js"></script>
+    <script src="/EmissorNacional/Areas/Notas/Scripts/AssinaturaPedRegEventoManifestacao.js"></script>
+
 
 </head>
 <body>
@@ -107,8 +108,8 @@
                         </a>
                         <ul class="dropdown-menu main-menu" style="right: -5px; margin-top: 5px;">
                             <li class="dropdown-header">
-                                AUTO POSTO PEREQUETE PALMAS LTDA<br>
-                                    <span>CNPJ: </span><span class="cnpj">56.102.541/0001-85</span><br>
+                                BAZIQUETTO &amp; KOL LTDA<br>
+                                    <span>CNPJ: </span><span class="cnpj">17.176.661/0001-75</span><br>
                             </li>
                             <li><a href="/EmissorNacional/Login/Sair">Sair com segurança</a></li>
                         </ul>
@@ -130,7 +131,7 @@
     NFS-e
             <span class="separador">::</span>
 
-    Emitidas
+    Recebidas
 </div>
         </div>
     </nav>
@@ -143,16 +144,15 @@
 <div id="erroAssinatura" class="alert-danger alert" style="display:none"><span class="icone"></span><a class="close" href="javascript:void(0);"></a></div>
 
 
-<h2>Notas emitidas</h2>
+<h2>Notas recebidas</h2>
 <div id="pnlIdentificacao" class="pnlCollapse">
     <div class="retratil">
         <div class="bd-callout bd-callout-info">
-            Ao entrar na tela de Notas emitidas é exibido as notas fiscais emitidas nos últimos 30 dias. Para exibir as notas referentes a um outro período informe os campos data inicial e data final. Em seguida clique no botão filtrar.
+            Para exibir as notas recebidas referentes a um período informe os campos data inicial e data final. Em seguida clique no botão filtrar.
             O período informado não deve ser superior a 30 dias.
         </div>
     </div>
 </div>
-
 
 <div id="pnlComandos" class="navbar navbar-nfse">
     <div class="navbar-collapse" id="searchbar">
@@ -163,14 +163,15 @@
                 </a>
             </li>
             <li>
-                <a id="btnRecarregar" href="/EmissorNacional/Notas/Emitidas" class="btn btn-lg btn-info" data-toggle="tooltip" title="" data-original-title="Recarregar">
+                <a id="btnRecarregar" href="/EmissorNacional/Notas/Recebidas" class="btn btn-lg btn-info" data-toggle="tooltip" title="" data-original-title="Recarregar">
                     <img src="/EmissorNacional/img/btn-recarregar.svg" style="height: 21px;"><span>Recarregar lista</span>
                 </a>
             </li>
         </ul>
-<form action="/EmissorNacional/Notas/Emitidas" class="navbar-form" method="get"><input id="executar" name="executar" type="hidden" value="1">            <div class="form-group" style="display:inline;">
+<form action="/EmissorNacional/Notas/Recebidas" class="navbar-form" method="get"><input id="executar" name="executar" type="hidden" value="1">            <input type="hidden" name="executar" value="1">
+            <div class="form-group" style="display:inline;">
                 <div class="input-group input-group-lg" style="display:table;">
-                    <input class="form-control" name="busca" placeholder="Pesquisar pessoa física ou jurídica" type="text">
+                    <input class="form-control" name="busca" placeholder="Pesquisar por pessoa física ou jurídica" type="text">
                     <span class="input-group-btn" style="width:1%;">
                         <button id="btnPesquisar" class="btn btn-default" type="submit"><img src="/EmissorNacional/img/btn-pesquisar-esq.svg"></button>
                     </span>
@@ -180,13 +181,13 @@
             <div style="display: flex; align-items: center; justify-content: flex-start;">
                 <div class="form-group form-group-lg">
                     <label class="control-label"><span>Data Inicial</span></label>
-                    <div class="input-group input-group-lg"><input class="form-control data" id="datainicio" name="datainicio" type="text" value="01/02/2026"><span class="input-group-btn"><button class="btn btn-lg btn-default btnCalendario" data-original-title="Abrir calendário" data-toggle="tooltip" id="btn_datainicio" type="button"><div class="btn-calendario"></div></button></span></div>
+                    <div class="input-group input-group-lg"><input class="form-control data" id="datainicio" name="datainicio" type="text" value="01/06/2026"><span class="input-group-btn"><button class="btn btn-lg btn-default btnCalendario" data-original-title="Abrir calendário" data-toggle="tooltip" id="btn_datainicio" type="button"><div class="btn-calendario"></div></button></span></div>
                     <span class="field-validation-valid text-danger" data-valmsg-for="datainicio" data-valmsg-replace="true"></span>
                 </div>
                 <div class="form-group" style="display: flex; align-items: center; justify-content: flex-start; gap: 10px;">
                     <div class="form-group form-group-lg">
                         <label class="control-label"><span>Data Final</span></label>
-                        <div class="input-group input-group-lg"><input class="form-control data" id="datafim" name="datafim" type="text" value="28/02/2026"><span class="input-group-btn"><button class="btn btn-lg btn-default btnCalendario" data-original-title="Abrir calendário" data-toggle="tooltip" id="btn_datafim" type="button"><div class="btn-calendario"></div></button></span></div>
+                        <div class="input-group input-group-lg"><input class="form-control data" id="datafim" name="datafim" type="text" value="30/06/2026"><span class="input-group-btn"><button class="btn btn-lg btn-default btnCalendario" data-original-title="Abrir calendário" data-toggle="tooltip" id="btn_datafim" type="button"><div class="btn-calendario"></div></button></span></div>
                         <span class="field-validation-valid text-danger" data-valmsg-for="datafim" data-valmsg-replace="true"></span>
                     </div>
                     <div class="form-group form-group-lg">
@@ -196,13 +197,59 @@
                     </div>
                 </div>
             </div>
-</form>
-    </div>
-
+</form>    </div>
 </div>
+
     <span class="sem-registros">Nenhum registro encontrado</span>
 
-<div id="modalCancelamento" class="modal fade" tabindex="-1" role="dialog"></div>
+<div id="modalManifestacao" class="modal fade" tabindex="-1" role="dialog"></div>
+
+<div id="modalSubstituicao" class="modal fade" tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"></button>
+                <h4 class="modal-title">Substituição de NFS-e</h4>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="txtDataAutorizacao">Data da autorização:</label>
+                            <input id="txtDataAutorizacao" type="text" class="form-control" disabled="">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label for="txtValor">Valor do Serviço:</label>
+                            <input id="txtValor" type="text" class="form-control" disabled="">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="txtTomador">Tomador do Serviço:</label>
+                            <input id="txtTomador" type="text" class="form-control" disabled="">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="form-group">
+                            <label for="txtServico">Serviço prestado:</label>
+                            <input id="txtServico" type="text" class="form-control" disabled="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="btnConfirmar" type="button" class="btn btn-primary has-spin"><img src="/EmissorNacional/img/btn-confirmar.svg"><span>Confirmar</span></button>
+                <button id="btnFechar" type="button" class="btn btn-info" data-dismiss="modal"><img src="/EmissorNacional/img/btn-fechar.svg"><span>Fechar</span></button>
+            </div>
+        </div>
+    </div>
+</div>
 
     </div>
 
