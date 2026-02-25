@@ -216,13 +216,28 @@ def processar_conversao(request, conversao_id):
                 conversao.save()
                 
                 print(f"✅ Arquivo salvo em: {conversao.arquivo_convertido.url}")
-                
-                return JsonResponse({
+
+                # If available, try to include the extracted TXT universal for frontend display
+                texto_completo = None
+                try:
+                    nome_base = os.path.splitext(conversao.nome_original)[0]
+                    candidato_txt = os.path.join(temp_dir, f"{nome_base}_texto_universal.txt")
+                    if os.path.exists(candidato_txt):
+                        with open(candidato_txt, 'r', encoding='utf-8', errors='replace') as tf:
+                            texto_completo = tf.read()
+                except Exception:
+                    texto_completo = None
+
+                resp = {
                     'id': conversao.id,
                     'status': 'concluido',
                     'url': conversao.arquivo_convertido.url,
                     'tamanho': conversao.tamanho_convertido
-                })
+                }
+                if texto_completo is not None:
+                    resp['texto_completo'] = texto_completo
+
+                return JsonResponse(resp)
             else:
                 print(f"❌ Erro na conversão: {erro}")
                 conversao.status = 'erro'
