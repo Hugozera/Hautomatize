@@ -2,41 +2,74 @@ import os
 import re
 import subprocess
 import zipfile
-import glob
 import tempfile
 from datetime import datetime
 import multiprocessing
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
+import xml.etree.ElementTree as ET
+from typing import List, Dict, Tuple, Optional
+import traceback
 
 # Tentativa de importar bibliotecas opcionais
 try:
-    import fitz
+    import fitz  # PyMuPDF
     HAS_FITZ = True
-except Exception:
+except ImportError:
     HAS_FITZ = False
 
 try:
     import pytesseract
-    from pdf2image import convert_from_path
-    from PIL import Image
+    from pdf2image import convert_from_path, pdfinfo_from_path
+    from PIL import Image, ImageEnhance, ImageFilter, ImageOps
     HAS_OCR = True
-except Exception:
+except ImportError:
     HAS_OCR = False
 
 
 class ConversorService:
     PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
     POPPLER_PATH = os.path.join(PROJECT_ROOT, 'poppler-25.12.0', 'Library', 'bin')
-    TESSERACT_CMD = os.path.join(PROJECT_ROOT, 'tesseract.exe')
+    TESSERACT_CMD = os.path.join(PROJECT_ROOT, 'Tesseract-OCR', 'tesseract.exe')
     TESSDATA_PREFIX = os.path.join(PROJECT_ROOT, 'tessdata')
 
+    # Configura caminhos
     if os.path.exists(POPPLER_PATH):
         os.environ['PATH'] = POPPLER_PATH + os.pathsep + os.environ.get('PATH', '')
-    try:
+    
+    if os.path.exists(TESSDATA_PREFIX):
         os.environ['TESSDATA_PREFIX'] = TESSDATA_PREFIX
-    except Exception:
-        pass
+    
+    if os.path.exists(TESSERACT_CMD) and HAS_OCR:
+        pytesseract.pytesseract.tesseract_cmd = TESSERACT_CMD
 
-    OCR_DPI = 200
+    # Configurações de OCR
+    OCR_CONFIGS = [
+        {
+            'nome': 'Rápido (150 DPI)',
+            'dpi': 150,
+            'grayscale': True,
+            'preprocess': 'basic',
+            'tesseract_config': r'--oem 3 --psm 6',
+            'peso': 1
+        },
+        {
+            'nome': 'Médio (200 DPI)',
+            'dpi': 200,
+            'grayscale': False,
+            'preprocess': 'contrast',
+            'tesseract_config': r'--oem 3 --psm 3',
+            'peso': 2
+        },
+        {
+            'nome': 'Completo (300 DPI)',
+            'dpi': 300,
+            'grayscale': False,
+            'preprocess': 'full',
+            'tesseract_config': r'--oem 3 --psm 3 --dpi 300',
+            'peso': 3
+        }
+    ]
+    
     MAX_WORKERS = multiprocessing.cpu_count()
 
     FORMATOS_SUPORTADOS = {
@@ -53,335 +86,534 @@ class ConversorService:
 
     @classmethod
     def get_formatos_destino(cls, formato_origem):
-        return cls.FORMATOS_SUPORTADOS.get((formato_origem or '').lower().replace('.', ''), ['ofx', 'pdf', 'txt', 'zip'])
+        return cls.FORMATOS_SUPORTADOS.get(
+            (formato_origem or '').lower().replace('.', ''), 
+            ['ofx', 'pdf', 'txt', 'zip']
+        )
 
     @classmethod
-    def _extrair_texto_pdf_rapido(cls, pdf_path):
-        """Extrai texto do PDF tentando PyMuPDF, depois pdftotext e por fim OCR.
-        Mantemos os parâmetros de OCR/geração de imagens sem alterações de performance."""
-        texto = ''
+    def _preprocessar_imagem(cls, imagem, nivel='basic'):
+        """Pré-processa imagem em diferentes níveis."""
+        try:
+            if nivel == 'basic':
+                return imagem.convert('L')
+            
+            elif nivel == 'contrast':
+                img = imagem.convert('L')
+                enhancer = ImageEnhance.Contrast(img)
+                return enhancer.enhance(1.5)
+            
+            elif nivel == 'full':
+                img = imagem.convert('L')
+                enhancer = ImageEnhance.Contrast(img)
+                img = enhancer.enhance(2.0)
+                img = img.filter(ImageFilter.MedianFilter(size=3))
+                img = ImageOps.autocontrast(img, cutoff=2)
+                return img
+            
+            return imagem
+            
+        except Exception as e:
+            print(f"    Erro no pré-processamento: {e}")
+            return imagem
 
-        # 1) PyMuPDF
+    @classmethod
+    def _extrair_texto_com_ocr(cls, pdf_path: str, config: dict) -> str:
+        """Extrai texto com OCR processando TODAS as páginas."""
+        if not HAS_OCR:
+            return ""
+        
+        print(f"\n  📸 Tentando OCR: {config['nome']}")
+        
+        try:
+            # Prepara parâmetros
+            kwargs = {
+                'pdf_path': pdf_path,
+                'dpi': config['dpi'],
+                'poppler_path': cls.POPPLER_PATH,
+                'fmt': 'jpeg',
+                'thread_count': cls.MAX_WORKERS
+            }
+            
+            if config.get('grayscale'):
+                kwargs['grayscale'] = True
+            
+            print(f"    🔄 Convertendo PDF ({config['dpi']} DPI)...")
+            
+            # Converte TODAS as páginas
+            imagens = convert_from_path(**kwargs)
+            total_paginas = len(imagens)
+            print(f"    📄 {total_paginas} páginas convertidas")
+
+            def processar_pagina(args):
+                idx, img = args
+                try:
+                    img_proc = cls._preprocessar_imagem(img, config.get('preprocess', 'basic'))
+                    texto = pytesseract.image_to_string(
+                        img_proc, 
+                        lang='por', 
+                        config=config['tesseract_config']
+                    )
+                    
+                    if (idx + 1) % 10 == 0 or (idx + 1) == total_paginas:
+                        print(f"      Página {idx+1}/{total_paginas}: {len(texto)} chars")
+                    
+                    return texto
+                except Exception as e:
+                    print(f"      Erro na página {idx+1}: {e}")
+                    return ""
+
+            # Processa em paralelo
+            with ThreadPoolExecutor(max_workers=cls.MAX_WORKERS) as executor:
+                args_list = [(i, img) for i, img in enumerate(imagens)]
+                resultados = list(executor.map(processar_pagina, args_list))
+
+            texto_final = '\n'.join(resultados)
+            print(f"    ✅ Extraídos {len(texto_final)} caracteres de {total_paginas} páginas")
+            
+            return texto_final
+
+        except Exception as e:
+            print(f"    ❌ Erro no OCR: {e}")
+            traceback.print_exc()
+            return ""
+
+    @classmethod
+    def extrair_texto_pdf(cls, pdf_path: str, modo_rapido: bool = True) -> str:
+        """
+        Extrai texto de PDF com múltiplas tentativas - processa TODAS as páginas.
+        """
+        if not os.path.exists(pdf_path):
+            print(f"  Arquivo não encontrado: {pdf_path}")
+            return ""
+
+        print(f"\n📄 Extraindo texto de: {os.path.basename(pdf_path)}")
+        print(f"  Tamanho: {os.path.getsize(pdf_path) / 1024 / 1024:.1f} MB")
+        print(f"  Modo: {'RÁPIDO' if modo_rapido else 'COMPLETO'}")
+
+        textos_encontrados = []
+
+        # Estratégia 1: PyMuPDF
         if HAS_FITZ:
             try:
+                print("\n  📄 Tentando PyMuPDF...")
                 doc = fitz.open(pdf_path)
-                partes = []
-                for p in doc:
-                    partes.append(p.get_text())
+                total_paginas = len(doc)
+                texto = ""
+                paginas_com_texto = 0
+                
+                for i, pagina in enumerate(doc):
+                    page_text = pagina.get_text()
+                    if page_text.strip():
+                        texto += page_text + "\n"
+                        paginas_com_texto += 1
+                    
+                    if (i + 1) % 10 == 0 or (i + 1) == total_paginas:
+                        print(f"    Página {i+1}/{total_paginas}: {len(page_text)} chars")
+                
                 doc.close()
-                texto = '\n'.join(partes)
+                
                 if texto.strip():
-                    return texto
-            except Exception:
-                pass
+                    print(f"  ✅ PyMuPDF extraiu {len(texto)} caracteres de {paginas_com_texto} páginas")
+                    textos_encontrados.append(('PyMuPDF', texto))
+                else:
+                    print("  ⚠ PyMuPDF não encontrou texto")
+                    
+            except Exception as e:
+                print(f"  Erro no PyMuPDF: {e}")
 
-        # 2) pdftotext (poppler)
+        # Estratégia 2: pdftotext
         try:
+            print("\n  📄 Tentando pdftotext...")
             pdftotext_cmd = os.path.join(cls.POPPLER_PATH, 'pdftotext.exe')
             if os.path.exists(pdftotext_cmd):
-                r = subprocess.run([pdftotext_cmd, '-layout', '-nopgbrk', pdf_path, '-'], capture_output=True, text=True, timeout=20)
-                if r.returncode == 0 and r.stdout.strip():
-                    return r.stdout
-        except Exception:
-            pass
+                resultado = subprocess.run(
+                    [pdftotext_cmd, '-layout', '-nopgbrk', pdf_path, '-'],
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+                if resultado.returncode == 0 and resultado.stdout.strip():
+                    texto = resultado.stdout
+                    print(f"  ✅ pdftotext extraiu {len(texto)} caracteres")
+                    textos_encontrados.append(('pdftotext', texto))
+                else:
+                    print("  ⚠ pdftotext não encontrou texto")
+        except subprocess.TimeoutExpired:
+            print("  ⚠ pdftotext timeout (muito lento)")
+        except Exception as e:
+            print(f"  Erro no pdftotext: {e}")
 
-        # 3) OCR (só se as bibliotecas existirem)
+        # Estratégia 3: OCR
         if HAS_OCR:
-            try:
-                if os.path.exists(cls.TESSERACT_CMD):
-                    pytesseract.pytesseract.tesseract_cmd = cls.TESSERACT_CMD
+            if modo_rapido:
+                configs_tentar = cls.OCR_CONFIGS[:2]
+            else:
+                configs_tentar = cls.OCR_CONFIGS
+            
+            for config in configs_tentar:
+                texto = cls._extrair_texto_com_ocr(pdf_path, config)
+                if texto.strip():
+                    textos_encontrados.append((config['nome'], texto))
+                    if len(texto) > 100000 and modo_rapido:
+                        print(f"\n  ✅ Texto suficiente encontrado, parando...")
+                        break
 
-                imagens = convert_from_path(pdf_path, dpi=cls.OCR_DPI, poppler_path=cls.POPPLER_PATH, fmt='jpeg', thread_count=cls.MAX_WORKERS)
-                partes = []
-                for img in imagens:
-                    try:
-                        partes.append(pytesseract.image_to_string(img, lang='por'))
-                    except Exception:
-                        partes.append('')
-                texto = '\n'.join(partes)
-                return texto
-            except Exception:
-                pass
+        # Escolhe o melhor texto
+        if textos_encontrados:
+            melhor_texto = max(textos_encontrados, key=lambda x: len(x[1]))
+            print(f"\n  ✅ Melhor resultado: {melhor_texto[0]} - {len(melhor_texto[1])} caracteres")
+            return melhor_texto[1]
 
-        return texto
+        print("\n  ❌ Nenhum texto extraído")
+        return ""
 
     @classmethod
-    def _extrair_transacoes_rapido(cls, texto):
-        """Heurística simples para extrair data, valor e descrição de extratos.
-        Não é perfeita mas serve para decidir se houve transações."""
+    def extrair_transacoes(cls, texto: str) -> List[Dict]:
+        """
+        Extrai transações bancárias do texto - VERSÃO OTIMIZADA.
+        """
         if not texto:
             return []
 
-        padrao_data = re.compile(r"(\d{2}/\d{2}(?:/\d{4})?)")
-        padrao_valor = re.compile(r"([+-]?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2}))")
+        print(f"\n📊 Extraindo transações de {len(texto)} caracteres")
+        
+        todas_transacoes = []
+        linhas = texto.split('\n')
+        print(f"  {len(linhas)} linhas para processar")
 
-        linhas = [l.strip() for l in texto.splitlines() if l.strip()]
-        transacoes = []
-        ano_atual = datetime.now().year
-        last_date = None
-        last_desc = ''
+        # Padrões simples e rápidos
+        padrao_data = re.compile(r'(\d{2}[/]\d{2}[/]\d{2,4})')
+        padrao_valor = re.compile(r'(\d{1,3}(?:[.]\d{3})*[,]\d{2})')
+        padrao_doc = re.compile(r'\b(\d{6})\b')
+        
+        # Palavras-chave para tipo
+        palavras_debito = ['PAG', 'DEB', 'TAR', 'ENVIADO', 'BOLETO', 'D ']
+        palavras_credito = ['CRED', 'RECEBIDO', 'PIX RECEBIDO', 'C ']
 
+        print("\n  🔍 Processando transações linha a linha...")
+        
         for i, linha in enumerate(linhas):
-            if not linha:
+            linha = linha.strip()
+            if len(linha) < 10:  # Linhas muito curtas ignorar
                 continue
-            dm = padrao_data.search(linha)
-            vm = padrao_valor.search(linha)
-
-            if dm:
-                last_date = dm.group(1)
-                rest = padrao_data.sub('', linha).strip()
-                rest = padrao_valor.sub('', rest).strip()
-                if rest:
-                    last_desc = rest
-                continue
-
-            if vm:
-                valor = vm.group(1)
-                data_str = last_date
-                if not data_str:
-                    # procurar para trás algumas linhas
-                    for j in range(1, 6):
-                        if i - j < 0:
-                            break
-                        pm = padrao_data.search(linhas[i - j])
-                        if pm:
-                            data_str = pm.group(1)
-                            break
-                if not data_str:
-                    continue
-
-                descricao = last_desc or ''
-                if not descricao:
-                    for j in range(1, 6):
-                        if i - j < 0:
-                            break
-                        if not padrao_valor.search(linhas[i - j]) and not linhas[i - j].isdigit():
-                            descricao = linhas[i - j]
-                            break
-
+            
+            # Procura data e valor na mesma linha
+            data_match = padrao_data.search(linha)
+            valor_match = padrao_valor.search(linha)
+            
+            if data_match and valor_match:
                 try:
-                    if '/' in data_str and len(data_str) == 10:
-                        dobj = datetime.strptime(data_str, '%d/%m/%Y')
-                    else:
-                        dobj = datetime.strptime(f"{data_str}/{ano_atual}", '%d/%m/%Y')
-                except Exception:
-                    continue
+                    # Data
+                    data_str = data_match.group(1)
+                    partes = data_str.split('/')
+                    if len(partes) == 3:
+                        dia, mes, ano = partes
+                        if len(ano) == 2:
+                            ano = f"20{ano}" if int(ano) <= 30 else f"19{ano}"
+                        data = f"{ano}{mes}{dia}"
+                        
+                        # Valor
+                        valor_str = valor_match.group(1)
+                        valor = float(valor_str.replace('.', '').replace(',', '.'))
+                        
+                        # Documento (opcional)
+                        doc_match = padrao_doc.search(linha)
+                        documento = doc_match.group(1) if doc_match else ""
+                        
+                        # Determina tipo baseado em palavras-chave
+                        linha_upper = linha.upper()
+                        if any(p in linha_upper for p in palavras_debito):
+                            tipo = 'DEBIT'
+                        elif any(p in linha_upper for p in palavras_credito):
+                            tipo = 'CREDIT'
+                        else:
+                            # Tenta inferir pelo sinal
+                            tipo = 'DEBIT' if ('-' in linha) else 'CREDIT'
+                        
+                        # Descrição (remove datas, valores e documentos)
+                        desc = linha
+                        desc = padrao_data.sub('', desc)
+                        desc = padrao_valor.sub('', desc)
+                        if documento:
+                            desc = desc.replace(documento, '')
+                        desc = re.sub(r'\s+', ' ', desc).strip()
+                        
+                        if not desc:
+                            desc = f"Transacao {documento}" if documento else "Transacao"
+                        
+                        todas_transacoes.append({
+                            'data': data,
+                            'valor': valor,
+                            'descricao': desc[:60].upper(),
+                            'tipo': tipo,
+                            'documento': documento
+                        })
+                        
+                        if len(todas_transacoes) % 100 == 0:
+                            print(f"    {len(todas_transacoes)} transações encontradas...")
+                            
+                except Exception as e:
+                    # Silencia erros individuais para não travar
+                    pass
 
-                try:
-                    v = float(valor.replace('.', '').replace(',', '.'))
-                except Exception:
-                    continue
+        print(f"\n  ✅ Encontradas {len(todas_transacoes)} transações brutas")
 
-                desc = re.sub(r'[R$\s]', ' ', descricao or '')
-                desc = re.sub(r'[+-]', '', desc)
-                desc = re.sub(r'\s+', ' ', desc).strip()
+        # Remove duplicatas de forma eficiente
+        print("  🔄 Removendo duplicatas...")
+        transacoes_unicas = []
+        vistos = set()
+        
+        for t in todas_transacoes:
+            # Chave única: data + valor + primeiros 10 chars da descrição
+            chave = f"{t['data']}_{t['valor']:.2f}_{t['descricao'][:10]}"
+            if chave not in vistos:
+                vistos.add(chave)
+                
+                # Gera FITID
+                fitid = f"{t['data']}{int(t['valor'] * 100):08d}"
+                if t.get('documento'):
+                    fitid = f"{fitid}{t['documento']}"
+                else:
+                    # Usa hash simples da descrição
+                    fitid = f"{fitid}{abs(hash(t['descricao'])) % 10000:04d}"
+                
+                t['fitid'] = fitid[:30]
+                transacoes_unicas.append(t)
 
-                if desc and abs(v) > 0.01:
-                    transacoes.append({'data': dobj.strftime('%Y%m%d'), 'valor': v, 'descricao': desc[:120]})
-
-                last_desc = ''
-                continue
-
-            if len(linha) > 3 and not padrao_valor.search(linha) and not linha.isdigit():
-                last_desc = linha
-
-        return transacoes
+        # Ordena por data
+        transacoes_unicas.sort(key=lambda x: x['data'])
+        
+        print(f"\n  ✅ Total final: {len(transacoes_unicas)} transações únicas")
+        
+        # Mostra estatísticas
+        if transacoes_unicas:
+            datas = [t['data'] for t in transacoes_unicas]
+            print(f"    Período: {min(datas)} a {max(datas)}")
+            
+            # Conta por tipo
+            debitos = sum(1 for t in transacoes_unicas if t['tipo'] == 'DEBIT')
+            creditos = sum(1 for t in transacoes_unicas if t['tipo'] == 'CREDIT')
+            print(f"    Débitos: {debitos}, Créditos: {creditos}")
+            
+            print("\n  📝 Primeiras 10 transações:")
+            for t in transacoes_unicas[:10]:
+                print(f"    {t['data']} | {t['tipo']:6} | R$ {t['valor']:8.2f} | {t['descricao'][:40]}")
+        
+        return transacoes_unicas
 
     @classmethod
-    def _gerar_ofx(cls, transacoes, ofx_path):
+    def gerar_ofx(cls, transacoes: List[Dict], ofx_path: str, banco_id: str = "104", 
+                  agencia: str = "0000", conta: str = "99999999") -> bool:
+        """Gera arquivo OFX."""
         try:
+            if not transacoes:
+                return False
+
+            print(f"\n📝 Gerando OFX com {len(transacoes)} transações...")
+            
+            transacoes.sort(key=lambda x: x['data'])
+            data_inicio = min(t['data'] for t in transacoes)
+            data_fim = max(t['data'] for t in transacoes)
+            
+            agora = datetime.now()
+            data_server = agora.strftime("%Y%m%d%H%M%S")
+
             with open(ofx_path, 'w', encoding='utf-8') as f:
-                f.write('OFXHEADER:100\nDATA:OFXSGML\nVERSION:102\n')
-                f.write('SECURITY:NONE\nENCODING:USASCII\nCHARSET:1252\n')
-                f.write('COMPRESSION:NONE\nOLDFILEUID:NONE\nNEWFILEUID:NONE\n\n')
-                f.write('<OFX>\n<SIGNONMSGSRSV1>\n<SONRS>\n<STATUS>\n')
-                f.write('<CODE>0\n<SEVERITY>INFO\n</STATUS>\n')
-                f.write(f'<DTSERVER>{datetime.now().strftime("%Y%m%d%H%M%S")}\n')
-                f.write('<LANGUAGE>POR\n</SONRS>\n</SIGNONMSGSRSV1>\n')
-                f.write('<BANKMSGSRSV1>\n<STMTTRNRS>\n<STMTRS>\n')
-                f.write('<CURDEF>BRL\n<BANKTRANLIST>\n')
-                for t in transacoes:
-                    f.write('<STMTTRN>\n<TRNTYPE>OTHER\n')
-                    f.write(f'<DTPOSTED>{t["data"]}\n')
-                    f.write(f'<TRNAMT>{t["valor"]:.2f}\n')
-                    f.write(f'<FITID>{t["data"]}{abs(int(t["valor"]*100))}\n')
-                    f.write(f'<NAME>{t["descricao"]}\n</STMTTRN>\n')
-                f.write('</BANKTRANLIST>\n</STMTRS>\n</STMTTRNRS>\n')
-                f.write('</BANKMSGSRSV1>\n</OFX>\n')
+                # HEADER
+                f.write("OFXHEADER:100\n")
+                f.write("DATA:OFXSGML\n")
+                f.write("VERSION:102\n")
+                f.write("SECURITY:NONE\n")
+                f.write("ENCODING:UTF-8\n")
+                f.write("CHARSET:1252\n")
+                f.write("COMPRESSION:NONE\n")
+                f.write("OLDFILEUID:NONE\n")
+                f.write("NEWFILEUID:NONE\n")
+                f.write("\n")
+
+                # OFX
+                f.write("<OFX>\n")
+                
+                # SIGNON
+                f.write("  <SIGNONMSGSRSV1>\n")
+                f.write("    <SONRS>\n")
+                f.write("      <STATUS>\n")
+                f.write("        <CODE>0</CODE>\n")
+                f.write("        <SEVERITY>INFO</SEVERITY>\n")
+                f.write("      </STATUS>\n")
+                f.write(f"      <DTSERVER>{data_server}</DTSERVER>\n")
+                f.write("      <LANGUAGE>POR</LANGUAGE>\n")
+                f.write("    </SONRS>\n")
+                f.write("  </SIGNONMSGSRSV1>\n")
+                
+                # BANK
+                f.write("  <BANKMSGSRSV1>\n")
+                f.write("    <STMTTRNRS>\n")
+                f.write("      <TRNUID>0</TRNUID>\n")
+                f.write("      <STATUS>\n")
+                f.write("        <CODE>0</CODE>\n")
+                f.write("        <SEVERITY>INFO</SEVERITY>\n")
+                f.write("      </STATUS>\n")
+                f.write("      <STMTRS>\n")
+                f.write(f"        <CURDEF>BRL</CURDEF>\n")
+                
+                # Conta
+                f.write("        <BANKACCTFROM>\n")
+                f.write(f"          <BANKID>{banco_id}</BANKID>\n")
+                f.write(f"          <ACCTID>{conta}</ACCTID>\n")
+                f.write("          <ACCTTYPE>CHECKING</ACCTTYPE>\n")
+                f.write("        </BANKACCTFROM>\n")
+                
+                # Transações
+                f.write("        <BANKTRANLIST>\n")
+                f.write(f"          <DTSTART>{data_inicio}</DTSTART>\n")
+                f.write(f"          <DTEND>{data_fim}</DTEND>\n")
+                
+                for i, t in enumerate(transacoes):
+                    f.write("          <STMTTRN>\n")
+                    f.write(f"            <TRNTYPE>{t['tipo']}</TRNTYPE>\n")
+                    f.write(f"            <DTPOSTED>{t['data']}</DTPOSTED>\n")
+                    
+                    valor = t['valor'] if t['tipo'] == 'CREDIT' else -t['valor']
+                    valor_str = f"{valor:.2f}".replace('.', ',')
+                    f.write(f"            <TRNAMT>{valor_str}</TRNAMT>\n")
+                    
+                    f.write(f"            <FITID>{t['fitid']}</FITID>\n")
+                    
+                    checknum = t.get('documento', f"{i+1:06d}")
+                    f.write(f"            <CHECKNUM>{checknum}</CHECKNUM>\n")
+                    
+                    f.write(f"            <MEMO>{t['descricao']}</MEMO>\n")
+                    f.write("          </STMTTRN>\n")
+                
+                f.write("        </BANKTRANLIST>\n")
+                
+                # Saldo
+                saldo_final = sum(t['valor'] if t['tipo'] == 'CREDIT' else -t['valor'] 
+                                 for t in transacoes)
+                saldo_str = f"{saldo_final:.2f}".replace('.', ',')
+                
+                f.write("        <LEDGERBAL>\n")
+                f.write(f"          <BALAMT>{saldo_str}</BALAMT>\n")
+                f.write(f"          <DTASOF>{data_fim}</DTASOF>\n")
+                f.write("        </LEDGERBAL>\n")
+                
+                f.write("      </STMTRS>\n")
+                f.write("    </STMTTRNRS>\n")
+                f.write("  </BANKMSGSRSV1>\n")
+                f.write("</OFX>\n")
+
+            print(f"  ✅ OFX gerado: {os.path.basename(ofx_path)}")
             return True
-        except Exception:
+
+        except Exception as e:
+            print(f"  ❌ Erro ao gerar OFX: {e}")
+            traceback.print_exc()
             return False
 
     @classmethod
-    def _gerar_txt(cls, texto, txt_path):
+    def _salvar_como_csv(cls, transacoes: List[Dict], csv_path: str) -> bool:
+        """Salva transações em CSV."""
         try:
-            with open(txt_path, 'w', encoding='utf-8') as f:
-                f.write(texto)
+            import csv
+            with open(csv_path, 'w', newline='', encoding='utf-8-sig') as f:
+                writer = csv.writer(f, delimiter=';')
+                writer.writerow(['Data', 'Tipo', 'Valor', 'Descrição', 'Documento', 'FITID'])
+                for t in transacoes:
+                    writer.writerow([
+                        t['data'],
+                        t['tipo'],
+                        f"{t['valor']:.2f}".replace('.', ','),
+                        t['descricao'],
+                        t.get('documento', ''),
+                        t.get('fitid', '')
+                    ])
             return True
-        except Exception:
+        except Exception as e:
+            print(f"Erro ao salvar CSV: {e}")
             return False
 
     @classmethod
-    def converter(cls, arquivo_path, formato_destino, output_dir=None):
-        """Conversor mínimo com fallback PDF->TXT->OFX somente quando não houver transacoes."""
+    def converter(cls, arquivo_path: str, formato_destino: str, 
+                  output_dir: Optional[str] = None, modo_rapido: bool = True) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Converte arquivo para formato destino.
+        """
+        print(f"\n🔄 Iniciando conversão:")
+        print(f"  Arquivo: {os.path.basename(arquivo_path)}")
+        print(f"  Formato destino: {formato_destino}")
+        print(f"  Modo: {'RÁPIDO' if modo_rapido else 'COMPLETO'}")
+
         if not os.path.exists(arquivo_path):
-            return None, 'Arquivo não encontrado'
+            return None, f"Arquivo não encontrado: {arquivo_path}"
 
         if not output_dir:
             output_dir = os.path.dirname(arquivo_path)
+        
         os.makedirs(output_dir, exist_ok=True)
 
         formato_origem = os.path.splitext(arquivo_path)[1].lower().replace('.', '')
         nome_base = os.path.splitext(os.path.basename(arquivo_path))[0]
         output_path = os.path.join(output_dir, f"{nome_base}.{formato_destino}")
 
-        # ZIP de origem: extrai e processa cada arquivo internamente
-        if formato_origem == 'zip':
-            try:
-                resultados = []
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    with zipfile.ZipFile(arquivo_path, 'r') as z:
-                        z.extractall(temp_dir)
-
-                    # procurar arquivos extraídos
-                    for root, _, files in os.walk(temp_dir):
-                        for f in files:
-                            arquivo_interno = os.path.join(root, f)
-                            ext = os.path.splitext(f)[1].lower().replace('.', '')
-                            if ext in cls.FORMATOS_SUPORTADOS:
-                                res, err = cls.converter(arquivo_interno, formato_destino, temp_dir)
-                                if res:
-                                    resultados.append(res)
-
-                    if not resultados:
-                        return None, 'Nenhum arquivo convertido no ZIP'
-
-                    # Se apenas um resultado e o usuário pediu um formato simples, retorne-o
-                    if len(resultados) == 1 and formato_destino != 'zip':
-                        return resultados[0], None
-
-                    # Caso contrário, empacotar resultados em um ZIP para download
-                    zip_out = os.path.join(output_dir, f"{nome_base}_convertidos.zip")
-                    with zipfile.ZipFile(zip_out, 'w') as zf:
-                        for r in resultados:
-                            if os.path.exists(r):
-                                zf.write(r, os.path.basename(r))
-                    return zip_out, None
-            except Exception as e:
-                return None, str(e)
-
-        # Tratamento PDF
+        # Processa PDF
         if formato_origem == 'pdf':
-            texto = cls._extrair_texto_pdf_rapido(arquivo_path)
-            transacoes = cls._extrair_transacoes_rapido(texto) if texto else []
-
+            print("\n📄 Processando PDF...")
+            
+            # Extrai texto
+            texto = cls.extrair_texto_pdf(arquivo_path, modo_rapido)
+            
+            if not texto.strip():
+                return None, "Não foi possível extrair texto do PDF"
+            
+            print(f"\n✅ Texto extraído: {len(texto)} caracteres")
+            
+            # Extrai transações
+            transacoes = cls.extrair_transacoes(texto)
+            
+            # Salva texto para debug
+            txt_debug = os.path.join(output_dir, f"{nome_base}_texto_extraido.txt")
+            with open(txt_debug, 'w', encoding='utf-8') as f:
+                f.write(texto)
+            print(f"  📝 Texto salvo: {txt_debug}")
+            
+            # Salva CSV se tiver transações
+            if transacoes:
+                csv_path = os.path.join(output_dir, f"{nome_base}.csv")
+                cls._salvar_como_csv(transacoes, csv_path)
+                print(f"  📊 CSV salvo: {csv_path}")
+            
+            # Gera formato solicitado
             if formato_destino == 'ofx':
-                # Se conseguimos extrair transacoes já geramos OFX
-                if transacoes and cls._gerar_ofx(transacoes, output_path):
-                    return output_path, None
-
-                # Fallback mínimo: gerar TXT intermediário e tentar extrair novamente
-                try:
-                    txt_tmp = os.path.join(output_dir, f"{nome_base}_intermediario.txt")
-                    if texto and cls._gerar_txt(texto, txt_tmp):
-                        with open(txt_tmp, 'r', encoding='utf-8', errors='ignore') as f:
-                            txt_conteudo = f.read()
-                        trans_txt = cls._extrair_transacoes_rapido(txt_conteudo)
-                        if trans_txt and cls._gerar_ofx(trans_txt, output_path):
-                            try:
-                                os.remove(txt_tmp)
-                            except Exception:
-                                pass
-                            return output_path, None
-                        try:
-                            os.remove(txt_tmp)
-                        except Exception:
-                            pass
-                except Exception as e:
-                    # Não interromper o fluxo principal
-                    print(f'Fallback PDF->TXT falhou: {e}')
-
-                return None, 'Nenhuma transação encontrada'
-
-            if formato_destino == 'txt':
-                if cls._gerar_txt(texto, output_path):
-                    return output_path, None
-
-            if formato_destino == 'zip':
-                try:
-                    zip_path = os.path.join(output_dir, f"{nome_base}_completo.zip")
-                    with zipfile.ZipFile(zip_path, 'w') as zf:
-                        # TXT
-                        txt_path = os.path.join(output_dir, f"{nome_base}.txt")
-                        if cls._gerar_txt(texto, txt_path):
-                            zf.write(txt_path, os.path.basename(txt_path))
-                            try:
-                                os.remove(txt_path)
-                            except Exception:
-                                pass
-
-                        # OFX
-                        if transacoes:
-                            ofx_path = os.path.join(output_dir, f"{nome_base}.ofx")
-                            if cls._gerar_ofx(transacoes, ofx_path):
-                                zf.write(ofx_path, os.path.basename(ofx_path))
-                                try:
-                                    os.remove(ofx_path)
-                                except Exception:
-                                    pass
-
-                    return zip_path, None
-                except Exception as e:
-                    return None, str(e)
-
-            # outros formatos básicos: se transacoes existem, gerar xml/csv/ofx conforme pedido
-            if formato_destino == 'xml' and transacoes:
-                if cls._gerar_xml(transacoes, output_path):
-                    return output_path, None
-
-            if formato_destino == 'csv' and transacoes:
-                if cls._gerar_csv(transacoes, output_path):
-                    return output_path, None
-
-            return None, f'Falha ao converter para {formato_destino}'
-
-        # TXT
-        if formato_origem == 'txt':
-            try:
-                with open(arquivo_path, 'r', encoding='utf-8') as f:
-                    texto = f.read()
-                transacoes = cls._extrair_transacoes_rapido(texto)
-                if formato_destino == 'ofx' and transacoes:
-                    if cls._gerar_ofx(transacoes, output_path):
+                if transacoes:
+                    if cls.gerar_ofx(transacoes, output_path):
                         return output_path, None
-                if formato_destino == 'html':
-                    with open(output_path, 'w', encoding='utf-8') as f:
-                        f.write(texto)
-                    return output_path, None
-            except Exception as e:
-                return None, str(e)
+                    else:
+                        return csv_path, "Falha ao gerar OFX, mas CSV foi criado"
+                else:
+                    return None, "Nenhuma transação encontrada no PDF"
+            
+            elif formato_destino == 'csv' and transacoes:
+                return csv_path, None
+            
+            elif formato_destino == 'txt':
+                return txt_debug, None
+            
+            else:
+                return None, f"Conversão de PDF para {formato_destino} não implementada"
 
-        # Para outros formatos (ofx, imagens, zip etc) manter comportamento padrão mínimo
-        if formato_origem == 'ofx':
-            # apenas salvar como txt/html se solicitado
-            try:
-                with open(arquivo_path, 'r', encoding='utf-8') as f:
-                    conteudo = f.read()
-                if formato_destino == 'txt':
-                    with open(output_path, 'w', encoding='utf-8') as f:
-                        f.write(conteudo)
-                    return output_path, None
-            except Exception as e:
-                return None, str(e)
-
-        return None, f'Conversão de {formato_origem} para {formato_destino} não suportada'
+        return None, f"Conversão de {formato_origem} para {formato_destino} não suportada"
 
 
-# Funções de interface
+# Funções de interface pública
+def converter_arquivo(arquivo_path: str, formato_destino: str, 
+                      output_dir: Optional[str] = None, modo_rapido: bool = True) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Converte um arquivo para o formato desejado.
+    """
+    return ConversorService.converter(arquivo_path, formato_destino, output_dir, modo_rapido)
 
-def converter_arquivo(arquivo_path, formato_destino, output_dir=None):
-    return ConversorService.converter(arquivo_path, formato_destino, output_dir)
 
-
-def get_formatos_destino(formato_origem):
+def get_formatos_destino(formato_origem: str) -> List[str]:
     return ConversorService.get_formatos_destino(formato_origem)
