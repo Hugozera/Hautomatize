@@ -17,7 +17,6 @@ from urllib.parse import quote
 from typing import List, Dict, Tuple, Optional
 
 import requests
-from playwright.sync_api import sync_playwright
 
 # Configuração silenciosa
 sys.stdout.reconfigure(line_buffering=True)
@@ -114,6 +113,13 @@ class EmissorNacionalPlaywright:
     def iniciar(self, usar_cookies=True):
         """Inicia navegador com configurações otimizadas"""
         self.extrair_certificado()
+        # Import Playwright lazily to avoid import-time errors when Playwright
+        # is not installed (lightweight venvs / CI). This keeps the module
+        # importable for web requests that don't need Playwright.
+        try:
+            from playwright.sync_api import sync_playwright
+        except Exception:
+            raise
         self.playwright = sync_playwright().start()
 
         # Otimizações de performance

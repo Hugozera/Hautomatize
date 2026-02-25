@@ -1,136 +1,63 @@
 # ============================================
-# HDOWNLOADER - REQUISITOS COMPLETOS
+# HDOWNLOADER - REQUISITOS (ajustado automaticamente)
 # ============================================
-# Versão: 1.0.0
-# Data: 21/02/2026
-# 
-# Este arquivo contém todas as dependências necessárias para:
-# - Download de NFSe via Playwright (certificado digital)
-# - Conversor universal de arquivos (PDF → OFX, etc)
-# - Tarefas em background com Celery
-# ============================================
+# Gerado a partir do ambiente `.venv` com `pip freeze`.
+# Incluir apenas pacotes instalados para evitar falhas durante
+# `pip install -r requirements.txt`.
 
-# -----------------------------
-# DJANGO E CORE
-# -----------------------------
+amqp==5.3.1
+asgiref==3.11.1
+beautifulsoup4==4.12.3
+billiard==4.2.4
+celery==5.3.6
+certifi==2026.2.25
+cffi==2.0.0
+charset-normalizer==3.4.4
+click==8.3.1
+click-didyoumean==0.3.1
+click-plugins==1.1.1.2
+click-repl==0.3.0
+colorama==0.4.6
+crispy-bootstrap5==2024.10
+cryptography==42.0.5
 Django==6.0.2
-python-dotenv==1.0.0               # Configurações por ambiente
-psycopg2-binary==2.9.9             # PostgreSQL (opcional, SQLite é padrão)
-django-crispy-forms==2.1            # Formulários elegantes
-crispy-bootstrap5==2024.10          # Template Bootstrap 5 para crispy
+django-crispy-forms==2.5
+greenlet==3.3.2
+idna==3.11
+kombu==5.6.2
+packaging==26.0
+pdf2image==1.16.3
+pdfminer.six==20231228
+pillow==12.1.1
+playwright==1.58.0
+prompt_toolkit==3.0.52
+pycparser==3.0
+pyee==13.0.1
+pyOpenSSL==24.1.0
+pypdf==4.1.0
+pytesseract==0.3.10
+python-dateutil==2.9.0.post0
+python-dotenv==1.0.0
+pywin32==311
+redis==5.0.3
+requests==2.31.0
+setuptools==82.0.0
+six==1.17.0
+soupsieve==2.8.3
+sqlparse==0.5.5
+typing_extensions==4.15.0
+tzdata==2025.3
+urllib3==2.6.3
+vine==5.1.0
+wcwidth==0.6.0
+wheel==0.46.3
 
-# -----------------------------
-# DOWNLOAD DE NFSE (EMISSOR PLAYWRIGHT)
-# -----------------------------
-# Automação com certificado digital no site da SEFAZ
-requests==2.31.0                     # Download dos arquivos PDF/XML
-pyopenssl==24.1.0                    # Suporte a SSL/TLS para certificados
-cryptography==42.0.5                 # Manipulação de certificados digitais
-playwright==1.42.0                    # Automação do navegador Chromium
-beautifulsoup4==4.12.3                # Parse de HTML das páginas
-lxml==5.1.0                           # Parse de XML das NFSe
-pywin32==306                          # Integração com certificados Windows
+# Pacotes opcionais / que exigem compilação nativa no Windows:
+# - psycopg2-binary: exige MSVC; instale apenas se tiver Build Tools.
+# - lxml: geralmente requer build tools (ou usar rodas pré-compiladas via conda).
+# - pymupdf: requer Visual Studio/SDK para compilar MuPDF; prefira conda.
+# Se você depender desses pacotes, instale o Microsoft Visual C++ Build Tools
+# com o workload "Desktop development with C++" (MSVC v143 + Windows SDK).
 
-# -----------------------------
-# CONVERSOR DE ARQUIVOS
-# -----------------------------
-# Conversão de PDFs, imagens, OFX e outros formatos
-pypdf==4.1.0                          # Extração de texto de PDFs
-pdfminer.six==20231228                 # Fallback para extração de PDF
-Pillow==10.2.0                         # Processamento de imagens
-pytesseract==0.3.10                    # OCR (reconhecimento de texto em imagens)
-pdf2image==1.16.3                       # Conversão PDF → Imagem (para OCR)
-pymupdf==1.24.5                         # Extração ultra-rápida de PDFs
-
-# -----------------------------
-# TAREFAS EM BACKGROUND
-# -----------------------------
-# Processamento assíncrono e filas
-celery==5.3.6                          # Filas de tarefas
-redis==5.0.3                            # Broker para Celery
-
-# ============================================
-# INSTRUÇÕES DE INSTALAÇÃO
-# ============================================
-
-"""
-🚀 COMO INSTALAR:
-
-1. Instalar dependências Python:
-   ----------------------------------------
-   pip install -r requirements.txt
-   ----------------------------------------
-
-2. Instalar navegador para Playwright:
-   ----------------------------------------
-   playwright install chromium
-   ----------------------------------------
-
-3. TESSERACT OCR (OBRIGATÓRIO para conversor de PDFs escaneados):
-   ----------------------------------------
-   - Baixar de: https://github.com/UB-Mannheim/tesseract/wiki
-   - Instalar e COPIAR 'tesseract.exe' para a RAIZ do projeto
-   - Baixar 'por.traineddata' de: https://github.com/tesseract-ocr/tessdata
-   - Colocar 'por.traineddata' na pasta 'tessdata/' na raiz do projeto
-   
-   Estrutura esperada:
-   D:\Hautomatize\
-   ├── tesseract.exe
-   └── tessdata/
-       └── por.traineddata
-   ----------------------------------------
-
-4. POPPLER UTILS (OBRIGATÓRIO para processar PDFs):
-   ----------------------------------------
-   - Baixar de: https://github.com/oschwartz10612/poppler-windows/releases/
-   - Extrair a pasta 'poppler-xx.xx.xx' para a RAIZ do projeto
-   
-   Estrutura esperada:
-   D:\Hautomatize\
-   └── poppler-xx.xx.xx/
-       └── Library/
-           └── bin/
-               ├── pdftotext.exe
-               ├── pdftoppm.exe
-               └── (outras DLLs)
-   ----------------------------------------
-
-5. VERIFICAÇÃO FINAL:
-   ----------------------------------------
-   python manage.py check
-   python manage.py runserver
-   ----------------------------------------
-"""
-
-# ============================================
-# NOTAS IMPORTANTES
-# ============================================
-
-"""
-📌 NOTAS:
-
-1. O sistema funciona com SQLite por padrão.
-   Para PostgreSQL, configure o banco nas settings.
-
-2. O Celery requer Redis instalado:
-   - Windows: https://github.com/microsoftarchive/redis/releases
-   - Linux: sudo apt-get install redis-server
-
-3. O Tesseract e Poppler são ESSENCIAIS para o conversor.
-   Sem eles, PDFs escaneados NÃO serão convertidos.
-
-4. O Playwright baixa o Chromium automaticamente após a instalação.
-
-5. Em caso de erro de SSL, execute:
-   pip install --upgrade certifi
-"""
-# 1. Instalar dependências Python
-pip install -r requirements.txt
-
-# 2. Instalar navegador para Playwright
-playwright install chromium
-
-# 3. Verificar se Tesseract e Poppler estão nos lugares corretos
-dir D:\Hautomatize\tesseract.exe
-dir D:\Hautomatize\tessdata\por.traineddata
-dir D:\Hautomatize\poppler-25.12.0\Library\bin\pdftotext.exe
+# A instalação dos navegadores do Playwright é feita separadamente:
+# python -m playwright install chromium

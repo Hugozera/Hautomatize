@@ -116,6 +116,10 @@
                         <a id="downloadLink" href="#" class="btn btn-success btn-lg" download>
                             <i class="bi bi-download me-2"></i>Baixar Arquivo Convertido
                         </a>
+                        <button id="btnVerTxt" class="btn btn-outline-secondary btn-lg ms-2">
+                            <i class="bi bi-file-earmark-text me-2"></i>Ver Texto Extraído
+                        </button>
+                        <pre id="txtExtraido" class="mt-3 p-3 bg-light border" style="display:none; max-height:300px; overflow:auto; white-space:pre-wrap;"></pre>
                     </div>
                 </div>
             </div>
@@ -532,6 +536,15 @@ function verificarStatus() {
             
             document.getElementById('downloadLink').href = data.url;
             document.getElementById('resultadoArea').classList.remove('d-none');
+            // If server returned the full extracted text, show a button to view it
+            if (data.texto_completo) {
+                const txtEl = document.getElementById('txtExtraido');
+                txtEl.textContent = data.texto_completo;
+                document.getElementById('btnVerTxt').style.display = 'inline-block';
+                document.getElementById('btnVerTxt').onclick = () => {
+                    txtEl.style.display = txtEl.style.display === 'none' ? 'block' : 'none';
+                };
+            }
         } else if (data.status === 'erro') {
             mostrarErro(data.erro || 'Erro na conversão');
         } else {
