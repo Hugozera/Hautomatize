@@ -23,7 +23,7 @@ from pathlib import Path
 from typing import Optional, Tuple
 
 POPPLER_DIR = Path("poppler-25.12.0/Library/bin")
-DEFAULT_TESSERACT = Path(r"C:/Program Files/Tesseract-OCR/tesseract.exe")
+DEFAULT_TESSERACT = Path(r"Tesseract-OCR/tesseract.exe")
 
 
 def find_tesseract() -> Optional[str]:
