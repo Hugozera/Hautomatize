@@ -35,7 +35,7 @@ class ConversorService:
     PROJECT_ROOT = r"C:\Hautomatize"  # Caminho absoluto fixo
     POPPLER_PATH = os.path.join(PROJECT_ROOT, 'poppler-25.12.0', 'Library', 'bin')
     TESSERACT_CMD = os.path.join(PROJECT_ROOT, 'Tesseract-OCR', 'tesseract.exe')
-    TESSDATA_PREFIX = os.path.join(PROJECT_ROOT, 'tessdata')
+    TESSDATA_PREFIX = os.path.join(PROJECT_ROOT, 'Tesseract-OCR','tessdata')
 
     # Configura caminhos - FORÇA o PATH correto
     if os.path.exists(POPPLER_PATH):
