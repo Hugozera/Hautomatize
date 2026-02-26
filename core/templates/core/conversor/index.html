@@ -222,7 +222,7 @@
 let arquivoSelecionado = null;
 let conversaoId = null;
 let arquivosOriginais = [];
-const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_SIZE = 1 * 1024 * 1024 * 1024; // 1 GB
 
 // Event Listeners
 document.addEventListener('DOMContentLoaded', function() {
@@ -547,6 +547,86 @@ function verificarStatus() {
             }
         } else if (data.status === 'erro') {
             mostrarErro(data.erro || 'Erro na conversão');
+        } else if (data.status === 'banco_nao_detectado') {
+            // Mostrar select com parsers disponíveis para o usuário escolher
+            const parsers = data.parsers || [];
+            // Remover escolha anterior se existir
+            const existing = document.getElementById('parserChoice');
+            if (existing) existing.remove();
+
+            const cardBody = document.getElementById('progressoCard').querySelector('.card-body');
+            const container = document.createElement('div');
+            container.id = 'parserChoice';
+            container.className = 'mt-3';
+
+            const info = document.createElement('div');
+            info.className = 'alert alert-warning';
+            info.innerHTML = '<i class="bi bi-exclamation-triangle me-2"></i>Banco não detectado automaticamente. Selecione o parser correto abaixo e reprocessar.';
+
+            const select = document.createElement('select');
+            select.id = 'parserSelect';
+            select.className = 'form-select mt-2';
+            const defaultOpt = document.createElement('option');
+            defaultOpt.value = '';
+            defaultOpt.textContent = 'Selecione um parser...';
+            select.appendChild(defaultOpt);
+
+            parsers.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.nome} (${p.id})`;
+                select.appendChild(opt);
+            });
+
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-primary mt-2';
+            btn.id = 'btnForcarParser';
+            btn.textContent = 'Usar parser selecionado e reprocessar';
+            btn.onclick = function() {
+                const selected = document.getElementById('parserSelect').value;
+                if (!selected) {
+                    mostrarErro('Selecione um parser antes de reprocessar');
+                    return;
+                }
+
+                document.getElementById('statusMensagem').textContent = 'Reprocessando com parser selecionado...';
+
+                const body = new URLSearchParams();
+                body.append('parser', selected);
+
+                fetch(`/conversor/processar/${conversaoId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: body.toString()
+                })
+                .then(response => response.json())
+                .then(d => {
+                    // Tratar resposta imediata
+                    if (d.status === 'concluido') {
+                        document.getElementById('progressBar').style.width = '100%';
+                        document.getElementById('progressBar').textContent = '100%';
+                        document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
+                        document.getElementById('downloadLink').href = d.url;
+                        document.getElementById('resultadoArea').classList.remove('d-none');
+                    } else if (d.status === 'banco_nao_detectado') {
+                        mostrarErro('Banco ainda não detectado. Tente outro parser.');
+                    } else {
+                        // Em caso de erro, exibe mensagem
+                        mostrarErro(d.erro || 'Erro ao reprocessar');
+                    }
+                })
+                .catch(err => {
+                    mostrarErro(err.message || 'Erro ao reenviar escolha');
+                });
+            };
+
+            container.appendChild(info);
+            container.appendChild(select);
+            container.appendChild(btn);
+            cardBody.appendChild(container);
         } else {
             // Ainda processando
             setTimeout(verificarStatus, 2000);
