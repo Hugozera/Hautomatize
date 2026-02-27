@@ -1,0 +1,90 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header">
+      <h5>Endpoints SIEG</h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted">Lista de endpoints detectados. Use o botão "Executar" para testar chamadas.</p>
+      {% for tag, eps in tags.items %}
+        <h6 class="mt-3">{{ tag }}</h6>
+        <div class="list-group mb-2">
+          {% for method, path, summary in eps %}
+            <div class="list-group-item d-flex justify-content-between align-items-start">
+              <div>
+                <span class="badge bg-secondary me-2">{{ method }}</span>
+                <strong>{{ path }}</strong>
+                <div class="small text-muted">{{ summary }}</div>
+              </div>
+              <div>
+                <button class="btn btn-sm btn-outline-primary execute-endpoint" data-method="{{ method }}" data-path="{{ path }}">Executar</button>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal fade" id="executeModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Executar endpoint</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2"><strong id="exe-endpoint"></strong></div>
+        <label class="form-label">Query / JSON</label>
+        <textarea id="exe-body" class="form-control" rows="6">{}</textarea>
+        <div class="mt-3">
+          <button id="exe-send" class="btn btn-success">Enviar</button>
+        </div>
+        <hr>
+        <h6>Resposta</h6>
+        <pre id="exe-response" style="max-height:360px;overflow:auto;background:#0f1720;color:#e6eef2;padding:12px;border-radius:6px"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const modalEl = document.getElementById('executeModal');
+  const exeEndpoint = document.getElementById('exe-endpoint');
+  const exeBody = document.getElementById('exe-body');
+  const exeResponse = document.getElementById('exe-response');
+  let curMethod = null, curPath = null;
+
+  document.querySelectorAll('.execute-endpoint').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      curMethod = btn.dataset.method;
+      curPath = btn.dataset.path;
+      exeEndpoint.textContent = curMethod + ' ' + curPath;
+      exeBody.value = '{}';
+      exeResponse.textContent = '';
+      new bootstrap.Modal(modalEl).show();
+    });
+  });
+
+  document.getElementById('exe-send').addEventListener('click', ()=>{
+    let body = null;
+    try{ body = JSON.parse(exeBody.value); }catch(e){ alert('JSON inválido'); return; }
+    exeResponse.textContent = 'Carregando...';
+    fetch('{% url "sieg_call" %}', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json','X-CSRFToken': (document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')||[])[2] },
+      body: JSON.stringify({ method: curMethod, path: curPath, json: body })
+    }).then(r=>r.json()).then(d=> exeResponse.textContent = JSON.stringify(d, null, 2)).catch(e=> exeResponse.textContent = 'Erro: '+e);
+  });
+});
+</script>
+{% endblock %}
+
+{% endblock %}

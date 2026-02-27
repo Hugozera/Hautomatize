@@ -4,6 +4,7 @@ from . import upload_router
 from . import upload_router
 from . import views
 from . import views_conversor
+from . import views as core_views
 
 urlpatterns = [
     # Home / inicial
@@ -72,6 +73,14 @@ urlpatterns = [
 
     # Conversor de Arquivos
     path('conversor/', views_conversor.conversor_index, name='conversor_index'),
+    path('sieg/', core_views.sieg_index, name='sieg_index'),
+    path('sieg/call/', core_views.sieg_call, name='sieg_call'),
+    path('sieg/certificados/', core_views.sieg_certificados, name='sieg_certificados'),
+    path('sieg/empresas/', core_views.sieg_empresas, name='sieg_empresas'),
+    path('sieg/downloads/', core_views.sieg_downloads, name='sieg_downloads'),
+    path('sieg/endpoints/', core_views.sieg_endpoints, name='sieg_endpoints'),
+    path('sieg/download/execute/', core_views.sieg_execute_download, name='sieg_execute_download'),
+    path('sieg/tag/<slug:tag_slug>/', core_views.sieg_tag, name='sieg_tag'),
     path('upload/', upload_router.upload_router, name='upload_router'),    path('conversor/processar/<int:conversao_id>/', views_conversor.processar_conversao, name='processar_conversao'),
     path('conversor/status/<int:conversao_id>/', views_conversor.status_conversao, name='status_conversao'),
     path('conversor/progresso/<int:conversao_id>/', views_conversor.progresso_conversao, name='progresso_conversao'),

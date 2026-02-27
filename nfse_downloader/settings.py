@@ -91,3 +91,8 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 # Ajustes para permitir uploads maiores (1 GB)
 FILE_UPLOAD_MAX_MEMORY_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1 * 1024 * 1024 * 1024  # 1 GB
+
+# SIEG API configuration (global key used by the integration)
+# Replace the key below if you need to update it.
+SIEG_BASE_URL = os.environ.get('SIEG_BASE_URL', 'https://api.sieg.com')
+SIEG_API_KEY = os.environ.get('SIEG_API_KEY', 'n1KEVTz0x91fWVi_D9SqyZ_RWak7tiCFQI3oWivfkl8')

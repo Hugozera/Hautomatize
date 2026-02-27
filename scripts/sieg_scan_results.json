@@ -1,0 +1,392 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/Certificado/ListarCertificados",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/ListarCertificados'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/ListarCertificados'.\"}",
+    "summary": "Listar Certificados cadastrados.",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Certificado/Registrar",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Registrar Certificado",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Certificado/Editar",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Atualizar Certificado",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Certificado/habilitar",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/habilitar'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/habilitar'.\"}",
+    "summary": "Ativar Certificado",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Certificado/desabilitar",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/desabilitar'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/desabilitar'.\"}",
+    "summary": "Desabilitar Certificado",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Certificado/deletar/{id}",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Deletar Certificado",
+    "security": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/Certificado/status",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/status'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Certificado/status'.\"}",
+    "summary": "Status Certificado",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Cadastrar",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Configuração NF-es de Saída (Modelo 55)",
+    "security": null
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/Desativar/{cnpj}",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Desativar Configuração NF-es de Saída (Modelo 55)",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/BaixarXml",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/BaixarXml'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/BaixarXml'.\"}",
+    "summary": "Download de XML Específico",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/BaixarXmls",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Download de XMLs em Lote",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/BaixarXmlsV2",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Download de XMLs em Lote V2 (Retorno padrão API antiga)",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/ContarXmls",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Contagem de XMLs",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/BaixarEventos",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Baixar Eventos",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/IntegracaoEstadual/CadastrarAutomacao",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Registrar Automação",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/IntegracaoEstadual/EditarAutomacao",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Editar Integração estadual",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/IntegracaoEstadual/Consultar",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Consultar Automação",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/IntegracaoEstadual/Habilitar/{id}",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Ativar Automação",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/IntegracaoEstadual/Desabilitar/{id}",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Desabilitar Automação",
+    "security": null
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/IntegracaoEstadual/Deletar/{id}",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Deletar Automação",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/IntegracaoEstadual/IntegracoesDisponiveis",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Automações Disponíveis",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/integracaoMunicipal/Inserir",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Registrar Automação",
+    "security": null
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/integracaoMunicipal/Deletar",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/integracaoMunicipal/Deletar'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/integracaoMunicipal/Deletar'.\"}",
+    "summary": "Deletar Automação",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/integracaoMunicipal/Buscar",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Buscar Automações",
+    "security": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/integracaoMunicipal/BuscarMunicipiosIntegrados",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/integracaoMunicipal/BuscarMunicipiosIntegrados'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/integracaoMunicipal/BuscarMunicipiosIntegrados'.\"}",
+    "summary": "Buscar informações sobre os municípios integrados por UF.",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/ManifestarXml/{chave}",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Manifestação de XMLs por chave",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/ManifestarXml",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Manifestação de XMLs",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/NotaDoMilhao/Buscar",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Buscar Automações",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/NotaDoMilhao/Inserir",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Registrar Automação",
+    "security": null
+  },
+  {
+    "method": "DELETE",
+    "path": "/api/NotaDoMilhao/Deletar",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/NotaDoMilhao/Deletar'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/NotaDoMilhao/Deletar'.\"}",
+    "summary": "Deletar Automação",
+    "security": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/Arquivos/GerarDanfeViaChave",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Arquivos/GerarDanfeViaChave'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Arquivos/GerarDanfeViaChave'.\"}",
+    "summary": "Geração de DaNFe por Chave do Xml NF-e",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Arquivos/GerarDanfeViaXml",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Geração de DaNFe por Xml NF-e",
+    "security": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/Arquivos/GerarDacteViaChave",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Arquivos/GerarDacteViaChave'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Arquivos/GerarDacteViaChave'.\"}",
+    "summary": "Geração de DaCTe por Chave do Xml CT-e",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Arquivos/GerarDacteViaXml",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Geração de DaCTe por Xml CT-e",
+    "security": null
+  },
+  {
+    "method": "GET",
+    "path": "/api/Arquivos/GerarDanfseViaChave",
+    "auth_status": 404,
+    "anon_status": 404,
+    "auth_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Arquivos/GerarDanfseViaChave'.\"}",
+    "anon_preview": "{\"Message\": \"No HTTP resource was found that matches the request URI 'https://api.sieg.com/api/Arquivos/GerarDanfseViaChave'.\"}",
+    "summary": "Geração de DaNFSe por Chave do Xml NFS-e",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Arquivos/GerarDanfseViaXml",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Geração de DaNFSe por Xml NFS-e",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/relatorio/xml",
+    "auth_status": 0,
+    "anon_status": 0,
+    "auth_preview": "{\"error\": \"HTTPSConnectionPool(host='api.sieg.com', port=443): Max retries exceeded with url: /api/relatorio/xml (Caused by ResponseError('too many 500 error responses'))\"}",
+    "anon_preview": "{\"error\": \"HTTPSConnectionPool(host='api.sieg.com', port=443): Max retries exceeded with url: /api/relatorio/xml (Caused by ResponseError('too many 500 error responses'))\"}",
+    "summary": "Relatório Xml's (Excel)",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Tags/AddTags",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Adicionar Tags",
+    "security": null
+  },
+  {
+    "method": "POST",
+    "path": "/api/Tags/RemoveTags",
+    "auth_status": 401,
+    "anon_status": 401,
+    "auth_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "anon_preview": "{\"error\": \"Unauthorized or invalid API key\", \"status\": 401}",
+    "summary": "Remover Tags",
+    "security": null
+  }
+]

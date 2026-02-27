@@ -1,0 +1,36 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Certificados</h5>
+      <small class="text-muted">{{ method }} {{ path }}</small>
+    </div>
+    <div class="card-body">
+      {% if items %}
+      <div class="table-responsive">
+        <table class="table table-dark table-striped">
+          <thead>
+            <tr><th>#</th><th>Thumbprint/ID</th><th>Emitente</th><th>Detalhes</th></tr>
+          </thead>
+          <tbody>
+            {% for it in items %}
+            <tr>
+              <td>{{ forloop.counter }}</td>
+              <td>{{ it.thumbprint|default:it.id|default:'-' }}</td>
+              <td>{{ it.emitente|default:it.nome|default:'-' }}</td>
+              <td><pre style="white-space:pre-wrap">{{ it|json_script:'item' }}</pre></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="alert alert-info">Nenhum certificado retornado pela API.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

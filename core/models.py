@@ -282,3 +282,8 @@ class NotaFiscal(models.Model):
         verbose_name = 'Nota Fiscal'
         verbose_name_plural = 'Notas Fiscais'
         ordering = ['-data_emissao']
+
+
+# `SiegCredential` removed: SIEG integration now uses a global key configured
+# in settings (`SIEG_API_KEY`) or the `SIEG_API_KEY` environment variable.
+# The migration to delete the model is included under core/migrations/.

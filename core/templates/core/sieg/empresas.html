@@ -1,0 +1,32 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Empresas</h5>
+      <small class="text-muted">{{ method }} {{ path }}</small>
+    </div>
+    <div class="card-body">
+      {% if items %}
+      <div class="row">
+        {% for e in items %}
+        <div class="col-md-4">
+          <div class="card mb-3 bg-dark text-white">
+            <div class="card-body">
+              <h6 class="card-title">{{ e.nome_fantasia|default:e.razao_social|default:'-' }}</h6>
+              <p class="small">CNPJ: {{ e.cnpj|default:'-' }}</p>
+              <p class="small">Ativo: {{ e.ativo }}</p>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-info">Nenhuma empresa retornada pela API.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
