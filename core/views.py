@@ -36,6 +36,10 @@ from .download_service import download_em_massa
 from .certificado_service import listar_certificados_windows
 from django.contrib.auth import logout as django_logout
 import secrets
+from .sieg_service import SiegClient
+from django.views.decorators.http import require_POST
+from django.http import HttpResponseBadRequest
+import json
 
 # ========== VIEWS DE DOWNLOAD ==========
 @login_required
@@ -461,6 +465,267 @@ def pessoa_edit(request, pk):
         form = PessoaForm(instance=pessoa)
     
     return render(request, 'core/pessoa_form.html', {'form': form})
+
+
+# ===== SIEG INTEGRAÇÃO =====
+@login_required
+def sieg_index(request):
+    """Dashboard wrapper for SIEG integration. Aggregates key numbers when available.
+    Uses the server-configured SIEG API key; no per-user keys or session keys are accepted.
+    """
+    # This integration uses a global API key from settings or environment.
+    # No per-user credential storage is used.
+
+    # Client will read API key from settings or environment automatically
+    client = SiegClient()
+    tags = client.list_tags_and_paths() or {}
+
+    # Try to fetch certificates count
+    certificados_count = 'N/A'
+    method, path, meta = client.find_path_for_keyword('Certificado')
+    if path and method:
+        status, hdrs, body = client.fetch_list(method, path, operation_meta=meta)
+        try:
+            if status == 200 and isinstance(body, list):
+                certificados_count = len(body)
+            elif isinstance(body, dict):
+                certificados_count = body.get('count') or body.get('total') or 'N/A'
+        except Exception:
+            pass
+
+    # Try to fetch companies count
+    empresas_count = 'N/A'
+    empresas_active = 'N/A'
+    m2, p2, meta2 = client.find_path_for_keyword('empresa')
+    if p2 and m2:
+        status, hdrs, body = client.fetch_list(m2, p2, operation_meta=meta2)
+        try:
+            if status == 200 and isinstance(body, list):
+                empresas_count = len(body)
+                empresas_active = sum(1 for e in body if (e.get('ativo') or e.get('ativo', True)))
+            elif isinstance(body, dict):
+                items = body.get('items') or body.get('data') or body.get('result')
+                if isinstance(items, list):
+                    empresas_count = len(items)
+                    empresas_active = sum(1 for e in items if e.get('ativo'))
+        except Exception:
+            pass
+
+    # Notes / invoices: we list available download endpoints instead of count
+    download_endpoints = []
+    for tag, eps in tags.items():
+        if 'download' in tag.lower() or 'nota' in tag.lower() or 'xml' in tag.lower():
+            for method, path, summary in eps:
+                download_endpoints.append((method, path, summary))
+
+    openapi_error = False
+    if not tags:
+        openapi_error = True
+
+    last_checked = timezone.now()
+
+    # also supply a small OpenAPI summary for debugging/inspection in the UI
+    openapi = client.get_openapi() or {}
+    paths = openapi.get('paths', {})
+    openapi_summary = {
+        'paths_count': len(paths),
+        'sample_paths': list(paths.keys())[:12]
+    }
+
+    return render(request, 'core/sieg/index.html', {
+        'tags': tags,
+        'certificados_count': certificados_count,
+        'empresas_count': empresas_count,
+        'empresas_active': empresas_active,
+        'download_endpoints': download_endpoints,
+        'openapi_error': openapi_error,
+        'sieg_last_checked': last_checked,
+        'openapi_summary': openapi_summary,
+    })
+
+
+@login_required
+@require_POST
+def sieg_call(request):
+    """Proxy a SIEG API call. Expects JSON body with { method, path, params?, json? }.
+
+    Returns JSON with status, headers and body (body may be string or JSON).
+    """
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        return HttpResponseBadRequest('Invalid JSON')
+
+    method = payload.get('method')
+    path = payload.get('path')
+    params = payload.get('params')
+    json_body = payload.get('json')
+
+    if not method or not path:
+        return HttpResponseBadRequest('method and path required')
+
+    # build client using session or persisted user key
+    client = SiegClient()
+    status_code, headers, body = client.request_generic(method, path, params=params, json_body=json_body)
+
+    return JsonResponse({'status_code': status_code, 'headers': headers, 'body': body})
+
+
+@login_required
+def sieg_certificados(request):
+    client = SiegClient()
+
+    method, path, meta = client.find_path_for_keyword('Certificado')
+    items = []
+    error = None
+    if path and method:
+        status, hdrs, body = client.fetch_list(method, path)
+        if status == 200 and isinstance(body, list):
+            items = body
+        else:
+            error = body
+
+    return render(request, 'core/sieg/certificados.html', {'items': items, 'method': method, 'path': path, 'error': error})
+
+
+@login_required
+def sieg_empresas(request):
+    client = SiegClient()
+    method, path, meta = client.find_path_for_keyword('empresa')
+    items = []
+    error = None
+    if path and method:
+        status, hdrs, body = client.fetch_list(method, path)
+        if status == 200 and isinstance(body, list):
+            items = body
+        else:
+            error = body
+
+    return render(request, 'core/sieg/empresas.html', {'items': items, 'method': method, 'path': path, 'error': error})
+
+
+@login_required
+def sieg_downloads(request):
+    # Use global server-configured key
+    client = SiegClient()
+    tags = client.list_tags_and_paths() or {}
+    download_endpoints = []
+    for tag, eps in tags.items():
+        if 'download' in tag.lower() or 'nota' in tag.lower() or 'xml' in tag.lower():
+            for method, path, summary in eps:
+                download_endpoints.append((method, path, summary))
+
+    return render(request, 'core/sieg/downloads.html', {'download_endpoints': download_endpoints})
+
+
+@login_required
+@require_POST
+def sieg_execute_download(request):
+    """Execute a download endpoint and stream/save the result to media/sieg_downloads/.
+
+    Expects JSON body: { method, path, params?, json? }
+    Returns JSON with status and `file_url` when a file was saved, or the API response.
+    """
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        return HttpResponseBadRequest('Invalid JSON')
+
+    method = payload.get('method')
+    path = payload.get('path')
+    params = payload.get('params')
+    json_body = payload.get('json')
+    if not method or not path:
+        return HttpResponseBadRequest('method and path required')
+
+    client = SiegClient()
+
+    status, headers, resp = client.request_generic(method, path, params=params, json_body=json_body, stream=True)
+    if status in (401, 403):
+        return JsonResponse({'status': status, 'error': 'Unauthorized / invalid API key'}, status=401)
+    if status == 429:
+        return JsonResponse({'status': status, 'error': 'Rate limited'}, status=429)
+    if status == 0:
+        return JsonResponse({'status': status, 'error': resp}, status=500)
+
+    # if resp is a requests.Response (streaming), save content
+    try:
+        if hasattr(resp, 'iter_content'):
+            from django.core.files.base import ContentFile
+            from django.core.files.storage import default_storage
+            import time
+            # determine filename
+            cd = headers.get('Content-Disposition') or ''
+            filename = None
+            if 'filename=' in cd:
+                filename = cd.split('filename=')[-1].strip('" ')
+            if not filename:
+                filename = f'sieg_{int(time.time())}.bin'
+            folder = 'sieg_downloads'
+            path_on_disk = default_storage.path(folder) if hasattr(default_storage, 'path') else None
+            # ensure media folder exists
+            dest_path = os.path.join('media', folder, filename)
+            os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+            with open(dest_path, 'wb') as w:
+                for chunk in resp.iter_content(chunk_size=8192):
+                    if chunk:
+                        w.write(chunk)
+            file_url = '/' + dest_path.replace('\\', '/')
+            return JsonResponse({'status': status, 'file_url': file_url})
+    except Exception as e:
+        logger.exception('Failed to stream/save download: %s', e)
+        return JsonResponse({'status': 500, 'error': str(e)}, status=500)
+
+    # fallback: if not streaming, return what we have
+    return JsonResponse({'status': status, 'headers': headers, 'body': resp})
+
+
+@login_required
+def sieg_endpoints(request):
+    """Show all discovered endpoints and allow executing them via proxy modal."""
+    # Use global server-configured key
+    client = SiegClient()
+    tags = client.list_tags_and_paths() or {}
+    return render(request, 'core/sieg/endpoints.html', {'tags': tags})
+
+
+@login_required
+def sieg_tag(request, tag_slug):
+    """Render a generic page for a given API tag, showing list-like data when possible."""
+    client = SiegClient()
+
+    tags = client.list_tags_and_paths() or {}
+    # tag_slug is slugified; try to match by slug or by raw key
+    from django.template.defaultfilters import slugify
+    match_key = None
+    for k in tags.keys():
+        if slugify(k) == tag_slug or k.lower() == tag_slug.lower():
+            match_key = k
+            break
+
+    if not match_key:
+        return render(request, 'core/sieg/tag.html', {'tag': tag_slug, 'items': [], 'error': 'Tag não encontrada'})
+
+    endpoints = tags.get(match_key, [])
+    # choose a GET endpoint if present
+    method = None
+    path = None
+    for m, p, s in endpoints:
+        if m.upper() == 'GET':
+            method = m; path = p; break
+    if not path and endpoints:
+        method, path, _ = endpoints[0]
+
+    items = []
+    error = None
+    if path and method:
+        status, hdrs, body = client.fetch_list(method, path)
+        if status == 200 and isinstance(body, list):
+            items = body
+        else:
+            error = body
+
+    return render(request, 'core/sieg/tag.html', {'tag': match_key, 'items': items, 'method': method, 'path': path, 'error': error})
 
 # ========== VIEWS DE EMPRESAS ==========
 

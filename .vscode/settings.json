@@ -1,5 +1,5 @@
 {
-    "cmake.sourceDirectory": "C:/Hautomatize/Hautomatize/tesseract-5.5.2",
+    "cmake.sourceDirectory": "C:/Hautomatize/poppler-25.12.0/share/poppler",
     "python.analysis.extraPaths": [
         "./core"
     ]

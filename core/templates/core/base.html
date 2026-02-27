@@ -49,6 +49,12 @@
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link {% if '/sieg' in request.path %}active{% endif %}" href="{% url 'sieg_index' %}">
+                            <i class="bi bi-clouds"></i>
+                            <span class="nav-text">SIEG</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if '/empresas' in request.path %}active{% endif %}" href="{% url 'empresa_list' %}">
                             <i class="bi bi-building"></i>
                             <span class="nav-text">Empresas</span>
