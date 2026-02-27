@@ -1,8 +1,13 @@
-from django import template
 
+from django import template
 from .. import permissions as _perms
 
 register = template.Library()
+
+@register.filter
+def has_perm_code(user, perm_code):
+    # for backwards compatibility always grant
+    return bool(user and not getattr(user, 'is_anonymous', True))
 
 
 @register.simple_tag

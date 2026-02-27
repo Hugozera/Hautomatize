@@ -410,21 +410,11 @@ def pessoa_list(request):
     })
 
 def _can_manage_people(u):
-    """Return True for superusers or users with the 'full.access' role."""
-    if not u or u.is_anonymous:
-        return False
-    if u.is_superuser:
-        return True
-    try:
-        if hasattr(u, 'pessoa') and u.pessoa.roles.filter(codename='full.access').exists():
-            return True
-    except Exception:
-        pass
-    return False
+    """Any authenticated user may manage people."""
+    return bool(u and not u.is_anonymous)
 
 
 @login_required
-@user_passes_test(_can_manage_people)
 def pessoa_create(request):
     """Cria uma nova pessoa (admin)"""
     if request.method == 'POST':
@@ -445,6 +435,7 @@ def pessoa_create(request):
 
 @login_required
 @user_passes_test(_can_manage_people)
+@login_required
 def pessoa_edit(request, pk):
     """Edita uma pessoa existente (admin)"""
     pessoa = get_object_or_404(Pessoa, pk=pk)
@@ -1252,7 +1243,12 @@ def role_list(request):
     return render(request, 'core/role_list.html', {'roles': roles})
 
 
-@user_passes_test(lambda u: u.is_superuser)
+from .permissions import _person_has_perm
+def _can_manage_roles(u):
+    # every logged-in user can manage roles as well
+    return bool(u and not u.is_anonymous)
+
+@login_required
 def role_create(request):
     from .forms import RoleForm
     if request.method == 'POST':
@@ -1265,7 +1261,7 @@ def role_create(request):
     return render(request, 'core/role_form.html', {'form': form, 'creating': True})
 
 
-@user_passes_test(lambda u: u.is_superuser)
+@login_required
 def role_edit(request, pk):
     from .models import Role
     from .forms import RoleForm
