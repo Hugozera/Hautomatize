@@ -1,0 +1,185 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container">
+  <h2>Criar OFX a partir de texto colado</h2>
+  <div style="display:flex;gap:16px;">
+    <div style="flex:1;">
+      <label for="raw_text">Cole o texto extraído do PDF aqui</label>
+      <textarea id="raw_text" name="raw_text" rows="25" style="width:100%;font-family:monospace;">{{ request.POST.raw_text|default_if_none:'' }}</textarea>
+      <div style="margin-top:8px;display:flex;gap:8px;align-items:center;">
+        <button id="btnGenerate" class="btn btn-primary" type="button">Gerar OFX</button>
+        <button id="btnDownload" class="btn btn-success" type="button" style="display:none;">Baixar OFX</button>
+        <span id="previewStatus" class="text-muted small"></span>
+      </div>
+    </div>
+    <div style="flex:1;">
+      <label>Pré-visualização OFX</label>
+      <div id="ofxPreview" style="border:1px solid #ccc;padding:8px;height:480px;overflow:auto;background:#f8f8f8;white-space:pre-wrap;">
+        {% if ofx_text %}
+          {{ ofx_text }}
+        {% else %}
+          <em>Nenhum OFX gerado ainda.</em>
+        {% endif %}
+      </div>
+      <div style="margin-top:8px;">
+        <h5>Transações detectadas</h5>
+        <div id="transacoesContainer">
+          {% if transacoes %}
+            <table class="table table-striped" id="transTable">
+              <thead><tr><th>Data</th><th>Valor</th><th>Tipo</th><th>Descrição</th></tr></thead>
+              <tbody>
+                {% for t in transacoes %}
+                  <tr>
+                    <td><input class="form-control form-control-sm" value="{{ t.data|default:t.date|default:t.dt }}"></td>
+                    <td><input class="form-control form-control-sm" value="{{ t.valor|default:t.amount|default:t.amt }}"></td>
+                    <td><input class="form-control form-control-sm" value="{{ t.tipo }}"></td>
+                    <td><input class="form-control form-control-sm" value="{{ t.descricao|default:t.name|default:t.memo }}"></td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          {% else %}
+            <em id="noTrans">Nenhuma transação detectada.</em>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if transacoes %}
+    <h3 style="margin-top:16px;">Transações detectadas</h3>
+    <table class="table table-striped">
+      <thead><tr><th>Data</th><th>Valor</th><th>Tipo</th><th>Descrição</th></tr></thead>
+      <tbody>
+        {% for t in transacoes %}
+          <tr>
+            <td>{{ t.data|default:t.date|default:t.dt }}</td>
+            <td>{{ t.valor|default:t.amount|default:t.amt }}</td>
+            <td>{{ t.tipo }}</td>
+            <td>{{ t.descricao|default:t.name|default:t.memo }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// CSRF helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+function debounce(fn, wait){
+  let t;
+  return function(...args){
+    clearTimeout(t);
+    t = setTimeout(()=>fn.apply(this,args), wait);
+  }
+}
+
+const rawEl = document.getElementById('raw_text');
+const previewEl = document.getElementById('ofxPreview');
+const statusEl = document.getElementById('previewStatus');
+const btnGen = document.getElementById('btnGenerate');
+const btnDownload = document.getElementById('btnDownload');
+const transContainer = document.getElementById('transacoesContainer');
+
+async function fetchPreview(){
+  const txt = rawEl.value || '';
+  if (!txt.trim()) { previewEl.innerText = 'Cole texto para pré-visualizar.'; return; }
+  statusEl.textContent = 'gerando...';
+  try{
+    const resp = await fetch('{% url "api_preview_from_text" %}', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      body: new URLSearchParams({raw_text: txt}).toString()
+    });
+    const j = await resp.json();
+    if (j.erro) { previewEl.innerText = 'Erro: ' + j.erro; statusEl.textContent = ''; return; }
+    previewEl.innerText = j.ofx || '';
+    statusEl.textContent = 'pronto';
+    btnDownload.style.display = j.ofx ? 'inline-block' : 'none';
+    renderTransacoes(j.transacoes || []);
+  }catch(e){ previewEl.innerText = 'Erro de rede'; statusEl.textContent = ''; }
+}
+
+const debouncedPreview = debounce(fetchPreview, 800);
+rawEl.addEventListener('input', debouncedPreview);
+
+function renderTransacoes(list){
+  let html = '';
+  if (!list || list.length === 0){
+    transContainer.innerHTML = '<em id="noTrans">Nenhuma transação detectada.</em>';
+    return;
+  }
+  html += '<table class="table table-striped" id="transTable"><thead><tr><th>Data</th><th>Valor</th><th>Tipo</th><th>Descrição</th></tr></thead><tbody>';
+  for(const t of list){
+    const data = t.data || t.date || '';
+    const valor = t.valor || t.amount || t.amt || '';
+    const tipo = t.tipo || '';
+    const desc = t.descricao || t.name || t.memo || '';
+    html += `<tr><td><input class="form-control form-control-sm" value="${escapeHtml(data)}"></td><td><input class="form-control form-control-sm" value="${escapeHtml(valor)}"></td><td><input class="form-control form-control-sm" value="${escapeHtml(tipo)}"></td><td><input class="form-control form-control-sm" value="${escapeHtml(desc)}"></td></tr>`;
+  }
+  html += '</tbody></table>';
+  transContainer.innerHTML = html;
+}
+
+function escapeHtml(s){ if(s==null) return ''; return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+btnGen.addEventListener('click', async ()=>{
+  // ensure preview updated
+  await fetchPreview();
+});
+
+btnDownload.addEventListener('click', async ()=>{
+  // collect current table rows to JSON
+  const rows = Array.from(document.querySelectorAll('#transTable tbody tr'));
+  const trans = rows.map(r=>{
+    const inputs = r.querySelectorAll('input');
+    return { date: inputs[0].value, amount: inputs[1].value, tipo: inputs[2].value, descricao: inputs[3].value };
+  });
+  try{
+    const resp = await fetch('{% url "api_generate_ofx" %}', {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'X-CSRFToken': getCookie('csrftoken'),
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ transacoes: trans })
+    });
+    if (!resp.ok) { const j = await resp.json(); alert('Erro: '+(j.erro||resp.statusText)); return; }
+    const blob = await resp.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'generated.ofx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.URL.revokeObjectURL(url);
+  }catch(e){ alert('Erro ao gerar OFX'); }
+});
+
+</script>
+{% endblock %}

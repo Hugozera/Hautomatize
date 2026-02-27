@@ -199,6 +199,15 @@ def processar_conversao(request, conversao_id):
     os.makedirs(processamento_dir, exist_ok=True)
     print(f"📁 Diretório de processamento: {processamento_dir}")
 
+    # Logging: record forced reprocess requests for debugging
+    try:
+        if force_quality or overwrite_learning or parser_post_check:
+            logf = os.path.join(processamento_dir, 'force_reprocess.log')
+            with open(logf, 'a', encoding='utf-8') as lf:
+                lf.write(f"{datetime.utcnow().isoformat()} - force_quality={force_quality} overwrite_learning={overwrite_learning} parser={parser_post_check} user={request.user}\n")
+    except Exception:
+        pass
+
     try:
         # Converter o arquivo
         print(f"🔄 Iniciando conversão para {conversao.formato_destino}...")
@@ -363,6 +372,123 @@ def processar_conversao(request, conversao_id):
             'status': 'erro',
             'erro': str(e)
         })
+
+
+@login_required
+def create_ofx_from_text(request):
+    """Allow pasting raw PDF text and generate an OFX preview from it."""
+    from django.shortcuts import render
+    ofx_text = None
+    transacoes = []
+    banco_id = request.GET.get('banco') or request.POST.get('banco')
+    if request.method == 'POST':
+        raw_text = request.POST.get('raw_text', '')
+        try:
+            from . import conversor_service
+            txt = raw_text or ''
+            try:
+                txt_padrao = conversor_service._to_txt_padrao(txt)
+            except Exception:
+                txt_padrao = txt
+
+            try:
+                transacoes = conversor_service.heuristic_extract_transactions(txt_padrao)
+            except Exception:
+                transacoes = []
+
+            svc = conversor_service.ConversorService()
+            import tempfile, os
+            fd, path = tempfile.mkstemp(suffix='.ofx')
+            os.close(fd)
+            svc.gerar_ofx(transacoes, path, banco_id=banco_id)
+            with open(path, 'r', encoding='utf-8', errors='replace') as f:
+                ofx_text = f.read()
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+        except Exception:
+            ofx_text = None
+
+    return render(request, 'core/conversor/create_from_text.html', {
+        'ofx_text': ofx_text,
+        'transacoes': transacoes,
+        'banco_id': banco_id,
+    })
+
+
+@login_required
+def api_preview_from_text(request):
+    """AJAX endpoint: accept raw_text (POST) and return detected transactions + OFX text."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+    try:
+        data = request.POST or json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        data = request.POST
+
+    raw_text = data.get('raw_text') if isinstance(data, dict) else request.POST.get('raw_text', '')
+    banco_id = data.get('banco') if isinstance(data, dict) else request.POST.get('banco')
+    try:
+        from . import conversor_service
+        txt = raw_text or ''
+        try:
+            txt_padrao = conversor_service._to_txt_padrao(txt)
+        except Exception:
+            txt_padrao = txt
+        try:
+            transacoes = conversor_service.heuristic_extract_transactions(txt_padrao)
+        except Exception:
+            transacoes = []
+
+        svc = conversor_service.ConversorService()
+        import tempfile, os
+        fd, path = tempfile.mkstemp(suffix='.ofx')
+        os.close(fd)
+        svc.gerar_ofx(transacoes, path, banco_id=banco_id)
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            ofx_text = f.read()
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+
+        return JsonResponse({'ofx': ofx_text, 'transacoes': transacoes})
+    except Exception as e:
+        return JsonResponse({'erro': str(e)}, status=500)
+
+
+@login_required
+def api_generate_ofx(request):
+    """AJAX endpoint: accept JSON {transacoes: [...]} and return OFX as attachment/text."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+    try:
+        payload = json.loads(request.body.decode('utf-8'))
+        transacoes = payload.get('transacoes', [])
+        banco_id = payload.get('banco')
+    except Exception:
+        return JsonResponse({'erro': 'Payload inválido'}, status=400)
+
+    try:
+        from .conversor_service import ConversorService
+        svc = ConversorService()
+        import tempfile, os
+        fd, path = tempfile.mkstemp(suffix='.ofx')
+        os.close(fd)
+        svc.gerar_ofx(transacoes, path, banco_id=banco_id)
+        with open(path, 'r', encoding='utf-8', errors='replace') as f:
+            ofx_text = f.read()
+        try:
+            os.remove(path)
+        except Exception:
+            pass
+
+        response = HttpResponse(ofx_text, content_type='application/ofx')
+        response['Content-Disposition'] = 'attachment; filename=generated.ofx'
+        return response
+    except Exception as e:
+        return JsonResponse({'erro': str(e)}, status=500)
 
 
 @login_required

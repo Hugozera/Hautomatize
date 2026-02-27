@@ -82,6 +82,9 @@ urlpatterns = [
     path('conversor/salvar_ofx/<int:conversao_id>/', views_conversor.salvar_ofx_editado, name='salvar_ofx_editado'),
     path('conversor/salvar_transacoes/<int:conversao_id>/', views_conversor.salvar_transacoes_editadas, name='salvar_transacoes_editadas'),
     path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos'),
+    path('conversor/create_from_text/', views_conversor.create_ofx_from_text, name='create_ofx_from_text'),
+    path('conversor/api/preview_from_text/', views_conversor.api_preview_from_text, name='api_preview_from_text'),
+    path('conversor/api/generate_ofx/', views_conversor.api_generate_ofx, name='api_generate_ofx'),
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

@@ -175,6 +175,11 @@
                         <i class="bi bi-info-circle me-2"></i>
                         Basta selecionar um PDF e escolher OFX como destino.
                     </div>
+                    <div class="mt-2">
+                        <a href="{% url 'create_ofx_from_text' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-clipboard me-1"></i>Colar texto e gerar OFX
+                        </a>
+                    </div>
                 </div>
             </div>
 
@@ -226,6 +231,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 <script>
 // Variáveis globais
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 let arquivoSelecionado = null;
 let conversaoId = null;
 let arquivosOriginais = [];
@@ -333,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-CSRFToken': getCookie('csrftoken'),
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: body.toString()
@@ -553,7 +573,7 @@ function iniciarConversao() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(async response => {
@@ -615,7 +635,7 @@ function verificarStatus() {
     fetch(`/conversor/processar/${conversaoId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(async response => {
@@ -710,7 +730,7 @@ function verificarStatus() {
                 fetch(`/conversor/processar/${conversaoId}/`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-CSRFToken': getCookie('csrftoken'),
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: body.toString()
@@ -775,7 +795,7 @@ function verificarStatus() {
                     fetch(`/conversor/processar/${conversaoId}/`, {
                         method: 'POST',
                         headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-CSRFToken': getCookie('csrftoken'),
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
                         body: body.toString()
@@ -861,7 +881,7 @@ function verificarStatus() {
     fetch(`/conversor/processar/${conversaoId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(response => {
