@@ -92,6 +92,7 @@ class Empresa(models.Model):
     certificado_validade = models.DateField(null=True, blank=True)
     certificado_emitente = models.CharField(max_length=255, blank=True)
     certificado_arquivo = models.FileField(upload_to='certificados/', blank=True, null=True)
+    certificado_antigo = models.BooleanField(default=False, help_text='Certificado usa algoritmo antigo (legacy)')
     ultimo_zip = models.FileField(upload_to='empresas/zips/', blank=True, null=True,
                                    help_text='Último arquivo ZIP gerado para esta empresa')
     

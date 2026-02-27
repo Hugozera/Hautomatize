@@ -55,36 +55,52 @@ class EmissorNacionalPlaywright:
                 f"cookies_{empresa.certificado_thumbprint[:8]}.pkl"
             )
 
+
     def extrair_certificado(self):
-        """Extrai certificado do PFX para PEM (otimizado)"""
+        """Extrai certificado do PFX para PEM (detecta legacy)"""
+        import django
+        from django.db import transaction
         if not os.path.exists(self.cert_path):
             raise Exception("Certificado não encontrado")
 
-        # Usar arquivos temporários com contexto gerenciado
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f:
             cert_pem = cert_f.name
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as key_f:
             key_pem = key_f.name
 
-        # Executar comandos em paralelo? Não, dependem um do outro
-        subprocess.run([
-            "openssl", "pkcs12",
-            "-in", self.cert_path,
-            "-clcerts", "-nokeys",
-            "-out", cert_pem,
-            "-passin", f"pass:{self.senha}"
-        ], check=True, capture_output=True)
-
-        subprocess.run([
-            "openssl", "pkcs12",
-            "-in", self.cert_path,
-            "-nocerts", "-nodes",
-            "-out", key_pem,
-            "-passin", f"pass:{self.senha}"
-        ], check=True, capture_output=True)
+        openssl_base = ["openssl", "pkcs12", "-in", self.cert_path]
+        env = os.environ.copy()
+        legacy_path = r"C:\Program Files\OpenSSL-Win64\lib\ossl-modules"
+        legacy_flag = False
+        try:
+            subprocess.run(openssl_base + ["-clcerts", "-nokeys", "-out", cert_pem, "-passin", f"pass:{self.senha}"], check=True, capture_output=True)
+            subprocess.run(openssl_base + ["-nocerts", "-nodes", "-out", key_pem, "-passin", f"pass:{self.senha}"], check=True, capture_output=True)
+        except subprocess.CalledProcessError as e:
+            # Tenta com -legacy se erro for de algoritmo
+            if b"unsupported" in e.stderr or b"Algorithm" in e.stderr or b"legacy" in e.stderr:
+                env["OPENSSL_MODULES"] = legacy_path
+                try:
+                    subprocess.run(openssl_base + ["-legacy", "-clcerts", "-nokeys", "-out", cert_pem, "-passin", f"pass:{self.senha}"], check=True, capture_output=True, env=env)
+                    subprocess.run(openssl_base + ["-legacy", "-nocerts", "-nodes", "-out", key_pem, "-passin", f"pass:{self.senha}"], check=True, capture_output=True, env=env)
+                    legacy_flag = True
+                except Exception as e2:
+                    raise Exception(f"Erro ao extrair certificado (legacy): {e2}")
+            else:
+                raise Exception(f"Erro ao extrair certificado: {e.stderr.decode(errors='ignore')}")
 
         self.cert_pem = cert_pem
         self.key_pem = key_pem
+
+        # Atualiza flag no banco se legacy
+        if hasattr(self.empresa, 'certificado_antigo'):
+            if legacy_flag and not self.empresa.certificado_antigo:
+                with transaction.atomic():
+                    self.empresa.certificado_antigo = True
+                    self.empresa.save(update_fields=["certificado_antigo"])
+            elif not legacy_flag and self.empresa.certificado_antigo:
+                with transaction.atomic():
+                    self.empresa.certificado_antigo = False
+                    self.empresa.save(update_fields=["certificado_antigo"])
 
     def salvar_cookies(self):
         """Salva cookies para reuso futuro"""
