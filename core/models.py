@@ -222,6 +222,7 @@ class ArquivoConversao(models.Model):
     formato_destino = models.CharField(max_length=10)
     tamanho_original = models.IntegerField(default=0)  # em bytes
     tamanho_convertido = models.IntegerField(default=0, null=True, blank=True)
+    banco = models.CharField(max_length=50, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
     mensagem_erro = models.TextField(blank=True)
     data_criacao = models.DateTimeField(auto_now_add=True)

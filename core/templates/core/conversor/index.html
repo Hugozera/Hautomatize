@@ -113,11 +113,18 @@
                             <i class="bi bi-check-circle me-2"></i>
                             Conversão concluída com sucesso!
                         </div>
+                        <button id="btnReprocessarQualidade" class="btn btn-warning mb-3" style="display:none;">Reprocessar (qualidade superior)</button>
                         <a id="downloadLink" href="#" class="btn btn-success btn-lg" download>
                             <i class="bi bi-download me-2"></i>Baixar Arquivo Convertido
                         </a>
-                        <button id="btnVerTxt" class="btn btn-outline-secondary btn-lg ms-2">
+                        <button id="btnVerTxt" class="btn btn-outline-secondary btn-lg ms-2" style="display:none;">
                             <i class="bi bi-file-earmark-text me-2"></i>Ver Texto Extraído
+                        </button>
+                        <a id="btnVerOfx" class="btn btn-outline-info btn-lg ms-2" style="display:none;" target="_blank">
+                            <i class="bi bi-file-earmark-medical me-2"></i>Ver OFX
+                        </a>
+                        <button id="btnNovoArquivo" class="btn btn-outline-primary btn-lg ms-2" style="display:inline-block;">
+                            <i class="bi bi-plus-circle me-2"></i>Converter novo arquivo
                         </button>
                         <pre id="txtExtraido" class="mt-3 p-3 bg-light border" style="display:none; max-height:300px; overflow:auto; white-space:pre-wrap;"></pre>
                     </div>
@@ -286,6 +293,81 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Botão converter
     btnConverter.addEventListener('click', iniciarConversao);
+
+    // Reprocessar (qualidade superior) handler
+    const btnReproc = document.getElementById('btnReprocessarQualidade');
+    if (btnReproc) {
+        btnReproc.addEventListener('click', async function () {
+            if (!conversaoId) { mostrarErro('Nenhuma conversão disponível para reprocessar'); return; }
+            if (!confirm('Esta ação forçará novas tentativas de OCR com qualidade superior e pode demorar. Deseja continuar?')) return;
+            btnReproc.disabled = true;
+            document.getElementById('progressoCard').classList.remove('d-none');
+            document.getElementById('statusMensagem').textContent = 'Reprocessando com qualidade superior...';
+            document.getElementById('progressBar').style.width = '0%';
+            document.getElementById('progressBar').textContent = '0%';
+
+            // start polling progress
+            const poll = setInterval(async () => {
+                try {
+                    const r = await fetch(`/conversor/progresso/${conversaoId}/`);
+                    const j = await r.json();
+                    if (j && j.status === 'ok' && j.progress) {
+                        const prog = j.progress;
+                        if (prog.percent !== undefined && prog.percent !== null) {
+                            document.getElementById('progressBar').style.width = prog.percent + '%';
+                            document.getElementById('progressBar').textContent = Math.round(prog.percent) + '%';
+                        }
+                        if (prog.pages_converted !== undefined) {
+                            document.getElementById('statusMensagem').textContent = `Reprocessando... ${prog.pages_converted}/${prog.total_pages || '?'} páginas.`;
+                        }
+                    }
+                } catch(e) { /* ignore */ }
+            }, 3000);
+
+            const body = new URLSearchParams();
+            body.append('force_quality', '1');
+            body.append('overwrite_learning', '1');
+
+            try {
+                const resp = await fetch(`/conversor/processar/${conversaoId}/`, {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/x-www-form-urlencoded'
+                    },
+                    body: body.toString()
+                });
+                const data = await resp.json();
+                clearInterval(poll);
+                btnReproc.disabled = false;
+                if (!resp.ok) { throw new Error(data.erro || data.mensagem || 'Erro'); }
+                if (data.status === 'concluido') {
+                    document.getElementById('statusMensagem').textContent = 'Reprocessamento concluído.';
+                    document.getElementById('downloadLink').href = data.url;
+                    const txtEl = document.getElementById('txtExtraido');
+                    txtEl.textContent = data.texto_completo || '';
+                    if (data.meta && window.showHeuristicMeta) showHeuristicMeta(data.meta);
+                } else {
+                    mostrarErro(data.erro || 'Erro no reprocessamento');
+                }
+            } catch (err) {
+                clearInterval(poll);
+                btnReproc.disabled = false;
+                mostrarErro(err.message || 'Erro no reprocessamento');
+            }
+        });
+    }
+
+    // show/hide reprocess button when resultadoArea visibility changes
+    const resultadoArea = document.getElementById('resultadoArea');
+    if (btnReproc && resultadoArea) {
+        const mo = new MutationObserver(() => {
+            if (!resultadoArea.classList.contains('d-none')) btnReproc.style.display = 'inline-block'; else btnReproc.style.display = 'none';
+        });
+        mo.observe(resultadoArea, { attributes: true, attributeFilter: ['class'] });
+        if (!resultadoArea.classList.contains('d-none')) btnReproc.style.display = 'inline-block';
+    }
 
     // Select de formato destino
     formatoDestino.addEventListener('change', function() {
@@ -500,6 +582,23 @@ function iniciarConversao() {
 }
 
 // Função para verificar status da conversão
+function showHeuristicMeta(meta) {
+    if (!meta) return;
+    let container = document.getElementById('heuristicBadge');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'heuristicBadge';
+        container.className = 'mt-3';
+        const resultadoArea = document.getElementById('resultadoArea');
+        if (resultadoArea) resultadoArea.prepend(container);
+    }
+    let parts = [];
+    if (meta.heuristic_used) parts.push(`<strong>Ajustes heurísticos aplicados</strong>`);
+    if (meta.heuristic_added && meta.heuristic_added > 0) parts.push(`+${meta.heuristic_added} transações (heur.)`);
+    if (meta.heuristic_filled_desc && meta.heuristic_filled_desc > 0) parts.push(`${meta.heuristic_filled_desc} descrições preenchidas`);
+    container.innerHTML = `<div class="alert alert-info p-2 mb-2">${parts.join(' · ')}</div>`;
+}
+
 function verificarStatus() {
     if (!conversaoId) return;
     
@@ -535,15 +634,29 @@ function verificarStatus() {
             document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
             
             document.getElementById('downloadLink').href = data.url;
+            // show OFX viewer link
+            const btnOfx = document.getElementById('btnVerOfx');
+            if (btnOfx) {
+                btnOfx.href = `/conversor/ver_ofx/${conversaoId}/`;
+                btnOfx.style.display = 'inline-block';
+            }
             document.getElementById('resultadoArea').classList.remove('d-none');
-            // If server returned the full extracted text, show a button to view it
+            // Show extracted text button if server returned the text
+            const txtEl = document.getElementById('txtExtraido');
+            txtEl.textContent = data.texto_completo || '';
             if (data.texto_completo) {
-                const txtEl = document.getElementById('txtExtraido');
-                txtEl.textContent = data.texto_completo;
                 document.getElementById('btnVerTxt').style.display = 'inline-block';
-                document.getElementById('btnVerTxt').onclick = () => {
-                    txtEl.style.display = txtEl.style.display === 'none' ? 'block' : 'none';
-                };
+            } else {
+                document.getElementById('btnVerTxt').style.display = 'none';
+            }
+            // Attach toggle handler
+            document.getElementById('btnVerTxt').onclick = () => {
+                txtEl.style.display = txtEl.style.display === 'none' ? 'block' : 'none';
+            };
+            // Attach "new file" handler
+            document.getElementById('btnNovoArquivo').onclick = resetConverterUI;
+            if (data.meta) {
+                showHeuristicMeta(data.meta);
             }
         } else if (data.status === 'erro') {
             mostrarErro(data.erro || 'Erro na conversão');
@@ -610,7 +723,14 @@ function verificarStatus() {
                         document.getElementById('progressBar').textContent = '100%';
                         document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
                         document.getElementById('downloadLink').href = d.url;
+                        // show OFX viewer link
+                        const btnOfx2 = document.getElementById('btnVerOfx');
+                        if (btnOfx2) {
+                            btnOfx2.href = `/conversor/ver_ofx/${conversaoId}/`;
+                            btnOfx2.style.display = 'inline-block';
+                        }
                         document.getElementById('resultadoArea').classList.remove('d-none');
+                        if (d.meta) showHeuristicMeta(d.meta);
                     } else if (d.status === 'banco_nao_detectado') {
                         mostrarErro('Banco ainda não detectado. Tente outro parser.');
                     } else {
@@ -626,7 +746,71 @@ function verificarStatus() {
             container.appendChild(info);
             container.appendChild(select);
             container.appendChild(btn);
+            // botão para testar automaticamente os parsers em sequência
+            const btnAuto = document.createElement('button');
+            btnAuto.className = 'btn btn-outline-primary mt-2 ms-2';
+            btnAuto.id = 'btnAutoTry';
+            btnAuto.textContent = 'Testar parsers automaticamente';
+            btnAuto.onclick = () => autoTryParsers(parsers);
+            container.appendChild(btnAuto);
             cardBody.appendChild(container);
+
+            // Função para testar parsers em sequência até um funcionar
+            function autoTryParsers(parsersList) {
+                if (!parsersList || !parsersList.length) {
+                    mostrarErro('Nenhum parser disponível para testar');
+                    return;
+                }
+                let index = 0;
+                const tryNext = () => {
+                    if (index >= parsersList.length) {
+                        mostrarErro('Nenhum parser funcionou');
+                        return;
+                    }
+                    const parserId = parsersList[index].id;
+                    document.getElementById('statusMensagem').textContent = `Testando parser ${parsersList[index].nome}...`;
+                    const body = new URLSearchParams();
+                    body.append('parser', parserId);
+
+                    fetch(`/conversor/processar/${conversaoId}/`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRFToken': '{{ csrf_token }}',
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: body.toString()
+                    })
+                    .then(r => r.json())
+                    .then(d => {
+                        if (d.status === 'concluido') {
+                            document.getElementById('progressBar').style.width = '100%';
+                            document.getElementById('progressBar').textContent = '100%';
+                            document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
+                            document.getElementById('downloadLink').href = d.url;
+                                // show OFX viewer link
+                                const btnOfx3 = document.getElementById('btnVerOfx');
+                                if (btnOfx3) {
+                                    btnOfx3.href = `/conversor/ver_ofx/${conversaoId}/`;
+                                    btnOfx3.style.display = 'inline-block';
+                                }
+                            document.getElementById('resultadoArea').classList.remove('d-none');
+                            const txtEl = document.getElementById('txtExtraido');
+                            txtEl.textContent = d.texto_completo || '';
+                            if (d.texto_completo) document.getElementById('btnVerTxt').style.display = 'inline-block';
+                            if (d.meta) showHeuristicMeta(d.meta);
+                        } else if (d.status === 'banco_nao_detectado') {
+                            index += 1;
+                            setTimeout(tryNext, 400);
+                        } else {
+                            mostrarErro(d.erro || 'Erro ao testar parser');
+                        }
+                    })
+                    .catch(err => {
+                        mostrarErro(err.message || 'Erro na requisição');
+                    });
+                };
+                tryNext();
+            }
         } else {
             // Ainda processando
             setTimeout(verificarStatus, 2000);
@@ -697,7 +881,26 @@ function verificarStatus() {
             document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
             
             document.getElementById('downloadLink').href = data.url;
+            // show OFX viewer link
+            const btnOfx4 = document.getElementById('btnVerOfx');
+            if (btnOfx4) {
+                btnOfx4.href = `/conversor/ver_ofx/${conversaoId}/`;
+                btnOfx4.style.display = 'inline-block';
+            }
             document.getElementById('resultadoArea').classList.remove('d-none');
+            // Also show extracted text / new-file button for this handler
+            const txtEl2 = document.getElementById('txtExtraido');
+            txtEl2.textContent = data.texto_completo || '';
+            if (data.texto_completo) {
+                document.getElementById('btnVerTxt').style.display = 'inline-block';
+            } else {
+                document.getElementById('btnVerTxt').style.display = 'none';
+            }
+            document.getElementById('btnVerTxt').onclick = () => {
+                txtEl2.style.display = txtEl2.style.display === 'none' ? 'block' : 'none';
+            };
+            document.getElementById('btnNovoArquivo').onclick = resetConverterUI;
+            if (data.meta) showHeuristicMeta(data.meta);
         } else if (data.status === 'erro') {
             mostrarErro(data.erro || 'Erro na conversão');
         } else {
@@ -726,6 +929,42 @@ function mostrarErro(mensagem) {
         document.getElementById('progressBar').classList.remove('bg-danger');
         document.getElementById('progressBar').classList.add('bg-success');
     }, 3000);
+}
+
+// Reset the converter UI to allow uploading a new file
+function resetConverterUI() {
+    conversaoId = null;
+    arquivosOriginais = [];
+    arquivoSelecionado = null;
+    const fileInput = document.getElementById('fileInput');
+    if (fileInput) fileInput.value = '';
+    const painel = document.getElementById('painelArquivos');
+    if (painel) painel.innerHTML = '';
+    const arquivoInfo = document.getElementById('arquivoInfo');
+    if (arquivoInfo) arquivoInfo.classList.add('d-none');
+    const formatoOrigem = document.getElementById('formatoOrigem');
+    if (formatoOrigem) formatoOrigem.value = '';
+    const formatoDestino = document.getElementById('formatoDestino');
+    if (formatoDestino) {
+        formatoDestino.innerHTML = '<option value="">Selecione um formato</option>';
+        formatoDestino.disabled = true;
+    }
+    const btnConverter = document.getElementById('btnConverter');
+    if (btnConverter) btnConverter.disabled = true;
+    const progressoCard = document.getElementById('progressoCard');
+    if (progressoCard) progressoCard.classList.add('d-none');
+    const resultadoArea = document.getElementById('resultadoArea');
+    if (resultadoArea) resultadoArea.classList.add('d-none');
+    const progressBar = document.getElementById('progressBar');
+    if (progressBar) { progressBar.style.width = '0%'; progressBar.textContent = '0%'; }
+    const statusMensagem = document.getElementById('statusMensagem');
+    if (statusMensagem) statusMensagem.textContent = 'Pronto para conversão';
+    const txtExtraido = document.getElementById('txtExtraido');
+    if (txtExtraido) { txtExtraido.textContent = ''; txtExtraido.style.display = 'none'; }
+    const btnVerTxt = document.getElementById('btnVerTxt');
+    if (btnVerTxt) btnVerTxt.style.display = 'none';
+    const downloadLink = document.getElementById('downloadLink');
+    if (downloadLink) downloadLink.href = '#';
 }
 </script>
 

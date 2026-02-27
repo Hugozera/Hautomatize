@@ -74,8 +74,13 @@ urlpatterns = [
     path('conversor/', views_conversor.conversor_index, name='conversor_index'),
     path('upload/', upload_router.upload_router, name='upload_router'),    path('conversor/processar/<int:conversao_id>/', views_conversor.processar_conversao, name='processar_conversao'),
     path('conversor/status/<int:conversao_id>/', views_conversor.status_conversao, name='status_conversao'),
+    path('conversor/progresso/<int:conversao_id>/', views_conversor.progresso_conversao, name='progresso_conversao'),
     path('conversor/historico/', views_conversor.historico_conversoes, name='historico_conversoes'),
     path('conversor/download/<int:conversao_id>/', views_conversor.download_arquivo, name='download_arquivo'),
+    path('conversor/ver_ofx/<int:conversao_id>/', views_conversor.ver_ofx, name='ver_ofx'),
+    path('conversor/original/<int:conversao_id>/', views_conversor.download_original, name='download_original'),
+    path('conversor/salvar_ofx/<int:conversao_id>/', views_conversor.salvar_ofx_editado, name='salvar_ofx_editado'),
+    path('conversor/salvar_transacoes/<int:conversao_id>/', views_conversor.salvar_transacoes_editadas, name='salvar_transacoes_editadas'),
     path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos'),
    
     # Autenticação

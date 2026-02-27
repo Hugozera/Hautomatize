@@ -409,8 +409,22 @@ def pessoa_list(request):
         'status': status
     })
 
+def _can_manage_people(u):
+    """Return True for superusers or users with the 'full.access' role."""
+    if not u or u.is_anonymous:
+        return False
+    if u.is_superuser:
+        return True
+    try:
+        if hasattr(u, 'pessoa') and u.pessoa.roles.filter(codename='full.access').exists():
+            return True
+    except Exception:
+        pass
+    return False
+
+
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_can_manage_people)
 def pessoa_create(request):
     """Cria uma nova pessoa (admin)"""
     if request.method == 'POST':
@@ -430,7 +444,7 @@ def pessoa_create(request):
     return render(request, 'core/pessoa_form.html', {'form': form})
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(_can_manage_people)
 def pessoa_edit(request, pk):
     """Edita uma pessoa existente (admin)"""
     pessoa = get_object_or_404(Pessoa, pk=pk)

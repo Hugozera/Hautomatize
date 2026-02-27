@@ -1,0 +1,88 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+
+# Environment variables / secrets
+.env
+.env.*
+*.key
+*.pem
+*.p12
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+media/
+media/**
+staticfiles/
+staticfiles/**
+
+# Build / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Coverage / testing
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.hypothesis/
+nosetests.xml
+coverage.xml
+
+# Sphinx docs
+docs/_build/
+_build/
+
+# Node
+node_modules/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Compiled extensions
+*.so
+*.dylib
+*.dll
+
+# Python packaging
+pip-wheel-metadata/
+*.egg
+
+# Misc caches
+.mypy_cache/
+.ropeproject/
+
+# Generated conversion artifacts (local)
+media/conversor/processing/
+media/conversor/convertidos/
+media/conversor/originais/
+
+# Docker compose local overrides
+docker-compose.override.yml

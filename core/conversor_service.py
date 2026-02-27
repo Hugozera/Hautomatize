@@ -13,6 +13,49 @@ from typing import List, Dict, Tuple, Optional
 import traceback
 import csv
 from . import conversor_pipeline
+from .learning_store import LearningStore
+import pkgutil
+import importlib
+import inspect
+import hashlib
+import json
+from collections import OrderedDict
+
+# Cache for parser instances to avoid repeated heavy imports during conversion
+_PARSER_INSTANCES = None
+
+# Cache for bank detection based on text hash to avoid re-running detection on identical texts
+_DETECTION_CACHE = OrderedDict()
+_DETECTION_CACHE_MAX = 1024
+
+def _load_parser_instances():
+    """Load and cache parser instances from core.parsers package."""
+    global _PARSER_INSTANCES
+    if _PARSER_INSTANCES is not None:
+        return _PARSER_INSTANCES
+    instances = []
+    try:
+        from . import parsers as parsers_pkg
+        from .parsers.base_parser import BaseParser
+        for finder, name, ispkg in pkgutil.iter_modules(parsers_pkg.__path__):
+            try:
+                mod = importlib.import_module(f"{parsers_pkg.__name__}.{name}")
+            except Exception:
+                continue
+            for attr in dir(mod):
+                try:
+                    obj = getattr(mod, attr)
+                    if inspect.isclass(obj) and issubclass(obj, BaseParser) and obj is not BaseParser:
+                        try:
+                            instances.append(obj())
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+    except Exception:
+        pass
+    _PARSER_INSTANCES = instances
+    return _PARSER_INSTANCES
 
 # Tentativa de importar bibliotecas opcionais
 try:
@@ -84,6 +127,10 @@ class ConversorService:
                 except:
                     pass
         
+                def get_formatos_destino(formato_origem: str) -> List[str]:
+                    """Module-level wrapper for backward compatibility with views importing this symbol."""
+                    return ConversorService.get_formatos_destino(formato_origem)
+
         replacements = {
             '': '', '': '', '': '', '': '', '': '', '': '',
             '': '', '': '', '': '', '': '', '': '', '': '',
@@ -263,6 +310,323 @@ class ConversorService:
             return 0.0
 
     @classmethod
+    def _normalizar_para_txt_padrao(cls, texto_bruto: str, banco_detectado: str = None) -> str:
+        """
+        Converte o texto bruto de qualquer extrato para um formato TXT padrão e universal.
+        Formato de saída: DATA;VALOR;TIPO;DESCRICAO;DOCUMENTO;SALDO
+        """
+        linhas_padrao = []
+        
+        # --- ETAPA 1: Limpeza pesada e correções específicas de encoding ---
+        texto_limpo = cls._limpar_texto_corrompido_hibrido(texto_bruto, banco_detectado if banco_detectado else "CAIXA")
+        texto_limpo = cls._corrigir_espacos_e_caracteres(texto_limpo)
+        
+        # Remove cabeçalhos e rodapés
+        linhas = texto_limpo.split('\n')
+        linhas_filtradas = []
+        for linha in linhas:
+            linha_lower = linha.lower()
+            # Lista expandida de termos a ignorar
+            if any(ignorar in linha_lower for ignorar in [
+                'página', 'pagina', 'page break', 'lançamentos', 'lançamento',
+                'data', 'histórico', 'documento', 'agência', 'conta', 'cpf', 'cnpj',
+                'autenticação', 'autenticacao', 'código', 'codigo', 'sac', 'ouvidoria',
+                '0800', 'telefone', 'whatsapp', 'e-mail', 'email', 'www', 'http',
+                'gerado em', 'emitido em', 'posicao', 'posição', 'consolidado',
+                'folha', 'total disponível', 'limite da conta', 'aplicações',
+                'saldo anterior', 'saldo do dia', 'saldo dia'
+            ]):
+                continue
+            if len(linha.strip()) < 8:
+                continue
+            linhas_filtradas.append(linha)
+        
+        texto_sem_cabecalho = '\n'.join(linhas_filtradas)
+
+        # --- NOVO: Reconstruir páginas com extração em colunas (DATA / TIPO / LANÇAMENTO / VALOR / SALDO)
+        def _reconstruct_columnar_page(page_text: str) -> str:
+            # Detect common headers (variants)
+            headers = ['DATA', 'TIPO', 'LANÇAMENTO', 'LANCAMENTO', 'LANÇAMENTO', 'VALOR', 'SALDO']
+            up = page_text.upper()
+            # find indices of headers
+            hdr_positions = {}
+            for h in ['DATA', 'TIPO', 'LAN', 'VALOR', 'SALDO']:
+                idx = up.find(h)
+                if idx >= 0:
+                    hdr_positions[h] = idx
+
+            # Simple heuristic: if we have at least DATA and VALOR present, attempt reconstruction
+            if 'DATA' not in hdr_positions or 'VALOR' not in hdr_positions:
+                return page_text
+
+            # try to slice blocks by locating the header keywords in order
+            # fallback: split by known header words
+            parts = {}
+            try:
+                # find header tokens in the original case-insensitive text
+                tokens = ['DATA', 'TIPO', 'LANÇAMENTO', 'LANCAMENTO', 'VALOR', 'SALDO']
+                locs = []
+                for t in tokens:
+                    m = re.search(rf"\b{t}\b", page_text, flags=re.IGNORECASE)
+                    if m:
+                        locs.append((m.start(), t.upper()))
+                locs.sort()
+                # build slices between headers
+                for i, (pos, t) in enumerate(locs):
+                    start = pos + len(t)
+                    end = locs[i+1][0] if i+1 < len(locs) else len(page_text)
+                    block = page_text[start:end].strip()
+                    parts[t] = [ln.strip() for ln in block.split('\n') if ln.strip()]
+            except Exception:
+                return page_text
+
+            # gather columns
+            date_lines = parts.get('DATA', [])
+            tipo_lines = parts.get('TIPO', [])
+            lanc_lines = parts.get('LANÇAMENTO', []) or parts.get('LANCAMENTO', [])
+            valor_lines = parts.get('VALOR', [])
+            saldo_lines = parts.get('SALDO', [])
+
+            # normalize valor lines to lines that look like numbers
+            regex_val = re.compile(r'-?\d+[\.\d]*,\d{2}')
+            valor_filtered = [v for v in valor_lines if regex_val.search(v)]
+            if not valor_filtered:
+                # try extracting numbers inside lines
+                valor_filtered = [v for v in valor_lines]
+
+            N = max(len(date_lines), len(valor_filtered), len(tipo_lines))
+            if N == 0:
+                return page_text
+
+            # Normalize lanc_lines to have approximately N items by merging if necessary
+            try:
+                if lanc_lines and len(lanc_lines) > N:
+                    # merge from the end until counts match
+                    while len(lanc_lines) > N:
+                        # merge last two
+                        lanc_lines[-2] = lanc_lines[-2] + ' ' + lanc_lines[-1]
+                        lanc_lines.pop()
+                elif lanc_lines and len(lanc_lines) < N:
+                    # pad with empty strings
+                    while len(lanc_lines) < N:
+                        lanc_lines.append('')
+            except Exception:
+                pass
+
+            reconstructed = []
+            for i in range(N):
+                d = date_lines[i] if i < len(date_lines) else ''
+                t = tipo_lines[i] if i < len(tipo_lines) else ''
+                v = valor_filtered[i] if i < len(valor_filtered) else ''
+                s = saldo_lines[i] if i < len(saldo_lines) else ''
+                desc = lanc_lines[i] if i < len(lanc_lines) else ''
+                # collapse multiple spaces and remove header tokens
+                row = f"{d} {v} {t} {desc} {s}".strip()
+                row = re.sub(r'\s+', ' ', row)
+                reconstructed.append(row)
+
+            return '\n'.join(reconstructed)
+
+        # Apply reconstruction per page
+        pages = texto_sem_cabecalho.split('\n=== PAGE BREAK ===\n')
+        new_pages = []
+        for ptext in pages:
+            new_pages.append(_reconstruct_columnar_page(ptext))
+        texto_sem_cabecalho = '\n=== PAGE BREAK ===\n'.join(new_pages)
+
+        # --- ETAPA 2: Detectar transações ---
+        # Regex para encontrar datas no formato brasileiro DD/MM/AAAA ou DD/MM/AA
+        regex_data_hora = re.compile(
+            r'(\d{2})[/-](\d{2})[/-](\d{2,4})'  # Data: DD/MM/AAAA ou DD/MM/AA
+            r'(?:[\s-]+(\d{2}:\d{2}(?::\d{2})?))?'  # Hora opcional
+        )
+        
+        # Regex APENAS para números com separador de milhar e vírgula decimal: 1.234,56 ou 1234,56
+        regex_valor_br = re.compile(r'\b(\d{1,3}(?:\.\d{3})*,\d{2})\b')
+        
+        # Regex para identificar se é débito (palavras-chave mais completas)
+        regex_debito = re.compile(r'\b(DEB|DEBIT|DEBITO|DÉBITO|PAG|PAGAMENTO|TAR|TARIFA|SAQUE|RETIRADA|PAG\.?)\b', re.IGNORECASE)
+
+        # Regex para capturar 'D' ou 'C' no final da linha (isolado)
+        # Require a boundary before the letter to avoid matching 'D' inside words
+        regex_tipo_final = re.compile(r'\b([DC])\s*$', re.IGNORECASE)
+        
+        # Regex para número de documento (6 dígitos)
+        regex_documento = re.compile(r'\b(\d{6})\b')
+
+        # Processar linha por linha
+        for raw_linha in texto_sem_cabecalho.split('\n'):
+            linha = raw_linha.strip()
+            if not linha:
+                continue
+
+            # Se a linha contém múltiplas transações (várias datas), quebramos em segmentos
+            # Ex.: quando o PDF extraiu duas linhas visuais numa única linha de texto.
+            segmentos = []
+            try:
+                date_iter = list(regex_data_hora.finditer(linha))
+                if len(date_iter) > 1:
+                    for idx, m in enumerate(date_iter):
+                        start = m.start()
+                        end = date_iter[idx + 1].start() if idx + 1 < len(date_iter) else len(linha)
+                        seg = linha[start:end].strip()
+                        if seg:
+                            segmentos.append(seg)
+                else:
+                    segmentos = [linha]
+            except Exception:
+                segmentos = [linha]
+
+            for linha in segmentos:
+                linha = linha.strip()
+                if not linha:
+                    continue
+
+            # --- Encontrar data na linha ---
+            data_match = regex_data_hora.search(linha)
+            if not data_match:
+                continue
+            
+            dia, mes, ano, hora = data_match.groups()
+            
+            # Normalizar ano para 4 dígitos
+            if len(ano) == 2:
+                if int(ano) < 70:
+                    ano = '20' + ano
+                else:
+                    ano = '19' + ano
+            # Normalizar hora para HHMMSS (padronizar quando hora for opcional)
+            hora_str = '000000'
+            if hora:
+                parts = hora.split(':')
+                if len(parts) == 2:
+                    parts.append('00')
+                # garantir dois dígitos
+                hora_str = ''.join(p.zfill(2) for p in parts[:3])
+
+            data_ofx = f"{ano}{mes}{dia}{hora_str}"
+
+            # --- Extrair TODOS os valores da linha ---
+            todos_valores = regex_valor_br.findall(linha)
+            
+            # Se não tem valor, não é uma transação
+            if not todos_valores:
+                continue
+            
+            # Para a CAIXA, o padrão é: [valor da transação, saldo]
+            if len(todos_valores) >= 2:
+                valor_transacao_str = todos_valores[0]  # PRIMEIRO valor é a transação
+                saldo_str = todos_valores[-1]           # ÚLTIMO valor é o saldo
+            else:
+                valor_transacao_str = todos_valores[0]
+                saldo_str = ''
+            
+            # Converter valor para float
+            valor_float = cls.corrigir_valor_br(valor_transacao_str)
+            
+            # --- Determinar o tipo (Débito/Crédito) de forma mais robusta ---
+            # Verificar 3 coisas:
+            # 1. Se há 'D' no final da linha
+            # 2. Se a descrição contém palavras de débito (DEB, PAG, TAR)
+            # 3. Se o caractere após o valor é 'D'
+            
+            linha_upper = linha.upper()
+            tipo = 'CREDITO'  # Padrão é crédito
+            valor_final = abs(valor_float)  # Começa com valor positivo
+            
+            # Verificar se é débito
+            is_debito = False
+            
+            # Verificar 'D' no final da linha
+            tipo_match = regex_tipo_final.search(linha)
+            if tipo_match and tipo_match.group(1) == 'D':
+                is_debito = True
+            
+            # Verificar palavras-chave de débito (busca por tokens completos)
+            if regex_debito.search(linha):
+                # Special-case PIX: if line contains PIX, check whether it's recebido (credit) or enviado/pagamento (debit)
+                if re.search(r'\bPIX\b', linha, flags=re.IGNORECASE):
+                    if re.search(r'\b(RECEB|RECEBIDO|RECEBEU|RECEBER)\b', linha, flags=re.IGNORECASE):
+                        is_debito = False
+                    elif re.search(r'\b(ENVI|ENVIADO|ENVIAR|PAG|PAGAMENTO|TRANSFER)\b', linha, flags=re.IGNORECASE):
+                        is_debito = True
+                    else:
+                        # fallback to debit when ambiguous
+                        is_debito = True
+                else:
+                    is_debito = True
+            
+            # Verificar se o valor está próximo de 'D' na linha
+            # (útil para casos onde o D está colado no valor)
+            for valor in todos_valores:
+                pos = linha.find(valor)
+                if pos >= 0 and pos + len(valor) < len(linha):
+                    resto = linha[pos + len(valor):]
+                    # look for a trailing token like 'D' or 'C' or a token starting with D (isolated)
+                    m2 = re.match(r'^\s*([DC])\b', resto)
+                    if m2 and m2.group(1).upper() == 'D':
+                        is_debito = True
+                        break
+                    # also check if there's a nearby word indicating debit
+                    if regex_debito.search(resto):
+                        is_debito = True
+                        break
+            
+            if is_debito:
+                tipo = 'DEBITO'
+                valor_final = -abs(valor_float)  # Negativo para débito
+
+            # --- Extrair Documento ---
+            doc_match = regex_documento.search(linha)
+            documento = doc_match.group(1) if doc_match else ''
+            
+            # --- Extrair Descrição (removendo data, valores, documento) ---
+            descricao = linha
+            # Remove a data
+            descricao = regex_data_hora.sub('', descricao)
+            # Remove todos os valores encontrados
+            for val in todos_valores:
+                descricao = descricao.replace(val, '')
+            # Remove o documento
+            if documento:
+                descricao = descricao.replace(documento, '')
+            # Remove 'C' e 'D' no final da linha
+            descricao = re.sub(r'\s+[CD]\s*$', '', descricao)
+            # Remove códigos de transação como 'CRED PIX CHAVE', 'DEB PIX CHAVE', etc.
+            descricao = re.sub(r'\b(CRED\s+PIX\s+CHAVE|DEB\s+PIX\s+CHAVE|PIX\s+RECEBIDO|PAG\s+BOLETO\s+IBC)\b', '', descricao, flags=re.IGNORECASE)
+            # Limpeza final
+            descricao = re.sub(r'[^\w\s\-/]', ' ', descricao)
+            descricao = re.sub(r'\s+', ' ', descricao).strip().upper()
+            
+            # Se a descrição ficou vazia, usa um placeholder
+            if not descricao:
+                descricao = 'TRANSACAO'
+            
+            # --- Processar saldo (se existir) ---
+            saldo_normalizado = ''
+            if saldo_str:
+                try:
+                    saldo_float = cls.corrigir_valor_br(saldo_str)
+                    saldo_normalizado = f"{saldo_float:.2f}"
+                except:
+                    pass
+            
+            # --- Montar a linha no formato padrão ---
+            linha_padrao = (
+                f"{data_ofx};"
+                f"{valor_final:.2f};"
+                f"{tipo};"
+                f"{descricao};"
+                f"{documento};"
+                f"{saldo_normalizado}"
+            )
+            
+            # Adiciona à lista
+            linhas_padrao.append(linha_padrao)
+
+        return '\n'.join(linhas_padrao)
+
+    @classmethod
     def extrair_transacoes_avancado(cls, texto: str) -> List[Dict]:
         """
         Extrai transações de extratos bancários de forma robusta.
@@ -308,7 +672,9 @@ class ConversorService:
                     transacao_em_construcao = None
 
                 dia, mes, ano, hora = data_hora_match.groups()
-                data_ofx = f"{ano}{mes}{dia}"
+                # data padrão com hora incluída (YYYYMMDDHHMMSS)
+                hora_norm = hora.replace(':', '') if hora else '000000'
+                data_ofx = f"{ano}{mes}{dia}{hora_norm}"
 
                 # Extrair documento (6 dígitos após a hora)
                 partes = linha.split()
@@ -371,8 +737,20 @@ class ConversorService:
                 if valor_str:
                     valor = cls.corrigir_valor_br(valor_str)
                     
-                    # Determinar tipo baseado na descrição
-                    if any(palavra in descricao.upper() for palavra in ['TAR', 'PAG', 'DEB', 'D']):
+                    # Determinar tipo baseado na descrição usando tokens completos
+                    # PIX-specific: recebido -> credit, enviado/pagamento -> debit
+                    if re.search(r'\bPIX\b', descricao, flags=re.IGNORECASE):
+                        if re.search(r'\b(RECEB|RECEBIDO|RECEBEU|RECEBER)\b', descricao, flags=re.IGNORECASE):
+                            tipo = 'CREDIT'
+                            valor = abs(valor)
+                        elif re.search(r'\b(ENVI|ENVIADO|ENVIAR|PAG|PAGAMENTO|TRANSFER|SAQUE)\b', descricao, flags=re.IGNORECASE):
+                            tipo = 'DEBIT'
+                            valor = -abs(valor)
+                        else:
+                            # ambiguous PIX -> fall back to credit? choose debit as safer default
+                            tipo = 'DEBIT'
+                            valor = -abs(valor)
+                    elif re.search(r'\b(DEB|DEBIT|DEBITO|DÉBITO|PAG|PAGAMENTO|TAR|TARIFA|SAQUE|RETIRADA)\b', descricao, flags=re.IGNORECASE):
                         tipo = 'DEBIT'
                         valor = -abs(valor)
                     else:
@@ -426,13 +804,14 @@ class ConversorService:
         
         transacao['descricao'] = descricao if descricao else 'TRANSACAO'
 
-        # Gerar FITID único
+        # Gerar FITID único: data já pode conter hora (YYYYMMDDHHMMSS)
         fitid = f"{transacao['data']}{int(abs(transacao['valor']) * 100):08d}"
         if transacao.get('documento'):
             fitid = f"{fitid}{transacao['documento']}"
-        if transacao.get('hora'):
+        # Só acrescenta hora separada quando a data NÃO contém hora (data length == 8)
+        if len(str(transacao['data'])) == 8 and transacao.get('hora'):
             fitid = f"{fitid}{transacao['hora'].replace(':', '')}"
-        else:
+        elif len(str(transacao['data'])) == 8:
             fitid = f"{fitid}{abs(hash(descricao)) % 10000:04d}"
         
         transacao['fitid'] = fitid[:30]
@@ -614,24 +993,40 @@ class ConversorService:
                 f.write(f"          <DTEND>{data_fim}</DTEND>\n")
                 
                 for i, t in enumerate(transacoes):
-                    valor_str = f"{t['valor']:.2f}".replace('.', ',')
-                    
+                    # Ensure TRNTYPE is one of 'DEBIT' or 'CREDIT'
+                    trntype_raw = str(t.get('tipo', 'CREDIT')).upper()
+                    # Accept multiple representations: full words and single-letter codes
+                    if trntype_raw in ('DEBITO', 'DEBIT', 'D', 'B'):
+                        trntype = 'DEBIT'
+                    else:
+                        trntype = 'CREDIT'
+
+                    # Use absolute value for TRNAMT; sign is represented by TRNTYPE
+                    amt = abs(t.get('valor', 0.0))
+                    valor_str = f"{amt:.2f}".replace('.', ',')
+
                     f.write("          <STMTTRN>\n")
-                    f.write(f"            <TRNTYPE>{t['tipo']}</TRNTYPE>\n")
+                    f.write(f"            <TRNTYPE>{trntype}</TRNTYPE>\n")
                     f.write(f"            <DTPOSTED>{t['data']}</DTPOSTED>\n")
                     f.write(f"            <TRNAMT>{valor_str}</TRNAMT>\n")
-                    
+
                     fitid = t.get('fitid', f"{t['data']}{i:06d}")
                     f.write(f"            <FITID>{fitid}</FITID>\n")
-                    
+
                     documento = t.get('documento', t.get('checknum', f"{i+1:06d}"))
                     f.write(f"            <CHECKNUM>{documento}</CHECKNUM>\n")
-                    
-                    f.write(f"            <MEMO>{t.get('descricao', 'TRANSACAO')}</MEMO>\n")
+
+                    # Include 'destino' if provided by the front-end as part of the MEMO
+                    memo = t.get('descricao', 'TRANSACAO') or 'TRANSACAO'
+                    destino_val = t.get('destino') or t.get('destination') or ''
+                    if destino_val:
+                        memo = f"{memo} / Dest:{destino_val}"
+                    f.write(f"            <MEMO>{memo}</MEMO>\n")
                     f.write("          </STMTTRN>\n")
                 
                 f.write("        </BANKTRANLIST>\n")
                 
+                # Calcular saldo final corretamente
                 saldo_final = sum(t['valor'] for t in transacoes)
                 saldo_str = f"{saldo_final:.2f}".replace('.', ',')
                 
@@ -647,8 +1042,67 @@ class ConversorService:
 
             return True
 
-        except Exception:
+        except Exception as e:
+            print(f"Erro ao gerar OFX: {e}")
             return False
+
+    @classmethod
+    def _normalize_transacoes_heuristic(cls, transacoes: List[Dict]) -> List[Dict]:
+        """Apply heuristic rules to ensure tipo (DEBIT/CREDIT) and valor signs are correct.
+
+        Rules:
+        - If descricao contains PIX and RECEB* -> CREDIT
+        - If descricao contains PIX and ENVI*/PAG*/TRANSFER* -> DEBIT
+        - If descricao contains debit words (PAGAMENTO, TARIFA, SAQUE, RETIRADA) -> DEBIT
+        - If descricao contains credit words (RECEBIDO, DEPOSITO) -> CREDIT
+        - If tipo present as single letter 'B' -> DEBIT, 'C' -> CREDIT
+        - Fallback: use sign of valor (negative -> DEBIT)
+        """
+        if not transacoes:
+            return transacoes
+
+        for t in transacoes:
+            desc = (t.get('descricao') or '')
+            val = float(t.get('valor') or 0.0)
+            tipo_present = (t.get('tipo') or '').strip().upper()
+
+            decided = None
+            # Provided single-letter hints
+            if tipo_present in ('B', 'D'):
+                decided = 'DEBIT'
+            elif tipo_present == 'C':
+                decided = 'CREDIT'
+
+            # PIX rules
+            if decided is None and re.search(r'\bPIX\b', desc, flags=re.IGNORECASE):
+                if re.search(r'\b(RECEB|RECEBIDO|RECEBEU|RECEBER|DEPOSI)\b', desc, flags=re.IGNORECASE):
+                    decided = 'CREDIT'
+                elif re.search(r'\b(ENVI|ENVIADO|ENVIAR|PAG|PAGAMENTO|TRANSFER|SAQUE)\b', desc, flags=re.IGNORECASE):
+                    decided = 'DEBIT'
+
+            # Generic keywords
+            if decided is None:
+                if re.search(r'\b(PAGAMENTO|PAG|TARIFA|TAR|SAQUE|RETIRADA|DEBITO|DEB|DESPESA)\b', desc, flags=re.IGNORECASE):
+                    decided = 'DEBIT'
+                elif re.search(r'\b(RECEBIDO|RECEB|DEPOSITO|CREDITO|CRED)\b', desc, flags=re.IGNORECASE):
+                    decided = 'CREDIT'
+
+            # Fallback to numeric sign
+            if decided is None:
+                if val < 0:
+                    decided = 'DEBIT'
+                else:
+                    decided = 'CREDIT'
+
+            # Apply decision
+            t['tipo'] = decided
+            # Ensure valor sign is consistent: OFX expects absolute TRNAMT and TRNTYPE indicates sign
+            if decided == 'DEBIT' and val > 0:
+                t['valor'] = -abs(val)
+            elif decided == 'CREDIT' and val < 0:
+                t['valor'] = abs(val)
+
+        return transacoes
 
     @classmethod
     def _salvar_como_csv(cls, transacoes: List[Dict], csv_path: str) -> bool:
@@ -688,11 +1142,13 @@ class ConversorService:
 
 def converter_arquivo(arquivo_path: str, formato_destino: str,
                       output_dir: Optional[str] = None, usar_ocr: bool = True,
-                      dpi: int = 300) -> Tuple[Optional[str], Optional[str]]:
+                      dpi: int = 300, banco_override: Optional[str] = None,
+                      force_quality: bool = False, overwrite_learning: bool = False) -> Tuple[Optional[str], Optional[str]]:
     """
     Converte um arquivo para o formato desejado.
     - Gera TXT usando o pipeline do conversor_pipeline
-    - Extrai transações e gera OFX/CSV quando solicitado
+    - NORMALIZA para o formato TXT PADRÃO UNIVERSAL
+    - Extrai transações do TXT PADRÃO e gera OFX/CSV quando solicitado
     """
     if not output_dir:
         output_dir = os.path.join(os.path.dirname(arquivo_path), 'convertidos')
@@ -701,6 +1157,90 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
     origem_ext = os.path.splitext(arquivo_path)[1].lower()
     texto = ''
     txt_path = None
+    nome_base = os.path.splitext(os.path.basename(arquivo_path))[0]
+
+    # compute lightweight file properties for learning store
+    file_hash = None
+    file_size = None
+    page_count = None
+    try:
+        import hashlib
+        file_size = os.path.getsize(arquivo_path)
+        with open(arquivo_path, 'rb') as fh:
+            file_bytes = fh.read()
+            file_hash = hashlib.sha256(file_bytes).hexdigest()
+    except Exception:
+        file_hash = None
+        file_size = None
+
+    # page count quick probe (uses fitz if available)
+    try:
+        if HAS_FITZ:
+            import fitz
+            doc = fitz.open(arquivo_path)
+            page_count = doc.page_count
+            doc.close()
+    except Exception:
+        page_count = None
+
+    # If caller requested forced high-quality or to overwrite learning, skip cached TXT reuse
+    skip_cached_text = bool(force_quality or overwrite_learning)
+    try:
+        if overwrite_learning and file_hash:
+            try:
+                LearningStore.delete_by_file_hash(file_hash)
+            except Exception:
+                pass
+    except Exception:
+        pass
+    # If forcing quality, clear detection cache so bank detection runs anew
+    try:
+        if force_quality:
+            try:
+                _DETECTION_CACHE.clear()
+            except Exception:
+                pass
+    except Exception:
+        pass
+
+    # Try to reuse cached extracted text in the output_dir to avoid re-running OCR
+    try:
+        possível_txt_universal = os.path.join(output_dir, f"{nome_base}_texto_universal.txt")
+        possível_txt_fast = os.path.join(output_dir, f"{nome_base}.txt")
+        possível_txt_padrao = os.path.join(output_dir, f"{nome_base}_padrao.txt")
+        if not skip_cached_text:
+            if os.path.exists(possível_txt_universal):
+                with open(possível_txt_universal, 'r', encoding='utf-8', errors='replace') as tf:
+                    texto = tf.read()
+                txt_path = possível_txt_universal
+            elif os.path.exists(possível_txt_fast):
+                with open(possível_txt_fast, 'r', encoding='utf-8', errors='replace') as tf:
+                    texto = tf.read()
+                txt_path = possível_txt_fast
+            elif os.path.exists(possível_txt_padrao):
+                # padrao file contains normalized TXT; use it as source
+                with open(possível_txt_padrao, 'r', encoding='utf-8', errors='replace') as tf:
+                    texto = tf.read()
+                txt_path = possível_txt_padrao
+        else:
+            # remove/ignore any existing cached TXT/meta/ofx to force fresh extraction
+            try:
+                meta_path = os.path.join(output_dir, f"{nome_base}.meta.json")
+                ofx_path = os.path.join(output_dir, f"{nome_base}.ofx")
+                csv_path = os.path.join(output_dir, f"{nome_base}.csv")
+                for p in (possível_txt_universal, possível_txt_fast, possível_txt_padrao, meta_path, ofx_path, csv_path):
+                    if os.path.exists(p):
+                        try:
+                            os.remove(p)
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+            texto = ''
+            txt_path = None
+    except Exception:
+        texto = ''
+        txt_path = None
 
     if origem_ext == '.txt':
         try:
@@ -710,63 +1250,496 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
         except Exception as e:
             return None, f"Erro ao ler TXT original: {e}"
     else:
-        txt_path, erro = conversor_pipeline.convert_pdf_to_txt(arquivo_path, out_dir=output_dir, usar_ocr=usar_ocr, dpi=dpi)
+        # Fast-path: if PyMuPDF (fitz) is available, try extracting embedded text first
+        # Only run extraction pipeline if we don't already have cached text
+        if not txt_path and HAS_FITZ:
+            try:
+                import fitz
+                doc = fitz.open(arquivo_path)
+                pages_text = []
+                for p in doc:
+                    try:
+                        t = p.get_text('text')
+                        if t:
+                            pages_text.append(t)
+                    except Exception:
+                        continue
+                doc.close()
+                combined = "\n\n=== PAGE BREAK ===\n\n".join(pages_text).strip()
+                if combined and len(combined.strip()) >= 50:
+                    # save extracted text to output dir and use it
+                    txt_file_path = os.path.join(output_dir, f"{nome_base}.txt")
+                    try:
+                        with open(txt_file_path, 'w', encoding='utf-8', errors='replace') as tf:
+                            tf.write(combined)
+                        txt_path = txt_file_path
+                        texto = combined
+                    except Exception:
+                        txt_path = None
+                        texto = ''
+            except Exception:
+                # If fitz exists but extraction fails, fallback to pipeline
+                txt_path = None
+                texto = ''
+        # If no fast-path text and no cached text, try learning store recommendation then pipeline
         if not txt_path:
-            return None, erro
+            try:
+                rec = None
+                if not skip_cached_text:
+                    # Prefer exact match by file_hash when available to avoid reusing unrelated cached TXT
+                    if file_hash:
+                        try:
+                            rec = LearningStore.find_by_file_hash(file_hash)
+                        except Exception:
+                            rec = None
+                    # Fallback to size/page_count recommendation only if no exact hash match
+                    if not rec:
+                        try:
+                            rec = LearningStore.recommend_for(file_size or 0, page_count)
+                        except Exception:
+                            rec = None
+                else:
+                    rec = None
+            except Exception:
+                rec = None
 
+            if rec and rec.get('txt_path') and os.path.exists(rec.get('txt_path')):
+                try:
+                    with open(rec.get('txt_path'), 'r', encoding='utf-8', errors='replace') as tf:
+                        texto = tf.read()
+                        txt_path = rec.get('txt_path')
+                except Exception:
+                    txt_path = None
+
+            # apply recommended params if available
+            if not txt_path and rec:
+                try:
+                    usar_ocr = rec.get('usar_ocr', usar_ocr)
+                    dpi = rec.get('dpi', dpi) or dpi
+                except Exception:
+                    pass
+
+            if not txt_path:
+                # quick initial conversion attempt: fail fast to avoid long waits in web requests
+                # if user requested forced high-quality, prefer larger initial dpi and longer passes
+                if force_quality:
+                    txt_path, erro = conversor_pipeline.convert_pdf_to_txt(arquivo_path, out_dir=output_dir, usar_ocr=True, dpi=max(dpi, 600))
+                else:
+                    txt_path, erro = conversor_pipeline.convert_pdf_to_txt(arquivo_path, out_dir=output_dir, usar_ocr=usar_ocr, dpi=dpi)
+                if not txt_path:
+                    return None, erro
+
+            try:
+                with open(txt_path, 'r', encoding='utf-8', errors='replace') as f:
+                    texto = f.read()
+            except Exception as e:
+                return None, f"Erro ao ler TXT gerado: {e}"
+
+            # If extracted text looks insufficient, retry with increasing DPI and OCR toggles
+            MIN_TEXT_CHARS = 80
+            if not texto or len(texto.strip()) < MIN_TEXT_CHARS:
+                tried = set()
+                # choose dpi candidates depending on force_quality
+                if force_quality:
+                    dpi_candidates = [600, 800, 1000, 1200]
+                else:
+                    dpi_candidates = list(range(100, 1201, 100))
+                ocr_modes = [usar_ocr]
+                if not usar_ocr:
+                    ocr_modes.append(True)
+                else:
+                    ocr_modes.append(False)
+
+                for use_ocr_try in ocr_modes:
+                    for dpi_try in dpi_candidates:
+                        key = (use_ocr_try, dpi_try)
+                        if key in tried:
+                            continue
+                        tried.add(key)
+                        try:
+                            txt_path_try, erro_try = conversor_pipeline.convert_pdf_to_txt(
+                                arquivo_path, out_dir=output_dir, usar_ocr=use_ocr_try, dpi=dpi_try)
+                        except Exception:
+                            txt_path_try, erro_try = None, 'erro na tentativa de conversão'
+
+                        if not txt_path_try:
+                            continue
+
+                        try:
+                            with open(txt_path_try, 'r', encoding='utf-8', errors='replace') as ftry:
+                                texto_try = ftry.read()
+                        except Exception:
+                            texto_try = ''
+
+                        # Accept if extracted text is reasonably large
+                        if texto_try and len(texto_try.strip()) >= MIN_TEXT_CHARS:
+                            txt_path = txt_path_try
+                            texto = texto_try
+                            # update chosen dpi and usar_ocr for downstream logic
+                            dpi = dpi_try
+                            usar_ocr = use_ocr_try
+                            break
+                    if texto and len(texto.strip()) >= MIN_TEXT_CHARS:
+                        break
+
+    # Detectar banco automaticamente usando os parsers disponíveis
+    def detect_bank_from_text(texto: str) -> str:
         try:
-            with open(txt_path, 'r', encoding='utf-8', errors='replace') as f:
-                texto = f.read()
-        except Exception as e:
-            return None, f"Erro ao ler TXT gerado: {e}"
+            # Use a stable hash of the text to memoize detection results
+            try:
+                key = hashlib.sha256((texto or '').encode('utf-8')).hexdigest()
+            except Exception:
+                key = None
 
-    banco_detectado = 'CAIXA'
-    texto_limpo = ConversorService._limpar_texto_corrompido_hibrido(texto, banco_detectado)
-    texto_limpo = ConversorService._corrigir_espacos_e_caracteres(texto_limpo)
+            if key is not None and key in _DETECTION_CACHE:
+                return _DETECTION_CACHE[key]
+
+            for inst in _load_parser_instances():
+                try:
+                    if inst.detectar_banco(texto):
+                        banco_nome = inst.banco_nome
+                        if key is not None:
+                            _DETECTION_CACHE[key] = banco_nome
+                            # keep cache size bounded
+                            if len(_DETECTION_CACHE) > _DETECTION_CACHE_MAX:
+                                _DETECTION_CACHE.popitem(last=False)
+                        return banco_nome
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return 'UNIVERSAL'
+
+    def extract_with_parser(texto: str, banco_nome: str) -> List[Dict]:
+        """Tenta extrair transações usando o parser específico do banco detectado."""
+        try:
+            # Prefer the parser matching banco_nome first
+            best = []
+            for inst in _load_parser_instances():
+                try:
+                    if getattr(inst, 'banco_nome', '').upper() == (banco_nome or '').upper():
+                        try:
+                            res = inst.extrair_transacoes(texto) or []
+                            if res:
+                                return res
+                            else:
+                                best = res
+                        except Exception:
+                            continue
+                except Exception:
+                    continue
+
+            # Fallback: try all parsers and choose the one with most transactions
+            best_count = len(best)
+            best_res = best
+            for inst in _load_parser_instances():
+                try:
+                    res = inst.extrair_transacoes(texto) or []
+                    if len(res) > best_count:
+                        best_count = len(res)
+                        best_res = res
+                except Exception:
+                    continue
+            return best_res
+        except Exception:
+            pass
+        return []
+
+        def heuristic_extract_transactions(texto: str) -> List[Dict]:
+            """Heuristic extraction: scan lines for date + amount patterns and build transactions.
+            This augments parser results when parsers miss descriptions or transactions.
+            """
+            res = []
+            try:
+                lines = (texto or '').splitlines()
+                for i, line in enumerate(lines):
+                    if not line or len(line.strip()) < 6:
+                        continue
+                    # find date formats dd/mm/YYYY or YYYYMMDD
+                    mdate = re.search(r'(\d{2}/\d{2}/\d{4})', line) or re.search(r'(\d{4}\d{2}\d{2})', line)
+                    mamt = re.search(r'(-?\d{1,3}(?:[\.\d]{0,}\d)?(?:,\d{2}))', line)
+                    if mdate and mamt:
+                        date_raw = mdate.group(1)
+                        amt_raw = mamt.group(1)
+                        # build description from surrounding lines
+                        desc_parts = []
+                        if i > 0:
+                            prev = lines[i-1].strip()
+                            if prev and not re.search(r'\d{2}/\d{2}/\d{4}', prev):
+                                desc_parts.append(prev)
+                        # remove date and amount from current line
+                        cur = line.replace(date_raw, '').replace(amt_raw, '').strip()
+                        if cur:
+                            desc_parts.append(cur)
+                        if i + 1 < len(lines):
+                            nxt = lines[i+1].strip()
+                            if nxt and not re.search(r'\d{2}/\d{2}/\d{4}', nxt):
+                                desc_parts.append(nxt)
+                        descricao = ' '.join(desc_parts).strip()
+                        # normalize amount to float
+                        try:
+                            valor = float(amt_raw.replace('.', '').replace(',', '.'))
+                        except Exception:
+                            try:
+                                valor = float(re.sub(r'[^0-9\-,]', '', amt_raw).replace(',', '.'))
+                            except Exception:
+                                valor = None
+                        if valor is None:
+                            continue
+                        # normalize date to YYYYMMDDHHMMSS
+                        parsed_date = None
+                        try:
+                            if re.match(r'^\d{8}$', date_raw):
+                                parsed_date = date_raw + '000000'
+                            else:
+                                m = re.match(r'^(\d{2})/(\d{2})/(\d{4})$', date_raw)
+                                if m:
+                                    d, mo, y = m.groups()
+                                    parsed_date = f"{y}{mo}{d}000000"
+                        except Exception:
+                            parsed_date = None
+                        if not parsed_date:
+                            continue
+                        tipo = 'DEBIT' if valor < 0 else 'CREDIT'
+                        trans = {
+                            'data': parsed_date,
+                            'valor': abs(float(valor)),
+                            'tipo': tipo,
+                            'descricao': descricao or '',
+                            'documento': '',
+                            'fitid': ''
+                        }
+                        res.append(trans)
+            except Exception:
+                pass
+            return res
+
+    banco_detectado = banco_override or detect_bank_from_text(texto)
+
+    # --- NOVO: Gerar o TXT Padrão Universal ---
+    txt_padrao_content = ConversorService._normalizar_para_txt_padrao(texto, banco_detectado)
 
     nome_base = os.path.splitext(os.path.basename(arquivo_path))[0]
-    txt_universal_path = os.path.join(output_dir, f"{nome_base}_texto_universal.txt")
+    txt_padrao_path = os.path.join(output_dir, f"{nome_base}_padrao.txt")
     try:
-        ConversorService._salvar_txt_universal(texto, txt_universal_path, banco_detectado)
+        with open(txt_padrao_path, 'w', encoding='utf-8') as f:
+            f.write(txt_padrao_content)
+    except Exception as e:
+        print(f"Aviso: Não foi possível salvar TXT padrão: {e}")
+
+    # Se o formato solicitado for 'txt', retornamos o TXT Padrão
+    if formato_destino == 'txt':
+        return txt_padrao_path, None
+
+    # --- Tentar extrair transações com parser específico ---
+    transacoes = extract_with_parser(texto, banco_detectado)
+
+    # Record learning data (best-effort)
+    try:
+        trans_count = len(transacoes) if transacoes else 0
+    except Exception:
+        trans_count = 0
+
+        try:
+            # If requested, remove existing learning entries for this file_hash so we overwrite with new data
+            if overwrite_learning and file_hash:
+                try:
+                    LearningStore.delete_by_file_hash(file_hash)
+                except Exception:
+                    pass
+
+            LearningStore.record({
+                'file_hash': file_hash,
+                'file_size': file_size,
+                'page_count': page_count,
+                'method': 'auto',
+                'dpi': dpi,
+                'usar_ocr': usar_ocr,
+                'txt_path': txt_path or txt_padrao_path,
+                'text_len': len(texto) if texto else 0,
+                'trans_count': trans_count,
+                'banco': banco_detectado,
+                'parser': banco_detectado,
+                'success': True if texto and len(texto.strip()) > 0 else False
+            })
+        except Exception:
+            pass
+
+    # Helper: check if any parser exists for a banco name
+    def parser_exists(banco_nome: str) -> bool:
+        try:
+            for inst in _load_parser_instances():
+                try:
+                    if getattr(inst, 'banco_nome', '').upper() == (banco_nome or '').upper():
+                        return True
+                except Exception:
+                    continue
+        except Exception:
+            pass
+        return False
+
+    # --- If parser produced none, try to build transacoes from TXT padrão ---
+    if not transacoes:
+        for linha in txt_padrao_content.split('\n'):
+            if not linha.strip() or linha.count(';') != 5:
+                continue
+            partes = linha.split(';')
+            try:
+                valor_float = float(partes[1])
+                # O tipo já vem correto do TXT padrão
+                if partes[2].upper() == 'DEBITO':
+                    tipo_ofx = 'DEBIT'
+                else:
+                    tipo_ofx = 'CREDIT'
+                transacao = {
+                    'data': partes[0],
+                    'valor': valor_float,  # Já vem com sinal correto
+                    'tipo': tipo_ofx,
+                    'descricao': partes[3],
+                    'documento': partes[4],
+                    'saldo': partes[5]
+                }
+                # Gerar FITID único baseado nos dados
+                fitid = f"{transacao['data']}{abs(int(transacao['valor']*100)):08d}"
+                if transacao['documento']:
+                    fitid += transacao['documento']
+                transacao['fitid'] = fitid[:30]
+                transacoes.append(transacao)
+            except (ValueError, IndexError) as e:
+                print(f"Aviso: Ignorando linha mal formatada no TXT padrão: {linha} - Erro: {e}")
+                continue
+
+    # Heuristic augmentation: if transactions are missing or lack descriptions, try heuristics
+    try:
+        need_aug = False
+        heur_added = 0
+        heur_filled_desc = 0
+        if not transacoes:
+            need_aug = True
+        else:
+            # if many transactions have empty descrição, consider augmentation
+            empty_desc = sum(1 for t in transacoes if not (t.get('descricao')))
+            if empty_desc / max(1, len(transacoes)) > 0.3:
+                need_aug = True
+        if need_aug:
+            heur = heuristic_extract_transactions(texto)
+            # merge heuristics without duplicating existing by date+valor
+            for h in heur:
+                dup = False
+                for exi in transacoes:
+                    try:
+                        if str(exi.get('data')) == str(h.get('data')) and abs(float(exi.get('valor') or 0) - float(h.get('valor') or 0)) < 0.01:
+                            # if existing lacks descricao but heuristic provides, fill it
+                            if (not exi.get('descricao')) and h.get('descricao'):
+                                exi['descricao'] = h.get('descricao')
+                                heur_filled_desc += 1
+                            dup = True
+                            break
+                    except Exception:
+                        continue
+                if not dup:
+                    transacoes.append(h)
+                    heur_added += 1
     except Exception:
         pass
 
-    if formato_destino == 'txt':
-        return txt_universal_path if os.path.exists(txt_universal_path) else txt_path, None
-
-    transacoes = ConversorService.extrair_transacoes_avancado(texto_limpo)
-
+    # --- Gerar CSV e OFX (código existente adaptado) ---
     csv_path = os.path.join(output_dir, f"{nome_base}.csv")
     if transacoes:
         ConversorService._salvar_como_csv(transacoes, csv_path)
 
-    if formato_destino == 'ofx':
-        if not transacoes:
-            return (txt_universal_path if os.path.exists(txt_universal_path) else txt_path), "Nenhuma transação encontrada para gerar OFX"
-
-        banco_id_map = {
-            'CAIXA': '104', 'BRADESCO': '237', 'ITAU': '341', 'SANTANDER': '033', 'BRASIL': '001', 'STONE': '165'
-        }
-        banco_id = banco_id_map.get(banco_detectado, '104')
-        ofx_path = os.path.join(output_dir, f"{nome_base}.ofx")
-        ok = ConversorService.gerar_ofx(transacoes, ofx_path, banco_id=banco_id)
-        if ok:
-            return ofx_path, None
-        else:
-            return (csv_path if os.path.exists(csv_path) else txt_universal_path), "Falha ao gerar OFX"
-
+    # If CSV requested, return CSV path
     if formato_destino == 'csv':
         if os.path.exists(csv_path):
             return csv_path, None
         else:
-            return None, "CSV não gerado"
+            return None, 'Erro ao gerar CSV'
 
-    return None, f"Formato {formato_destino} não suportado"
+    # Apply heuristic normalization to fix wrong credit/debit classification from parsers
+    try:
+        transacoes = ConversorService._normalize_transacoes_heuristic(transacoes)
+    except Exception:
+        pass
 
+    if formato_destino == 'ofx':
+        banco_id_map = {
+            'CAIXA': '104', 'BRADESCO': '237', 'ITAU': '341', 'SANTANDER': '033', 'BRASIL': '001', 'STONE': '165',
+            # full names / aliases
+            'BANCO DO BRASIL': '001',
+            'BANCO DO NORDESTE': '004',
+            'BNB': '004'
+        }
 
-def get_formatos_destino(formato_origem: str) -> List[str]:
-    """Retorna lista de formatos disponíveis para conversão."""
-    return ConversorService.get_formatos_destino(formato_origem)
+        # If no transactions were detected, decide next step:
+        if not transacoes:
+            # check if TXT padrão produced any transactions
+            has_txt_transactions = any(1 for l in txt_padrao_content.split('\n') if l.strip() and l.count(';') == 5)
+            parser_available = parser_exists(banco_detectado)
+
+            # If there's no parser implemented for this banco and TXT has no transactions,
+            # send the original PDF to support for parser development.
+            if (not parser_available) and (not has_txt_transactions):
+                try:
+                    import shutil
+                    support_dir = os.path.join(output_dir, 'support_queue')
+                    os.makedirs(support_dir, exist_ok=True)
+                    support_path = os.path.join(support_dir, os.path.basename(arquivo_path))
+                    shutil.copy(arquivo_path, support_path)
+                except Exception:
+                    support_path = os.path.join(output_dir, os.path.basename(arquivo_path))
+                return None, f"SUPPORT:{support_path}"
+
+            # If TXT padrão has transactions, use them (already collected into transacoes list)
+            # If parser exists but returned empty, fall back to generating OFX from TXT padrão if available
+            if not transacoes and has_txt_transactions:
+                # transacoes was filled above from TXT padrão parsing
+                pass
+
+        banco_id = banco_id_map.get(banco_detectado, '104')
+        ofx_path = os.path.join(output_dir, f"{nome_base}.ofx")
+        ok = ConversorService.gerar_ofx(transacoes, ofx_path, banco_id=banco_id)
+        try:
+            LearningStore.record({
+                'file_hash': file_hash,
+                'file_size': file_size,
+                'page_count': page_count,
+                'method': 'auto',
+                'dpi': dpi,
+                'usar_ocr': usar_ocr,
+                'txt_path': txt_path or txt_padrao_path,
+                'text_len': len(texto) if texto else 0,
+                'trans_count': trans_count,
+                'banco': banco_detectado,
+                'parser': banco_detectado,
+                'success': True if texto and len(texto.strip()) > 0 else False,
+                'heuristic_used': True if (('heur_added' in locals() and heur_added > 0) or ('heur_filled_desc' in locals() and heur_filled_desc > 0)) else False
+            })
+        except Exception:
+            pass
+
+        # Write metadata about heuristic augmentation to output_dir for frontend visibility
+        try:
+            meta = {
+                'heuristic_used': True if (('heur_added' in locals() and heur_added > 0) or ('heur_filled_desc' in locals() and heur_filled_desc > 0)) else False,
+                'heuristic_added': int(heur_added) if 'heur_added' in locals() else 0,
+                'heuristic_filled_desc': int(heur_filled_desc) if 'heur_filled_desc' in locals() else 0,
+                'trans_count': trans_count,
+                'banco_detectado': banco_detectado,
+                'txt_path': txt_path or txt_padrao_path
+            }
+            try:
+                meta_path = os.path.join(output_dir, f"{nome_base}.meta.json")
+                with open(meta_path, 'w', encoding='utf-8') as mf:
+                    json.dump(meta, mf)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        # Return result for OFX
+        if ok and os.path.exists(ofx_path):
+            return ofx_path, None
+        else:
+            return None, 'Erro ao gerar OFX'
 
 
 def processar_pasta(pasta_path: str, formato_destino: str = 'ofx', 
@@ -841,3 +1814,9 @@ EXEMPLOS:
             print(f"\n✅ Sucesso! Arquivo gerado: {resultado}")
         else:
             print(f"\n❌ Erro: {erro}")
+
+
+# Module-level wrapper for backward compatibility with views importing this symbol
+def get_formatos_destino(formato_origem: str) -> List[str]:
+    """Return destination formats for a given origin format."""
+    return ConversorService.get_formatos_destino(formato_origem)
