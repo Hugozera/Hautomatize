@@ -334,15 +334,7 @@ body.dark-mode .sidebar {
     border-right: 1px solid #333;
 }
 
-body.dark-mode input,
-body.dark-mode select,
-body.dark-mode textarea,
-body.dark-mode .form-control,
-body.dark-mode .form-select {
-    background: #2b2b2b;
-    color: #e0e0e0;
-    border-color: #444;
-}
+/* Removido para permitir override específico do formulário de pessoa */
 
 body.dark-mode .form-control:focus,
 body.dark-mode .form-select:focus {

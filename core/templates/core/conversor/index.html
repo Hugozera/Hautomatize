@@ -29,15 +29,15 @@
             <!-- Card de Upload -->
             <div class="card mb-4 animate__animated animate__fadeInUp">
                 <div class="card-header bg-transparent d-flex align-items-center">
-                    <i class="bi bi-cloud-upload fs-4 me-2" style="color: var(--verde-deep);"></i>
+                    <i class="bi bi-cloud-upload fs-4 me-2 icon-accent-verde"></i>
                     <span class="fw-semibold">1. Selecione o arquivo</span>
                 </div>
                 <div class="card-body">
                     <div class="upload-area" id="uploadArea" tabindex="0" role="button" aria-label="Área de upload - pressione Enter para selecionar arquivo">
-                        <i class="bi bi-cloud-arrow-up" style="font-size: 4rem; color: var(--verde-deep);"></i>
+                        <i class="bi bi-cloud-arrow-up cloud-icon-large icon-accent-verde"></i>
                         <h5 class="mt-3">Arraste arquivos ou clique para selecionar</h5>
                         <p class="text-muted">Suporta PDF, OFX, imagens, documentos e mais</p>
-                        <input type="file" id="fileInput" style="display: none;" multiple>
+                        <input type="file" id="fileInput" class="d-none" multiple>
                         <button class="btn btn-success mt-2" id="btnSelect">
                             <i class="bi bi-folder2-open me-2"></i>Selecionar Arquivo(s)
                         </button>
@@ -64,7 +64,7 @@
             <!-- Card de Configuração -->
             <div class="card mb-4 animate__animated animate__fadeInUp">
                 <div class="card-header bg-transparent d-flex align-items-center">
-                    <i class="bi bi-gear fs-4 me-2" style="color: var(--amarelo-deep);"></i>
+                    <i class="bi bi-gear fs-4 me-2 icon-accent-amarelo"></i>
                     <span class="fw-semibold">2. Configurar conversão</span>
                 </div>
                 <div class="card-body">
@@ -96,37 +96,37 @@
             <!-- Card de Progresso -->
             <div class="card mb-4 animate__animated animate__fadeInUp d-none" id="progressoCard">
                 <div class="card-header bg-transparent d-flex align-items-center">
-                    <i class="bi bi-hourglass-split fs-4 me-2" style="color: var(--verde-deep);"></i>
+                    <i class="bi bi-hourglass-split fs-4 me-2 icon-accent-verde"></i>
                     <span class="fw-semibold">3. Conversão em andamento</span>
                 </div>
                 <div class="card-body text-center">
-                    <div class="spinner-border text-success mb-3" style="width: 3rem; height: 3rem;" role="status">
+                    <div class="spinner-border text-success mb-3 spinner-large" role="status">
                         <span class="visually-hidden">Carregando...</span>
                     </div>
                     <h5 id="statusMensagem">Processando arquivo...</h5>
-                    <div class="progress mt-3" style="height: 25px;">
-                        <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
-                             role="progressbar" style="width: 0%">0%</div>
+                    <div class="progress mt-3 progress-tall">
+                            <div id="progressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+                                role="progressbar" style="width: 0%">0%</div>
                     </div>
                     <div id="resultadoArea" class="mt-4 d-none">
                         <div class="alert alert-success">
                             <i class="bi bi-check-circle me-2"></i>
                             Conversão concluída com sucesso!
                         </div>
-                        <button id="btnReprocessarQualidade" class="btn btn-warning mb-3" style="display:none;">Reprocessar (qualidade superior)</button>
+                        <button id="btnReprocessarQualidade" class="btn btn-warning mb-3 hidden-inline">Reprocessar (qualidade superior)</button>
                         <a id="downloadLink" href="#" class="btn btn-success btn-lg" download>
                             <i class="bi bi-download me-2"></i>Baixar Arquivo Convertido
                         </a>
-                        <button id="btnVerTxt" class="btn btn-outline-secondary btn-lg ms-2" style="display:none;">
+                        <button id="btnVerTxt" class="btn btn-outline-secondary btn-lg ms-2 hidden-inline">
                             <i class="bi bi-file-earmark-text me-2"></i>Ver Texto Extraído
                         </button>
-                        <a id="btnVerOfx" class="btn btn-outline-info btn-lg ms-2" style="display:none;" target="_blank">
+                        <a id="btnVerOfx" class="btn btn-outline-info btn-lg ms-2 hidden-inline" target="_blank">
                             <i class="bi bi-file-earmark-medical me-2"></i>Ver OFX
                         </a>
-                        <button id="btnNovoArquivo" class="btn btn-outline-primary btn-lg ms-2" style="display:inline-block;">
+                        <button id="btnNovoArquivo" class="btn btn-outline-primary btn-lg ms-2 visible-inline">
                             <i class="bi bi-plus-circle me-2"></i>Converter novo arquivo
                         </button>
-                        <pre id="txtExtraido" class="mt-3 p-3 bg-light border" style="display:none; max-height:300px; overflow:auto; white-space:pre-wrap;"></pre>
+                        <pre id="txtExtraido" class="mt-3 p-3 bg-light border pre-extracted"></pre>
                     </div>
                 </div>
             </div>
@@ -174,6 +174,11 @@
                     <div class="alert alert-info py-2">
                         <i class="bi bi-info-circle me-2"></i>
                         Basta selecionar um PDF e escolher OFX como destino.
+                    </div>
+                    <div class="mt-2">
+                        <a href="{% url 'create_ofx_from_text' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="bi bi-clipboard me-1"></i>Colar texto e gerar OFX
+                        </a>
                     </div>
                 </div>
             </div>
@@ -226,6 +231,21 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
 <script>
 // Variáveis globais
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
 let arquivoSelecionado = null;
 let conversaoId = null;
 let arquivosOriginais = [];
@@ -333,7 +353,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-CSRFToken': getCookie('csrftoken'),
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: body.toString()
@@ -553,7 +573,7 @@ function iniciarConversao() {
         method: 'POST',
         body: formData,
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(async response => {
@@ -615,7 +635,7 @@ function verificarStatus() {
     fetch(`/conversor/processar/${conversaoId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(async response => {
@@ -710,7 +730,7 @@ function verificarStatus() {
                 fetch(`/conversor/processar/${conversaoId}/`, {
                     method: 'POST',
                     headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
+                        'X-CSRFToken': getCookie('csrftoken'),
                         'Content-Type': 'application/x-www-form-urlencoded'
                     },
                     body: body.toString()
@@ -775,7 +795,7 @@ function verificarStatus() {
                     fetch(`/conversor/processar/${conversaoId}/`, {
                         method: 'POST',
                         headers: {
-                            'X-CSRFToken': '{{ csrf_token }}',
+                            'X-CSRFToken': getCookie('csrftoken'),
                             'Content-Type': 'application/x-www-form-urlencoded'
                         },
                         body: body.toString()
@@ -861,7 +881,7 @@ function verificarStatus() {
     fetch(`/conversor/processar/${conversaoId}/`, {
         method: 'POST',
         headers: {
-            'X-CSRFToken': '{{ csrf_token }}'
+            'X-CSRFToken': getCookie('csrftoken')
         }
     })
     .then(response => {
@@ -968,29 +988,5 @@ function resetConverterUI() {
 }
 </script>
 
-<style>
-.upload-area {
-    border: 3px dashed #ddd;
-    border-radius: 20px;
-    padding: 40px;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.3s;
-}
-.upload-area:hover {
-    border-color: var(--verde-deep);
-    background-color: rgba(76, 175, 80, 0.05);
-}
-#painelArquivos {
-    max-height: 200px;
-    overflow-y: auto;
-    padding: 6px 0;
-    background: transparent; /* use surface colors from global CSS */
-    border-radius: 8px;
-}
-#painelArquivos ul {
-    margin-bottom: 0;
-    padding-left: 20px;
-}
-</style>
+<!-- Styles moved to static/css/conversor.css -->
 {% endblock %}

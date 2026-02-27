@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'core/css/empresa.css' %}">
 <div class="container py-4">
     <!-- Cabeçalho -->
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
@@ -36,7 +37,7 @@
     <!-- Card do Formulário -->
     <div class="card animate__animated animate__fadeInUp">
         <div class="card-header bg-transparent d-flex align-items-center">
-            <i class="bi bi-building fs-4 me-2" style="color: var(--verde-deep);"></i>
+            <i class="bi bi-building fs-4 me-2 icon-empresa"></i>
             <span class="fw-semibold">Informações da Empresa</span>
         </div>
         
@@ -288,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </a>
 
                     <!-- Botão para salvar apenas o certificado (exibe quando certificado extraído ou já configurado) -->
-                    <button type="submit" name="salvar_certificado" id="btnSalvarCertificado" class="btn btn-outline-primary" style="{% if form.instance.certificado_thumbprint %}display:inline-block{% else %}display:none{% endif %};">
+                    <button type="submit" name="salvar_certificado" id="btnSalvarCertificado" class="btn btn-outline-primary {% if form.instance.certificado_thumbprint %}visible-inline{% else %}hidden-inline{% endif %}">
                         <i class="bi bi-download me-2"></i>Salvar Certificado
                     </button>
 

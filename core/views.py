@@ -382,7 +382,7 @@ def consultar_cnpj_receita(cnpj):
 # ========== VIEWS DE PESSOAS (USUÁRIOS) ==========
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
+@user_passes_test(lambda u: bool(u and not u.is_anonymous))
 def pessoa_list(request):
     """Lista todas as pessoas (apenas admin)"""
     q = request.GET.get('q', '').strip()
@@ -415,6 +415,7 @@ def _can_manage_people(u):
 
 
 @login_required
+@user_passes_test(lambda u: bool(u and not u.is_anonymous))
 def pessoa_create(request):
     """Cria uma nova pessoa (admin)"""
     if request.method == 'POST':
@@ -434,8 +435,7 @@ def pessoa_create(request):
     return render(request, 'core/pessoa_form.html', {'form': form})
 
 @login_required
-@user_passes_test(_can_manage_people)
-@login_required
+@user_passes_test(lambda u: bool(u and not u.is_anonymous))
 def pessoa_edit(request, pk):
     """Edita uma pessoa existente (admin)"""
     pessoa = get_object_or_404(Pessoa, pk=pk)
