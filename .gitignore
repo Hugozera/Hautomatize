@@ -84,5 +84,7 @@ media/conversor/processing/
 media/conversor/convertidos/
 media/conversor/originais/
 
+
+db_prod.sqlite3
 # Docker compose local overrides
 docker-compose.override.yml

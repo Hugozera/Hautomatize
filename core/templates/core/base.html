@@ -20,6 +20,7 @@
     <!-- Nosso CSS personalizado -->
     {% load static %}
     <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/conversor.css' %}">
 </head>
 <body>
     <a href="#mainContent" class="skip-to-content">Ir para o conteúdo</a>
@@ -262,39 +263,6 @@
 </body>
 </html>
 
-            // Close sidebar when tapping main content on small screens
-            const mainContent = document.querySelector('.main-content');
-            if (mainContent) {
-                mainContent.addEventListener('click', function() {
-                    if (window.innerWidth < 992) {
-                        const sidebar = document.getElementById('sidebar');
-                        if (sidebar && sidebar.classList.contains('sidebar-expanded')) {
-                            sidebar.classList.remove('sidebar-expanded');
-                        }
-                    }
-                });
-            }
-
-            // Inject data-label attributes into table cells for mobile stacked view
-            function applyTableLabels() {
-                if (window.innerWidth > 520) return;
-                document.querySelectorAll('table').forEach(table => {
-                    const headers = Array.from(table.querySelectorAll('thead th')).map(h => h.textContent.trim());
-                    if (!headers.length) return;
-                    table.querySelectorAll('tbody tr').forEach(row => {
-                        Array.from(row.children).forEach((cell, idx) => {
-                            if (!cell.hasAttribute('data-label')) {
-                                const label = headers[idx] || '';
-                                cell.setAttribute('data-label', label);
-                            }
-                        });
-                    });
-                });
-            }
-
-            applyTableLabels();
-            window.addEventListener('resize', function(){ applyTableLabels(); });
-        });
     </script>
     
     {% block extra_js %}{% endblock %}

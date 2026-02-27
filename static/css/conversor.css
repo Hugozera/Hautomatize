@@ -1,0 +1,111 @@
+/* Centralized styles for Conversor pages */
+:root{
+  --verde-deep:#2c8a4f;
+  --amarelo-deep:#d4a017;
+}
+
+/* Upload area */
+.upload-area {
+  border: 3px dashed #ddd;
+  border-radius: 20px;
+  padding: 40px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+.upload-area:hover { border-color: var(--verde-deep); background-color: rgba(76,175,80,0.05); }
+
+/* Panel files */
+#painelArquivos { max-height: 200px; overflow-y:auto; padding:6px 0; border-radius:8px; }
+
+/* Conversor layout helpers */
+.conversor-flex { display:flex; gap:16px; }
+.flex-1 { flex:1; }
+.pre-wrap { white-space:pre-wrap; }
+
+/* OFX preview */
+#ofxPreview { border:1px solid #ccc; padding:8px; height:480px; overflow:auto; background:#f8f8f8; white-space:pre-wrap; }
+
+/* Transaction table inputs */
+#transTable input { width:100%; }
+
+/* Monospace textarea */
+.monospace-text { font-family: monospace; width:100%; }
+
+/* Icon accents */
+.icon-accent-verde { color: var(--verde-deep) !important; }
+.icon-accent-amarelo { color: var(--amarelo-deep) !important; }
+
+/* Spinner larger */
+.spinner-large { width: 3rem; height: 3rem; }
+
+.cloud-icon-large { font-size: 4rem; }
+
+/* Taller progress bar */
+.progress-tall { height: 25px; }
+
+/* helpers for toggling display (JS-friendly) */
+.hidden-inline { display: none; }
+.visible-inline { display: inline-block; }
+
+/* extracted text pre */
+.pre-extracted { max-height:300px; overflow:auto; white-space:pre-wrap; display:none; }
+
+/* Buttons */
+.btn-small { padding:.25rem .5rem; font-size:.875rem; }
+
+/* Responsive adjustments */
+@media (max-width: 768px){
+  .conversor-flex { flex-direction:column; }
+  #ofxPreview { height:300px; }
+}
+
+/* Modern visual improvements */
+html,body{ -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+body { background: #f6f8fa; }
+.card { border-radius: 12px; box-shadow: 0 8px 24px rgba(15,23,42,0.06); }
+.btn { border-radius: 8px; }
+.table { background: white; border-radius:8px; overflow:hidden; }
+.badge { border-radius: 6px; }
+
+/* Small utility spacing */
+.gap-2 { gap: .5rem; }
+.mt-2 { margin-top: .5rem !important; }
+
+/* Improve table row hover */
+.table tbody tr:hover { background: rgba(0,0,0,0.02); }
+
+/* Avatar */
+.avatar-sm { width:32px; height:32px; border-radius:50%; object-fit:cover; display:inline-block; vertical-align:middle; }
+
+/* Compact table */
+.table--compact td, .table--compact th { padding: .6rem .75rem; }
+
+/* Empty state */
+.empty-state-icon { font-size:3rem; display:block; margin-bottom:1rem; color: rgba(44,138,79,0.9); }
+
+/* Modal tweaks for user form */
+.modal-content { border-radius:12px; }
+.modal-header .modal-title i { font-size:1.2rem; }
+/* Empresa icon specific */
+.icon-empresa { color: var(--verde-deep) !important; }
+
+/* Avatar preview & drag-drop */
+.avatar-drop { border: 2px dashed #e9ecef; border-radius: 12px; padding: 12px; text-align: center; background: #fff; cursor: pointer; }
+.avatar-drop.drag-over { border-color: var(--verde-deep); background: rgba(44,138,79,0.03); }
+.avatar-preview { width: 128px; height:128px; border-radius: 12px; object-fit:cover; display:block; margin: 0 auto 8px; }
+.avatar-hint { font-size: .9rem; color: #666; }
+
+/* Password strength meter */
+.pw-meter { height: 8px; background: #e9ecef; border-radius: 6px; overflow:hidden; }
+.pw-meter > .pw-fill { height:100%; width:0%; background: linear-gradient(90deg,#ff6b6b,#ffd166); transition: width .2s ease; }
+.pw-text { font-size: .9rem; margin-top: .4rem; }
+
+/* Small helpers */
+.hidden-inline { display:none; }
+
+/* Profile page tweaks */
+.profile-container { max-width: 900px; margin: 0 auto; }
+.avatar-lg { width:120px; height:120px; border-radius:50%; object-fit:cover; display:inline-block; }
+.avatar-placeholder { width:120px; height:120px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
+

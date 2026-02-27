@@ -1,84 +1,82 @@
 {% extends 'core/base.html' %}
+{% load static %}
 {% load crispy_forms_tags %}
 {% load static %}
 
-{% block content %}{% endblock %}
-
-{% block extra_modals %}
-<!-- Modal de Cadastro de Usuário -->
-<div class="modal fade container-user-form" id="modalCadastroUsuario" tabindex="-1" aria-labelledby="modalCadastroUsuarioLabel" aria-modal="true">
-    <div class="modal-dialog modal-xl modal-dialog-centered">
-        <div class="modal-content animate__animated animate__fadeInUp">
-            <div class="modal-header bg-success bg-opacity-10 border-0">
-                <h5 class="modal-title" id="modalCadastroUsuarioLabel">
-                    {% if form.instance.pk %}
-                        <i class="bi bi-pencil-square text-success me-2"></i>Editar Usuário
-                    {% else %}
-                        <i class="bi bi-plus-circle text-success me-2"></i>Novo Usuário
-                    {% endif %}
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar" onclick="window.location.href='{% url 'pessoa_list' %}'"></button>
-            </div>
+{% block content %}
+<link rel="stylesheet" href="{% static 'core/css/pessoa.css' %}">
+<div class="container pessoa-form-container py-4">
+    <div class="pessoa-form-card card animate__animated animate__fadeInUp">
+        <div class="card-header">
+            {% if form.instance.pk %}
+                <i class="bi bi-pencil-square text-success me-2"></i>Editar Usuário
+            {% else %}
+                <i class="bi bi-plus-circle text-success me-2"></i>Novo Usuário
+            {% endif %}
+        </div>
+        <div class="card-body">
             <form method="post" enctype="multipart/form-data" class="needs-validation" novalidate>
-                <div class="modal-body">
-                    {% csrf_token %}
-                    {{ form.non_field_errors }}
-                    <div class="row g-4">
-                        <div class="col-lg-7">
-                            <div class="row g-3">
-                                <div class="col-md-6">{{ form.username|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.email|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.first_name|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.last_name|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.cpf|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.telefone|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.foto|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.ativo|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.password|as_crispy_field }}</div>
-                                <div class="col-md-6">{{ form.password_confirm|as_crispy_field }}</div>
-                            </div>
-                        </div>
-                        <div class="col-lg-5">
-                            <div class="card shadow-sm border-0 mb-3">
-                                <div class="card-header bg-light border-bottom-0 pb-2">
-                                    <i class="bi bi-people-fill me-2 text-primary"></i>
-                                    <span class="fw-semibold">Papéis (roles)</span>
-                                </div>
-                                <div class="card-body pt-2 pb-2">
-                                    {{ form.roles }}
-                                    <div class="mt-2 small text-muted">
-                                        {% for role in form.fields.roles.queryset %}
-                                            <div><strong>{{ role.name }}</strong>{% if role.descricao %}: {{ role.descricao }}{% endif %}</div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card shadow-sm border-0">
-                                <div class="card-header bg-light border-bottom-0 pb-2">
-                                    <i class="bi bi-shield-lock-fill me-2 text-warning"></i>
-                                    <span class="fw-semibold">Permissões diretas</span>
-                                </div>
-                                <div class="card-body pt-2 pb-2">
-                                    {{ form.permissions }}
-                                    <div class="mt-2 small text-muted">
-                                        {% for code,label in form.permissions.field.choices %}
-                                            <div><strong>{{ code }}</strong> – {{ label }}</div>
-                                        {% endfor %}
-                                    </div>
-                                </div>
-                            </div>
+                {% csrf_token %}
+                {{ form.non_field_errors }}
+                <div class="row g-4">
+                    <div class="col-md-4 text-center">
+                        <label class="form-label fw-semibold">Foto</label>
+                        <div class="avatar-drop mb-2" id="avatarDrop">
+                            <img id="avatarPreview" class="avatar-preview" src="{% if form.instance.foto %}{{ form.instance.foto.url }}{% else %}{% static 'admin/img/default-avatar.png' %}{% endif %}" alt="Preview">
+                            <div class="avatar-hint">Arraste uma foto ou clique para selecionar</div>
+                            <div style="display:none">{{ form.foto|as_crispy_field }}</div>
+                            <input type="file" id="id_foto_custom" name="foto" accept="image/*" capture="environment" style="display:none">
                         </div>
                     </div>
-                    <div class="alert alert-info mt-3">
-                        <i class="bi bi-info-circle me-2"></i>
-                        {% if form.instance.pk %}
-                            Deixe a senha em branco para manter a atual.
-                        {% else %}
-                            A senha deve ter pelo menos 8 caracteres.
-                        {% endif %}
+                    <div class="col-md-8">
+                        <div class="row g-3">
+                            <div class="col-md-6">{{ form.username|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.email|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.first_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.last_name|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.cpf|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.telefone|as_crispy_field }}</div>
+                            <div class="col-md-6">{{ form.ativo|as_crispy_field }}</div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0">
+                <hr class="my-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        {{ form.password|as_crispy_field }}
+                        <div class="pw-meter mt-2" id="pwMeter"><div class="pw-fill" id="pwFill"></div></div>
+                        <div class="pw-text text-muted" id="pwText">&nbsp;</div>
+                    </div>
+                    <div class="col-md-6">{{ form.password_confirm|as_crispy_field }}</div>
+                </div>
+                <hr class="my-4">
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Papéis (roles)</label>
+                        <select name="roles" id="id_roles" class="form-select select2" multiple>
+                            {% for role in form.fields.roles.queryset %}
+                                <option value="{{ role.pk }}" {% if role.pk in form.roles.value %}selected{% endif %}>{{ role.name }}{% if role.descricao %} - {{ role.descricao }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Permissões diretas</label>
+                        <select name="permissions" id="id_permissions" class="form-select select2" multiple>
+                            {% for code,label in form.permissions.field.choices %}
+                                <option value="{{ code }}" {% if code in form.permissions.value %}selected{% endif %}>{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="alert alert-info mt-4">
+                    <i class="bi bi-info-circle me-2"></i>
+                    {% if form.instance.pk %}
+                        Deixe a senha em branco para manter a atual.
+                    {% else %}
+                        A senha deve ter pelo menos 8 caracteres.
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-end gap-2 mt-4">
                     <a href="{% url 'pessoa_list' %}" class="btn btn-secondary">
                         <i class="bi bi-x-circle me-2"></i>Cancelar
                     </a>
@@ -88,8 +86,72 @@
                     </button>
                 </div>
             </form>
-            <link href="{% static 'core/css/usuario_form.css' %}" rel="stylesheet" />
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+    // Avatar drop & preview
+    const avatarDrop = document.getElementById('avatarDrop');
+    const avatarInput = document.getElementById('id_foto_custom');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const realInput = document.querySelector('input[type=file][name="foto"]');
+
+    // If real input exists, wire its change to preview as well
+    function handleFiles(files){
+        if (!files || !files.length) return;
+        const f = files[0];
+        if (!f.type.startsWith('image/')) return;
+        const url = URL.createObjectURL(f);
+        avatarPreview.src = url;
+        // populate the real input (if available) using DataTransfer
+        if (realInput) {
+            const dt = new DataTransfer();
+            dt.items.add(f);
+            realInput.files = dt.files;
+        }
+    }
+
+    if (avatarDrop) {
+        avatarDrop.addEventListener('click', () => avatarInput.click());
+        avatarInput.addEventListener('change', (e) => handleFiles(e.target.files));
+
+        avatarDrop.addEventListener('dragover', (e)=>{ e.preventDefault(); avatarDrop.classList.add('drag-over'); });
+        avatarDrop.addEventListener('dragleave', (e)=>{ e.preventDefault(); avatarDrop.classList.remove('drag-over'); });
+        avatarDrop.addEventListener('drop', (e)=>{ e.preventDefault(); avatarDrop.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
+
+        // Also wire clicks to the real input if present
+        if (realInput) {
+            avatarInput.addEventListener('change', function(e){ /* sync already handled */ });
+            realInput.addEventListener('change', function(e){ handleFiles(e.target.files); });
+        }
+    }
+
+    // Password strength (simple heuristic)
+    const pwInput = document.querySelector('input[name="password"]');
+    const pwFill = document.getElementById('pwFill');
+    const pwText = document.getElementById('pwText');
+    function scorePassword(pw){
+        if (!pw) return 0;
+        let score = 0;
+        if (pw.length >= 8) score += 30;
+        if (/[A-Z]/.test(pw)) score += 20;
+        if (/[0-9]/.test(pw)) score += 20;
+        if (/[^A-Za-z0-9]/.test(pw)) score += 30;
+        return Math.min(100, score);
+    }
+    function updatePwMeter(){
+        const v = pwInput ? pwInput.value : '';
+        const s = scorePassword(v);
+        pwFill.style.width = s + '%';
+        if (s < 40) { pwFill.style.background = 'linear-gradient(90deg,#ff6b6b,#ff9a9a)'; pwText.textContent = 'Senha fraca'; }
+        else if (s < 75) { pwFill.style.background = 'linear-gradient(90deg,#ffd166,#ffd88a)'; pwText.textContent = 'Senha média'; }
+        else { pwFill.style.background = 'linear-gradient(90deg,#8ce99a,#38d39f)'; pwText.textContent = 'Senha forte'; }
+    }
+    if (pwInput) { pwInput.addEventListener('input', updatePwMeter); updatePwMeter(); }
+});
+</script>
 {% endblock %}
