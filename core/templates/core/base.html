@@ -83,7 +83,8 @@
                             <span class="nav-text">Configurações</span>
                         </a>
                     </li>
-                    {% if request.user.is_superuser %}
+                    {% load permissions_tags %}
+                    {% if request.user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
                             <i class="bi bi-people"></i>
@@ -170,6 +171,22 @@
             }
         }
 
+        // show user form modal if present on the page
+        document.addEventListener('DOMContentLoaded', function() {
+            var modalEl = document.getElementById('modalCadastroUsuario');
+            if (modalEl) {
+                // remove existing backdrops just in case
+                var existing = document.querySelectorAll('.modal-backdrop');
+                existing.forEach(function(b){ b.parentNode.removeChild(b); });
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+            // initialize any select2 elements (forms load script earlier may run before jQuery)
+            if (window.jQuery) {
+                $('.select2').select2({width: '100%', theme: 'bootstrap-5'});
+            }
+        });
+
         // typing animation helper
         function animateText(expand, elem, text) {
             if (!elem) return;
@@ -237,6 +254,13 @@
                     }
                 });
             }
+        });
+    </script>
+    
+    <!-- allow pages to inject modals at body-end so stacking contexts work -->
+    {% block extra_modals %}{% endblock %}
+</body>
+</html>
 
             // Close sidebar when tapping main content on small screens
             const mainContent = document.querySelector('.main-content');

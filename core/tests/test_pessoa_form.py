@@ -23,6 +23,8 @@ class PessoaFormTests(TestCase):
         from django.forms import ModelMultipleChoiceField, MultipleChoiceField
         from django.forms.widgets import CheckboxSelectMultiple
         self.assertIsInstance(form.fields['roles'], ModelMultipleChoiceField)
+        from django.forms.widgets import CheckboxSelectMultiple
+        self.assertIsInstance(form.fields['roles'].widget, CheckboxSelectMultiple)
         self.assertIsInstance(form.fields['permissions'], MultipleChoiceField)
         self.assertIsInstance(form.fields['permissions'].widget, CheckboxSelectMultiple)
         # choices for permissions should include all codes

@@ -36,13 +36,13 @@ class PessoaForm(forms.ModelForm):
     # associação de roles e permissões diretas
     roles = forms.ModelMultipleChoiceField(
         queryset=Role.objects.filter(ativo=True),
-        widget=forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}),
+        widget=forms.CheckboxSelectMultiple(),
         required=False,
         label='Papéis (roles)'
     )
     permissions = forms.MultipleChoiceField(
         choices=_permission_choices(),
-        widget=forms.CheckboxSelectMultiple,
+        widget=forms.CheckboxSelectMultiple(),
         required=False,
         label='Permissões diretas'
     )
@@ -67,8 +67,8 @@ class PessoaForm(forms.ModelForm):
             self.fields['password'].required = True
             self.fields['password_confirm'].required = True
 
-        # style classes for new fields
-        self.fields['roles'].widget.attrs.update({'class': 'form-select', 'size': '6'})
+        # style classes for new fields (checkbox lists)
+        self.fields['roles'].widget.attrs.update({'class': 'form-check'})
         self.fields['permissions'].widget.attrs.update({'class': 'form-check'})
 
     def clean_username(self):
