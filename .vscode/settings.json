@@ -2,5 +2,6 @@
     "cmake.sourceDirectory": "C:/Hautomatize/Hautomatize/tesseract-5.5.2",
     "python.analysis.extraPaths": [
         "./core"
-    ]
+    ],
+    "chat.agent.maxRequests": 1000
 }

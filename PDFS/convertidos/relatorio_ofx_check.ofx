@@ -1,0 +1,111 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:UTF-8
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <DTSERVER>20260225224850</DTSERVER>
+      <LANGUAGE>POR</LANGUAGE>
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <BANKMSGSRSV1>
+    <STMTTRNRS>
+      <TRNUID>0</TRNUID>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <STMTRS>
+        <CURDEF>BRL</CURDEF>
+        <BANKACCTFROM>
+          <BANKID>104</BANKID>
+          <ACCTID>99999999</ACCTID>
+          <ACCTTYPE>CHECKING</ACCTTYPE>
+        </BANKACCTFROM>
+        <BANKTRANLIST>
+          <DTSTART></DTSTART>
+          <DTEND></DTEND>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE></TRNTYPE>
+            <DTPOSTED></DTPOSTED>
+            <TRNAMT>0.00</TRNAMT>
+            <FITID></FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO></MEMO>
+          </STMTTRN>
+        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>0.00</BALAMT>
+          <DTASOF></DTASOF>
+        </LEDGERBAL>
+      </STMTRS>
+    </STMTTRNRS>
+  </BANKMSGSRSV1>
+</OFX>

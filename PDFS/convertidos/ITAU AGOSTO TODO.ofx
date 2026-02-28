@@ -1,0 +1,1031 @@
+OFXHEADER:100
+DATA:OFXSGML
+VERSION:102
+SECURITY:NONE
+ENCODING:UTF-8
+CHARSET:1252
+COMPRESSION:NONE
+OLDFILEUID:NONE
+NEWFILEUID:NONE
+
+<OFX>
+  <SIGNONMSGSRSV1>
+    <SONRS>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <DTSERVER>20260225230127</DTSERVER>
+      <LANGUAGE>POR</LANGUAGE>
+    </SONRS>
+  </SIGNONMSGSRSV1>
+  <BANKMSGSRSV1>
+    <STMTTRNRS>
+      <TRNUID>0</TRNUID>
+      <STATUS>
+        <CODE>0</CODE>
+        <SEVERITY>INFO</SEVERITY>
+      </STATUS>
+      <STMTRS>
+        <CURDEF>BRL</CURDEF>
+        <BANKACCTFROM>
+          <BANKID>000</BANKID>
+          <ACCTID>99999999</ACCTID>
+          <ACCTTYPE>CHECKING</ACCTTYPE>
+        </BANKACCTFROM>
+        <BANKTRANLIST>
+          <DTSTART>20250731</DTSTART>
+          <DTEND>20250828</DTEND>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250731</DTPOSTED>
+            <TRNAMT>-26.28</TRNAMT>
+            <FITID>FB_2628_20250731</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SALDO ANTERIOR</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>6.76</TRNAMT>
+            <FITID>FB_676_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-9307.44</TRNAMT>
+            <FITID>FB_930744_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-9513.60</TRNAMT>
+            <FITID>FB_951360_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>1.43</TRNAMT>
+            <FITID>FB_143_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>9608.43</TRNAMT>
+            <FITID>FB_960843_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MULTIPLO1/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 14.070,22</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-17807.83</TRNAMT>
+            <FITID>FB_1780783_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-1236.56</TRNAMT>
+            <FITID>FB_123656_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-1588.20</TRNAMT>
+            <FITID>FB_158820_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-2085.63</TRNAMT>
+            <FITID>FB_208563_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-1541.89</TRNAMT>
+            <FITID>FB_154189_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES PAG TIT BANCO 001</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-291.95</TRNAMT>
+            <FITID>FB_29195_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES PAG TIT 109008793880</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250801</DTPOSTED>
+            <TRNAMT>-70.46</TRNAMT>
+            <FITID>FB_7045_20250801</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SALDO TOTAL DISPON#VEL DIA</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF7973-9 3.028,00</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF7973-9 5.156,16</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>-244.27</TRNAMT>
+            <FITID>FB_24427_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TARPLANO ADAPT 2 07/25</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 325,05</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 332,96</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 39,00</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 3.888,42</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 28,91</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 421,79</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 1.257,11</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 7.927,59</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF7973-9 77,39</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF7973-9 123,71</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250804</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250804</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF7973-9 15.060,08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>-9127.46</TRNAMT>
+            <FITID>FB_912745_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>-9261.69</TRNAMT>
+            <FITID>FB_926169_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>62.35</TRNAMT>
+            <FITID>FB_6235_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 13.051,56</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 13.113,91</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 714,02</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250805</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250805</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 6.164,68</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250806</DTPOSTED>
+            <TRNAMT>19.27</TRNAMT>
+            <FITID>FB_1927_20250806</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250806</DTPOSTED>
+            <TRNAMT>-9182.71</TRNAMT>
+            <FITID>FB_918270_20250806</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250806</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250806</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 12.106,70</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250807</DTPOSTED>
+            <TRNAMT>-9173.18</TRNAMT>
+            <FITID>FB_917318_20250807</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250807</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250807</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 16.100,68</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>5013.32</TRNAMT>
+            <FITID>FB_501332_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MULTIPLO9/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>25700.00</TRNAMT>
+            <FITID>FB_2570000_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MARLY D11/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>4565.65</TRNAMT>
+            <FITID>FB_456564_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MULTIPL11/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>2401.85</TRNAMT>
+            <FITID>FB_240185_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MULTIPL11/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 33,62</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-15568.53</TRNAMT>
+            <FITID>FB_1556853_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PARCELA GIRO 31/36</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 705,97</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>0.02</TRNAMT>
+            <FITID>FB_2_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>REND PAGO APLIC AUT MAIS</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 51,55</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 8.865,79</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 5.176,55</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-23170.27</TRNAMT>
+            <FITID>FB_2317027_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-9385.38</TRNAMT>
+            <FITID>FB_938537_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-7653.04</TRNAMT>
+            <FITID>FB_765304_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-1139.47</TRNAMT>
+            <FITID>FB_113947_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES PAG TIT BANCO 237</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-827.29</TRNAMT>
+            <FITID>FB_82729_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-1835.33</TRNAMT>
+            <FITID>FB_183533_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250811</DTPOSTED>
+            <TRNAMT>-1029.34</TRNAMT>
+            <FITID>FB_102933_20250811</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SALDO TOTAL DISPON#VEL DIA</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250813</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250813</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 5.797,00</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250814</DTPOSTED>
+            <TRNAMT>43.46</TRNAMT>
+            <FITID>FB_4346_20250814</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250814</DTPOSTED>
+            <TRNAMT>-9247.55</TRNAMT>
+            <FITID>FB_924754_20250814</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250814</DTPOSTED>
+            <TRNAMT>81.40</TRNAMT>
+            <FITID>FB_8140_20250814</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250814</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250814</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 13.926,27</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250815</DTPOSTED>
+            <TRNAMT>-9333.11</TRNAMT>
+            <FITID>FB_933311_20250815</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250815</DTPOSTED>
+            <TRNAMT>-9136.32</TRNAMT>
+            <FITID>FB_913632_20250815</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250815</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250815</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 12.419,61</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 2.382,09</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 385,13</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 261,74</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 25,33</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 14.377,54</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 6.916,18</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 86,78</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 426,78</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 196,68</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 104,46</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 7.190,53</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 291,14</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 654,42</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250818</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250818</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 6.510,66</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250819</DTPOSTED>
+            <TRNAMT>-9145.69</TRNAMT>
+            <FITID>FB_914569_20250819</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250819</DTPOSTED>
+            <TRNAMT>-9188.51</TRNAMT>
+            <FITID>FB_918851_20250819</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250819</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250819</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 12.803,09</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>46.26</TRNAMT>
+            <FITID>FB_4626_20250820</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>3300.30</TRNAMT>
+            <FITID>FB_330030_20250820</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MULTIPL20/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250820</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 11.163,87</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>-5238.02</TRNAMT>
+            <FITID>FB_523802_20250820</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>-1054.93</TRNAMT>
+            <FITID>FB_105493_20250820</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250820</DTPOSTED>
+            <TRNAMT>-5000.00</TRNAMT>
+            <FITID>FB_500000_20250820</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>-9185.16</TRNAMT>
+            <FITID>FB_918516_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>63.51</TRNAMT>
+            <FITID>FB_6351_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>8366.36</TRNAMT>
+            <FITID>FB_836636_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF PORT GA21/</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>3336.44</TRNAMT>
+            <FITID>FB_333644_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>PIX TRANSF MULTIPL21/08</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 13.621,58</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>-20616.97</TRNAMT>
+            <FITID>FB_2061697_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>-583.93</TRNAMT>
+            <FITID>FB_58392_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SISPAG FORNECEDORES</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250821</DTPOSTED>
+            <TRNAMT>-290.31</TRNAMT>
+            <FITID>FB_29031_20250821</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>SALDO TOTAL DISPON#VEL DIA</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250822</DTPOSTED>
+            <TRNAMT>-9134.87</TRNAMT>
+            <FITID>FB_913487_20250822</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250822</DTPOSTED>
+            <TRNAMT>-9241.52</TRNAMT>
+            <FITID>FB_924152_20250822</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250822</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250822</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 12.905,50</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 83,33</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 248,00</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 210,82</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 6.272,97</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 231,02</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 14.071,93</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 216,15</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 4.036,19</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 33,65</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 5.423,81</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 196,45</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 273,16</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 5.548,48</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 475,59</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250825</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250825</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 428,32</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250826</DTPOSTED>
+            <TRNAMT>-9157.04</TRNAMT>
+            <FITID>FB_915704_20250826</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEXGAR7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250826</DTPOSTED>
+            <TRNAMT>-9275.40</TRNAMT>
+            <FITID>FB_927540_20250826</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEXGAR7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250826</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250826</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 19.258,75</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250827</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250827</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 15.530,31</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250828</DTPOSTED>
+            <TRNAMT>-9287.27</TRNAMT>
+            <FITID>FB_928727_20250828</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250828</DTPOSTED>
+            <TRNAMT>7.70</TRNAMT>
+            <FITID>FB_770_20250828</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973-9</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>DEBIT</TRNTYPE>
+            <DTPOSTED>20250828</DTPOSTED>
+            <TRNAMT>-9283.70</TRNAMT>
+            <FITID>FB_928370_20250828</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TEGEX GAR 7731-34973</MEMO>
+          </STMTTRN>
+          <STMTTRN>
+            <TRNTYPE>CREDIT</TRNTYPE>
+            <DTPOSTED>20250828</DTPOSTED>
+            <TRNAMT>73134.00</TRNAMT>
+            <FITID>FB_7313400_20250828</FITID>
+            <CHECKNUM></CHECKNUM>
+            <MEMO>TRANSF 7973-9 17.889,19</MEMO>
+          </STMTTRN>
+        </BANKTRANLIST>
+        <LEDGERBAL>
+          <BALAMT>4458732.41</BALAMT>
+          <DTASOF>20250828</DTASOF>
+        </LEDGERBAL>
+      </STMTRS>
+    </STMTTRNRS>
+  </BANKMSGSRSV1>
+</OFX>
