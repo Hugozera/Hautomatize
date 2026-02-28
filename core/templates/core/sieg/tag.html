@@ -1,0 +1,55 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">{{ tag }}</h5>
+      <div>
+        <a href="{% url 'sieg_index' %}" class="btn btn-sm btn-outline-secondary">Voltar</a>
+      </div>
+    </div>
+    <div class="card-body">
+      {% if error %}
+        <div class="alert alert-warning">{{ error }}</div>
+      {% endif %}
+
+      {% if items %}
+        {% if items.0 %}
+          {% if items.0.items %}
+            <pre>{{ items|safe }}</pre>
+          {% endif %}
+        {% endif %}
+        {% comment %} If items is a list of dicts, render simple table {% endcomment %}
+        {% if items and items.0 is mapping %}
+          <div class="table-responsive">
+            <table class="table table-sm table-striped">
+              <thead>
+                <tr>
+                  {% for k in items.0.keys %}
+                    <th>{{ k }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for it in items %}
+                <tr>
+                  {% for k in items.0.keys %}
+                    <td>{{ it|get_item:k }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <pre>{{ items|safe }}</pre>
+        {% endif %}
+      {% else %}
+        <div class="alert alert-info">Nenhum dado disponível para esta tag.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

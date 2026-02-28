@@ -20,6 +20,7 @@
     <!-- Nosso CSS personalizado -->
     {% load static %}
     <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
+    <link rel="stylesheet" href="{% static 'css/conversor.css' %}">
 </head>
 <body>
     <a href="#mainContent" class="skip-to-content">Ir para o conteúdo</a>
@@ -45,6 +46,12 @@
                         <a class="nav-link {% if '/conversor' in request.path %}active{% endif %}" href="{% url 'conversor_index' %}">
                             <i class="bi bi-arrow-left-right"></i>
                             <span class="nav-text">Conversor</span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/sieg' in request.path %}active{% endif %}" href="{% url 'sieg_index' %}">
+                            <i class="bi bi-clouds"></i>
+                            <span class="nav-text">SIEG</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -83,7 +90,8 @@
                             <span class="nav-text">Configurações</span>
                         </a>
                     </li>
-                    {% if request.user.is_superuser %}
+                    {% load permissions_tags %}
+                    {% if request.user.is_authenticated %}
                     <li class="nav-item">
                         <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
                             <i class="bi bi-people"></i>
@@ -170,6 +178,22 @@
             }
         }
 
+        // show user form modal if present on the page
+        document.addEventListener('DOMContentLoaded', function() {
+            var modalEl = document.getElementById('modalCadastroUsuario');
+            if (modalEl) {
+                // remove existing backdrops just in case
+                var existing = document.querySelectorAll('.modal-backdrop');
+                existing.forEach(function(b){ b.parentNode.removeChild(b); });
+                var modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
+            // initialize any select2 elements (forms load script earlier may run before jQuery)
+            if (window.jQuery) {
+                $('.select2').select2({width: '100%', theme: 'bootstrap-5'});
+            }
+        });
+
         // typing animation helper
         function animateText(expand, elem, text) {
             if (!elem) return;
@@ -237,40 +261,14 @@
                     }
                 });
             }
-
-            // Close sidebar when tapping main content on small screens
-            const mainContent = document.querySelector('.main-content');
-            if (mainContent) {
-                mainContent.addEventListener('click', function() {
-                    if (window.innerWidth < 992) {
-                        const sidebar = document.getElementById('sidebar');
-                        if (sidebar && sidebar.classList.contains('sidebar-expanded')) {
-                            sidebar.classList.remove('sidebar-expanded');
-                        }
-                    }
-                });
-            }
-
-            // Inject data-label attributes into table cells for mobile stacked view
-            function applyTableLabels() {
-                if (window.innerWidth > 520) return;
-                document.querySelectorAll('table').forEach(table => {
-                    const headers = Array.from(table.querySelectorAll('thead th')).map(h => h.textContent.trim());
-                    if (!headers.length) return;
-                    table.querySelectorAll('tbody tr').forEach(row => {
-                        Array.from(row.children).forEach((cell, idx) => {
-                            if (!cell.hasAttribute('data-label')) {
-                                const label = headers[idx] || '';
-                                cell.setAttribute('data-label', label);
-                            }
-                        });
-                    });
-                });
-            }
-
-            applyTableLabels();
-            window.addEventListener('resize', function(){ applyTableLabels(); });
         });
+    </script>
+    
+    <!-- allow pages to inject modals at body-end so stacking contexts work -->
+    {% block extra_modals %}{% endblock %}
+</body>
+</html>
+
     </script>
     
     {% block extra_js %}{% endblock %}

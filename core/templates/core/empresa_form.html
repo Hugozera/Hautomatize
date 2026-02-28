@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+<link rel="stylesheet" href="{% static 'core/css/empresa.css' %}">
 <div class="container py-4">
     <!-- Cabeçalho -->
     <div class="d-flex justify-content-between align-items-center mb-4 animate__animated animate__fadeIn">
@@ -36,7 +37,7 @@
     <!-- Card do Formulário -->
     <div class="card animate__animated animate__fadeInUp">
         <div class="card-header bg-transparent d-flex align-items-center">
-            <i class="bi bi-building fs-4 me-2" style="color: var(--verde-deep);"></i>
+            <i class="bi bi-building fs-4 me-2 icon-empresa"></i>
             <span class="fw-semibold">Informações da Empresa</span>
         </div>
         
@@ -58,16 +59,16 @@
                         <label class="form-label fw-semibold">
                             <i class="bi bi-qr-code me-1 text-success"></i>CNPJ *
                         </label>
-                        <input type="text" name="cnpj" id="id_cnpj" class="form-control" 
-                               value="{{ form.cnpj.value|default:'' }}" maxlength="18" 
-                               {% if form.instance.pk %}readonly{% endif %} required>
-                        {% if not form.instance.pk %}
-                        <div class="form-text">
-                            <button type="button" class="btn btn-sm btn-outline-success mt-1" onclick="buscarCNPJ()">
-                                <i class="bi bi-search"></i> Buscar dados do CNPJ
+                        <div class="input-group">
+                            <input type="text" name="cnpj" id="id_cnpj" class="form-control" 
+                                   value="{{ form.cnpj.value|default:'' }}" maxlength="18" 
+                                   {% if form.instance.pk %}readonly{% endif %} required>
+                            {% if not form.instance.pk %}
+                            <button type="button" class="btn btn-outline-success" onclick="buscarCNPJ()">
+                                <i class="bi bi-search"></i>
                             </button>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
                     
                     <div class="col-md-6">
@@ -190,25 +191,24 @@
                         Este certificado precisa do arquivo .pfx porque não pôde ser exportado da loja do Windows. Faça upload do .pfx e informe a senha para salvá-lo.
                     {% else %}
                         {% if form.instance.pk %}
-                            Deixe em branco para manter o certificado atual.
+                            Deixe em branco para manter o certificado atual; o upload é opcional.
                         {% else %}
-                            Faça upload do certificado (.pfx) e informe a senha.
+                            O certificado é opcional. Você pode fazer upload do .pfx e informar a senha para preencher campos automaticamente, ou cadastrá-lo depois.
                         {% endif %}
                     {% endif %}
                 </div>
                 
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Arquivo do Certificado (.pfx)</label>
+                        <label class="form-label fw-semibold">Arquivo do Certificado (.pfx) <small class="text-muted">(opcional)</small></label>
                         <input type="file" name="certificado" id="id_certificado" class="form-control" 
-                               accept=".pfx" {% if not form.instance.pk or require_pfx %}required{% endif %}>
+                               accept=".pfx" {% if require_pfx %}required{% endif %}>
                     </div>
                     
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Senha do Certificado</label>
+                        <label class="form-label fw-semibold">Senha do Certificado <small class="text-muted">(opcional)</small></label>
                         <div class="input-group">
-                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control" 
-                                   {% if not form.instance.pk %}required{% endif %}>
+                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control">
                             <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
                                 <i class="bi bi-eye" id="olhoSenha"></i>
                             </button>
@@ -288,7 +288,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     </a>
 
                     <!-- Botão para salvar apenas o certificado (exibe quando certificado extraído ou já configurado) -->
-                    <button type="submit" name="salvar_certificado" id="btnSalvarCertificado" class="btn btn-outline-primary" style="{% if form.instance.certificado_thumbprint %}display:inline-block{% else %}display:none{% endif %};">
+                    <button type="submit" name="salvar_certificado" id="btnSalvarCertificado" class="btn btn-outline-primary {% if form.instance.certificado_thumbprint %}visible-inline{% else %}hidden-inline{% endif %}">
                         <i class="bi bi-download me-2"></i>Salvar Certificado
                     </button>
 

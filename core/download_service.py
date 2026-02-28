@@ -16,6 +16,8 @@ def download_em_massa(empresa, tipo, data_inicio, data_fim, pasta_destino, url_b
     try:
         if not empresa.certificado_arquivo:
             raise Exception("Empresa não possui arquivo de certificado!")
+        if not empresa.certificado_senha:
+            raise Exception("Senha do certificado não informada para esta empresa.")
 
         cert_path = empresa.certificado_arquivo.path
         if not os.path.exists(cert_path):

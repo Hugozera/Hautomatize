@@ -1,0 +1,473 @@
+--- Página 1 ---
+Extrato de Conta Corrente
+
+Cliente
+
+LanÃ§amentos
+
+Dia Lote
+31/07/2025
+01/08/2025 0176
+01/08/2025 0176
+01/08/2025 0476
+01/08/2025 0176
+01/08/2025 0176
+01/08/2025 5405
+01/08/2025 5405
+01/08/2025 53405
+01/08/2025
+00/00/0000 gqq9g
+04/08/2025 â€” gaqgg
+04/08/2025 â€” gaqog
+04/08/2025 â€” gaq9g
+04/08/2025 â€”gaqgg
+04/08/2025 â€” gaqgg
+04/08/2025 gaq9g
+04/08/2025 5405
+04/08/2025 44455
+04/08/2025 5405
+04/08/2025 5013
+04/08/2025 5013
+04/08/2025
+00/00/0000 44476
+05/08/2025 4475
+05/08/2025 44397
+05/08/2025 â€” gqqgg
+05/08/2025 5405
+05/08/2025 5405
+05/08/2025 5405
+05/08/2025 5013
+05/08/2025
+
+Documento
+
+484470176162517
+484470176162751
+484470176162855
+484470176162952
+
+484470176163029
+
+80101
+
+80102
+80103
+
+9903
+
+84264
+
+153084
+175480
+180222
+212749
+982772
+
+80401
+
+80402
+
+80403
+
+43160
+43160
+
+9903
+
+33434638
+51011191727261
+
+164918
+
+80501
+
+80502
+
+80503
+43159
+
+9903
+
+AgÃªncia: 2138-5 Conta: 16384-8
+
+Historico
+Saldo Anterior
+
+Dep dinheiro ATM
+
+01/08 16:25 SOP IPOJUCA
+Dep dinheiro ATM
+
+01/08 16:27 SOP IPOJUCA
+Dep dinheiro ATM
+
+01/08 16:28 SOP IPOJUCA
+Dep dinheiro ATM
+
+01/08 16:29 SOP IPOJUCA
+Dep dinheiro ATM
+
+01/08 16:30 SOP IPOJUCA
+Pix - Enviado
+
+01/08 10:40 Annakarina Cunha Da Silva
+
+Pix - Enviado
+
+01/08 13:01 Ribeiro Pinto Servicos / S
+Pix - Enviado
+
+01/08 17:40 Ribeiro Pinto Servicos / S
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+Compra com CartÃ£o
+
+03/08 14:49 CONCESSIONARIA ROTA
+Compra com CartÃ£o
+
+04/08 22:54 CONCESSIONARIA ROTA
+Compra com CartÃ£o
+
+02/08 23:31 POSTO PORTO GALINHAS
+Compra com CartÃ£o
+
+02/08 23:39 CONCESSIONARIA ROTA
+Compra com CartÃ£o
+
+03/08 00:51 CONCESSIONARIA ROTA
+Compra com CartÃ£o
+
+03/08 13:39 CONCESSIONARIA ROTA
+Pix - Enviado
+
+02/08 14:00 Marly Da Silva Ribeiro Pin
+
+Pix - Enviado
+
+02/08 21:33 Ribeiro Pinto Servicos / S
+
+Pix - Enviado
+
+03/08 10:27 Severino Robson Lourenco P
+
+Pagto Energia ElÃ©trica
+NEOENERGIA PERNAMBUCO
+Pagto Energia ElÃ©trica
+NEOENERGIA PERNAMBUCO
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+TED-CrÃ©dito em Conta
+
+341 0772 07687928000305 WISH S A
+Pix - Rejeitado
+
+05/08 10:11 QR Code rejeitado p/ inst.
+Compra com CartÃ£o
+
+05/08 00:10 CONCESSIONARIA ROTA
+Pix - Enviado
+
+05/08 10:11 Severina Raquel Andrade Da
+
+Pix - Enviado
+05/08 10:12 Severina Raquel Andrade Da
+
+Pix - Enviado
+
+05/08 10:54 Ribeiro Pinto Servicos / S
+Pagamento Fatura de Agua
+
+CIA PERNAMBUCANA DE SANEA
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Valor
+0,00 (+)
+
+2.700,00 (+)
+3.000,00 (+)
+3.000,00 (+)
+1.600,00 (+)
+
+100,00 (+)
+
+180,00 (-)
+
+5.000,00 (-)
+4.500,00 (-)
+720,00 (-)
+0,00 (+)
+11,10 (-)
+11,10 (5)
+150,00 (-)
+11,10 (-)
+11,10 (5)
+11,10 (-)
+2.600,00 (-)
+1.000,00 (-)
+500,00 (-)
+1.160,33 (-)
+118,34 (-)
+5.584,17 (+)
+0,00 (+)
+4.893,14 (+)
+800,00 (+)
+11,10 (-)
+
+800,00 (-)
+
+800,00 (-)
+4.000,00 (-)
+181,76 (-)
+
+99,72 (+)
+
+
+
+
+--- Página 3 ---
+Extrato de Conta Corrente
+
+Cliente
+
+LanÃ§amentos
+
+Dia Lote
+5
+
+00/00/0000 44397
+18/08/2025 44397
+18/08/2025 gang
+18/08/2025 gag
+18/08/2025
+00/00/0000 gqq9g
+19/08/2025 gang
+19/08/2025
+00/00/0000 44544
+20/08/2025 5013
+20/08/2025
+00/00/0000 44497
+21/08/2025 4397
+21/08/2025 4397
+21/08/2025 goog
+21/08/2025 9008
+21/08/2025
+00/00/0000 gaqgg
+22/08/2025 9008
+22/08/2025
+00/00/0000 ggqgg
+25/08/2025 9008
+25/08/2025 q9008
+25/08/2025 (3413
+25/08/2025 43443
+25/08/2025 3013
+25/08/2025 5013
+25/08/2025
+00/00/0000 4475
+27/08/2025 (4475
+27/08/2025 44497
+27/08/2025
+
+Documento
+
+161818100557192
+
+220149
+856823
+
+9903
+
+993393
+
+9903
+
+4154
+
+9903
+
+211014123100862
+
+211014550913142
+
+362299
+395976
+9903
+
+142117
+9903
+
+386135
+
+416857
+822370900051571
+832371101027738
+49146
+
+49146
+
+9903
+
+33708418
+
+271506156469232
+
+9903
+
+AgÃªncia: 2138-5 Conta: 16384-8
+
+Historico
+Rende Facil
+
+Saldo do dia
+
+Pix - Recebido
+16/08 18:18 00005661578458 MIRIAM BENE
+
+Compra com CartÃ£o
+
+17/08 09:51 NETFLIX.COM
+
+Compra com CartÃ£o
+
+18/08 12:45 POSTO PORTO GALINHAS
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+Compra com CartÃ£o
+
+19/08 18:58 CONCESSIONARIA ROTA
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+Brasilprev
+
+BRASILPREV SEGUROS
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+Pix - Recebido
+21/08 10:14 00008555722489 MARIA ISABE
+
+Pix - Recebido
+21/08 10:14 00008555722489 MARIA ISABE
+
+Compra com CartÃ£o
+
+21/08 21:56 CONCESSIONARIA ROTA
+Compra com CartÃ£o
+
+21/08 23:05 CONCESSIONARIA ROTA
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+Compra com CartÃ£o
+
+22/08 22:39 CONCESSIONARIA ROTA
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+
+Compra com CartÃ£o
+
+24/08 21:52 CONCESSIONARIA ROTA
+Compra com CartÃ£o
+
+24/08 23:07 CONCESSIONARIA ROTA
+Tarifa MSG - MÃªs Anterior
+
+CobranÃ§a referente 11/08/2025
+
+Tarifa Pacote de ServiÃ§os
+
+CobranÃ§a referente 25/08/2025
+
+CLARO LD21
+
+EMBRATEL
+
+Estorno de DÃ©bito
+
+EMBRATEL
+
+BB Rende FÃ¡cil
+
+Rende Facil
+
+Saldo do dia
+TED-CrÃ©dito em Conta
+341 0366 02732968000138 FORTBRASIL INS
+
+Pix - Recebido
+27/08 15:06 00070586570411 POLIANA FER
+
+BB Rende FÃ¡cil
+Rende Facil
+
+Valor
+
+0,00 (+)
+17,00 (+)
+
+44,90 (-)
+150,00 (-)
+177,90 (+)
+0,00 (+)
+11,10 (-)
+11,10 (+)
+0,00 (+)
+127,69 (-)
+127,69 (+)
+
+0,00 (+)
+
+50,00 (+)
+
+20,00 (+)
+
+11,10 (-)
+11,10 (-)
+47,80 (-)
+0,00 (+)
+11,10 (-)
+11,10 (+)
+0,00 (+)
+11,10 (-)
+11,10 (-)
+6,50 (-)
+128,90 (-)
+50,39 (-)
+50,39 (+)
+157,60 (+)
+
+0,00 (+)
+
+54,15 (+)
+
+25,00 (+)
+
+79,15 (-)
+
+

@@ -1,0 +1,85 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+      <h5 class="mb-0">Downloads / Notas</h5>
+    </div>
+    <div class="card-body">
+      {% if download_endpoints %}
+      <div class="list-group">
+        {% for method,path,summary in download_endpoints %}
+        <div class="list-group-item d-flex justify-content-between align-items-start">
+          <div>
+            <span class="badge bg-secondary me-2">{{ method }}</span>
+            <strong>{{ path }}</strong>
+            <div class="small text-muted">{{ summary }}</div>
+          </div>
+          <div>
+            <button class="btn btn-sm btn-outline-primary execute-endpoint" data-method="{{ method }}" data-path="{{ path }}">Executar</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="alert alert-info">Nenhum endpoint de download detectado.</div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const modalHtml = `
+    <div class="modal fade" id="exeDownloadModal" tabindex="-1">
+      <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title">Executar Download</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-2"><strong id="dl-endpoint"></strong></div>
+            <label class="form-label">JSON Body</label>
+            <textarea id="dl-body" class="form-control" rows="6">{}</textarea>
+            <div class="mt-3"><button id="dl-send" class="btn btn-success">Enviar</button></div>
+            <hr>
+            <h6>Resposta</h6>
+            <pre id="dl-response" style="max-height:360px;overflow:auto;background:#0f1720;color:#e6eef2;padding:12px;border-radius:6px"></pre>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+  const modalEl = document.getElementById('exeDownloadModal');
+  const dlEndpoint = document.getElementById('dl-endpoint');
+  const dlBody = document.getElementById('dl-body');
+  const dlResponse = document.getElementById('dl-response');
+  let curMethod=null, curPath=null;
+
+  document.querySelectorAll('.execute-endpoint').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      curMethod = btn.dataset.method; curPath = btn.dataset.path;
+      dlEndpoint.textContent = curMethod + ' ' + curPath;
+      dlBody.value = '{}'; dlResponse.textContent = '';
+      new bootstrap.Modal(modalEl).show();
+    });
+  });
+
+  document.addEventListener('click', e=>{
+    if(e.target && e.target.id==='dl-send'){
+      let body=null; try{ body=JSON.parse(dlBody.value);}catch(err){alert('JSON inválido');return}
+      dlResponse.textContent='Carregando...';
+      fetch('{% url "sieg_execute_download" %}',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','X-CSRFToken':(document.cookie.match('(^|;)\\s*csrftoken\\s*=\\s*([^;]+)')||[])[2]},
+        body: JSON.stringify({method:curMethod, path:curPath, json: body})
+      }).then(r=>r.json()).then(d=>dlResponse.textContent=JSON.stringify(d,null,2)).catch(err=>dlResponse.textContent='Erro: '+err)
+    }
+  });
+});
+</script>
+{% endblock %}

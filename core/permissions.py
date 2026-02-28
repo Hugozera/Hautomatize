@@ -17,80 +17,51 @@ def _get_pessoa_from_user(user) -> Optional[Pessoa]:
 # ===== Empresa =====
 
 def _person_has_perm(user, perm_code: str) -> bool:
-    """Retorna True se a pessoa possuir `perm_code` diretamente ou via roles."""
-    pessoa = _get_pessoa_from_user(user)
-    if not pessoa:
+    """Simplified: consider any authenticated user as having the permission.
+
+    The original system distinguished between roles, permissions, and
+    superusers.  The requester wanted to remove that bureaucracy so every
+    logged-in user effectively acts like a superuser.  This helper therefore
+    simply returns True for any non-anonymous user. """
+    if not user or user.is_anonymous:
         return False
-    # permissões diretas
-    if perm_code in (getattr(pessoa, 'permissions', '') or '').split(','):
-        return True
-    # permissões herdadas de roles
-    for role in getattr(pessoa, 'roles').all():
-        if perm_code in role.perm_list():
-            return True
-    return False
+    return True
 
 
 def can_view_empresa(user, empresa: Empresa) -> bool:
-    """Usuário pode visualizar a empresa?
-
-    Segue regra da matriz: superuser, usuário ligado, ou público se empresa.ativo.
-    Também considera permissão explícita ``empresa.view`` quando presente em
-    roles/permissions da pessoa.
-    """
+    """Any authenticated user may view any empresa (simplified rules)."""
     if not user or user.is_anonymous:
         return bool(empresa.ativo)
-    if user.is_superuser:
-        return True
-    pessoa = _get_pessoa_from_user(user)
-    if pessoa and pessoa in empresa.usuarios.all():
-        return True
-    if _person_has_perm(user, 'empresa.view'):
-        return True
-    return bool(empresa.ativo)
+    # authenticated users see everything
+    return True
 
 
 def can_edit_empresa(user, empresa: Empresa) -> bool:
-    """Usuário pode editar a empresa?"""
+    """Any authenticated user may edit any empresa (simplified rules)."""
     if not user or user.is_anonymous:
         return False
-    if user.is_superuser:
-        return True
-    pessoa = _get_pessoa_from_user(user)
-    if pessoa and pessoa in empresa.usuarios.all():
-        return True
-    # check custom permissions/roles
-    if _person_has_perm(user, 'empresa.edit'):
-        return True
-    return False
+    return True
 
 
 
 
 # ===== Certificado (ligado à empresa) =====
 def can_manage_certificado(user, empresa: Empresa) -> bool:
-    """Permissão para salvar/remover/baixar certificado associado a `empresa`."""
-    if can_edit_empresa(user, empresa):
-        return True
-    # permissions/roles
-    return _person_has_perm(user, 'certificado.manage')
+    """Simplified: editing empresas implies credential management."""
+    return can_edit_empresa(user, empresa)
 
 
 # ===== Pessoa =====
 def can_view_pessoa(user, pessoa_obj: Pessoa) -> bool:
     if not user or user.is_anonymous:
         return False
-    if user.is_superuser:
-        return True
-    return user == pessoa_obj.user
+    return True
 
 
 def can_edit_pessoa(user, pessoa_obj: Pessoa) -> bool:
     if not user or user.is_anonymous:
         return False
-    if user.is_superuser:
-        return True
-    return user == pessoa_obj.user
+    return True
 
 
 # ===== Conversor (ArquivoConversao) =====
@@ -129,6 +100,7 @@ PERMISSIONS_MATRIX = {
 EXTRA_PERMISSIONS = [
     'empresa.view',
     'pessoa.edit',
+    'pessoa.add',
     'agendamento.manage',
     'download.manage',
     'historico.view',

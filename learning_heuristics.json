@@ -1,0 +1,52 @@
+{
+  "p2_s640000": {
+    "page_count": 2,
+    "file_size": 641082,
+    "method": "auto",
+    "dpi": 300,
+    "usar_ocr": false,
+    "txt_path": "c:\\Hautomatize\\media\\conversor\\learning_run\\Santander_Agosto_Completo_padrao.txt",
+    "count": 1,
+    "successes": 1
+  },
+  "p7_s800000": {
+    "page_count": 7,
+    "file_size": 803082,
+    "method": "auto",
+    "dpi": 300,
+    "usar_ocr": false,
+    "txt_path": "c:\\Hautomatize\\media\\conversor\\learning_run\\ITAU_AGOSTO_TODO_padrao.txt",
+    "count": 1,
+    "successes": 1
+  },
+  "p34_s180000": {
+    "page_count": 34,
+    "file_size": 182922,
+    "method": "auto",
+    "dpi": 300,
+    "usar_ocr": false,
+    "txt_path": "c:\\Hautomatize\\media\\conversor\\learning_run\\ExtratoContaCorrenteBNB_20251010_1138_setembro_padrao.txt",
+    "count": 1,
+    "successes": 1
+  },
+  "p70_s3700000": {
+    "page_count": 70,
+    "file_size": 3721522,
+    "method": "auto",
+    "dpi": 300,
+    "usar_ocr": false,
+    "txt_path": "c:\\Hautomatize\\media\\conversor\\learning_run\\STONE_AGOSTO_TODO_padrao.txt",
+    "count": 1,
+    "successes": 1
+  },
+  "p8_s84000": {
+    "page_count": 8,
+    "file_size": 84564,
+    "method": "auto",
+    "dpi": 300,
+    "usar_ocr": true,
+    "txt_path": "C:\\Hautomatize\\media\\conversor\\processing\\178\\ExtratoContaCorrenteBNB_20250910_1257_agosto_oVNjOPh.txt",
+    "count": 1,
+    "successes": 1
+  }
+}

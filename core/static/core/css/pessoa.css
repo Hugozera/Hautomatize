@@ -1,3 +1,140 @@
+/* ===== DARK MODE ===== */
+body.dark-mode .pessoa-form-card input,
+body.dark-mode .pessoa-form-card select,
+body.dark-mode .pessoa-form-card textarea {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border-color: #444 !important;
+}
+
+/* Stronger override targeting full path to avoid other rules taking precedence */
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body .form-control,
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body .form-select,
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body textarea,
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body input[type="text"],
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body input[type="email"],
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body input[type="password"],
+html body.dark-mode .main-content .pessoa-form-container .pessoa-form-card .card-body input[type="tel"] {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border-color: rgba(255,255,255,0.06) !important;
+}
+
+/* Ensure placeholder text is muted and readable */
+html body.dark-mode .pessoa-form-card ::placeholder {
+    color: rgba(230,238,242,0.45) !important;
+}
+
+/* Select2 - ensure rendered selection area also uses the surface color */
+html body.dark-mode .pessoa-form-card .select2-container--bootstrap-5 .select2-selection,
+html body.dark-mode .pessoa-form-card .select2-container--bootstrap-5 .select2-selection__rendered {
+    background: var(--surface-3) !important;
+    color: var(--text-color) !important;
+}
+
+/* Some browsers apply background to inner input; force the input inside .form-control to match */
+html body.dark-mode .pessoa-form-card .form-control input,
+html body.dark-mode .pessoa-form-card .form-select select {
+    background: transparent !important;
+}
+body.dark-mode .pessoa-form-card {
+    background: var(--surface-1);
+    color: var(--text-color);
+    border-color: rgba(255,255,255,0.04);
+}
+body.dark-mode .pessoa-form-card .card-header {
+    background: linear-gradient(135deg, rgba(76,175,80,0.08), rgba(255,193,7,0.08));
+    color: var(--text-color);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+body.dark-mode .pessoa-form-card .card-body {
+    background: transparent;
+    color: var(--text-color);
+}
+body.dark-mode .pessoa-form-card .form-label,
+body.dark-mode .pessoa-form-card label {
+    color: var(--muted);
+}
+body.dark-mode .pessoa-form-card .form-control,
+body.dark-mode .pessoa-form-card .form-select,
+body.dark-mode .pessoa-form-card textarea,
+body.dark-mode .pessoa-form-card input[type="text"],
+body.dark-mode .pessoa-form-card input[type="email"],
+body.dark-mode .pessoa-form-card input[type="password"],
+body.dark-mode .pessoa-form-card input[type="file"] {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border-color: #444 !important;
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-selection {
+    background: var(--surface-3) !important;
+    color: var(--text-color) !important;
+    border-color: #444 !important;
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-dropdown,
+body.dark-mode .select2-container--bootstrap-5 .select2-results__option {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-results__option--selected,
+body.dark-mode .select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background: var(--surface-3) !important;
+    color: var(--text-color) !important;
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-selection {
+    background: var(--surface-3);
+    color: var(--text-color);
+    border-color: #444;
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-dropdown,
+body.dark-mode .select2-container--bootstrap-5 .select2-results__option {
+    background: var(--surface-2);
+    color: var(--text-color);
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-results__option--selected,
+body.dark-mode .select2-container--bootstrap-5 .select2-results__option--highlighted {
+    background: var(--surface-3);
+    color: var(--text-color);
+}
+body.dark-mode .select2-container--bootstrap-5 .select2-dropdown {
+    background: var(--surface-2);
+    color: var(--text-color);
+}
+body.dark-mode .pessoa-form-card .form-control:focus,
+body.dark-mode .pessoa-form-card .form-select:focus,
+body.dark-mode .pessoa-form-card textarea:focus,
+body.dark-mode .pessoa-form-card input:focus {
+    background: var(--surface-2);
+    border-color: var(--verde-deep);
+    box-shadow: 0 0 0 0.2rem rgba(76,175,80,0.18);
+}
+body.dark-mode .avatar-drop {
+    background: #232323;
+    border: 2px dashed #444;
+}
+body.dark-mode .avatar-hint {
+    color: var(--muted);
+}
+body.dark-mode .pw-meter {
+    background: #232323;
+}
+body.dark-mode .pw-fill {
+    background: var(--verde-deep);
+}
+body.dark-mode .alert-info {
+    background: #232323;
+    color: var(--muted);
+    border-color: #444;
+}
+body.dark-mode .btn-secondary {
+    background: #333;
+    color: #e0e0e0;
+    border-color: #555;
+}
+body.dark-mode .btn-success {
+    background: var(--verde-deep);
+    color: #fff;
+}
 /* ===== PESSOA / PERFIL ===== */
 .pessoa-header h1, 
 .pessoa-header h2 {

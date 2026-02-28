@@ -40,3 +40,9 @@ class RoleFormTests(TestCase):
         role = Role.objects.create(name='R', codename='r', permissions='empresa.edit,download.manage', ativo=True)
         form = RoleForm(instance=role)
         self.assertEqual(set(form.initial['permissions']), {'empresa.edit', 'download.manage'})
+
+    def test_default_roles_exist(self):
+        # migration 0012 should create these sample roles
+        expected = ['administrador', 'gestor_pessoas', 'gerente_empresas', 'operador', 'leitor']
+        for codename in expected:
+            self.assertTrue(Role.objects.filter(codename=codename).exists(), f"{codename} missing")

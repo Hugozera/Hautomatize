@@ -1,23 +1,13 @@
-"""
-Módulo de parsers para diferentes bancos.
+"""core.parsers
+
+Keep this module lightweight: avoid eager imports of all parser
+modules so importing the package doesn't fail when a single parser
+module has a typo or missing dependency. Parsers are discovered
+and imported dynamically by the conversion scripts when needed.
 """
 
 from .base_parser import BaseParser
-from .caixa_parser import CaixaParser
-from .itau_parser import ItauParser
-from .bradesco_parser import BradescoParser
-from .santander_parser import SantanderParser
-from .stone_parser import StoneParser
-from .bb_parser import BBParser
-from .universal_parser import UniversalParser
 
 __all__ = [
     'BaseParser',
-    'CaixaParser',
-    'ItauParser',
-    'BradescoParser',
-    'SantanderParser',
-    'StoneParser',
-    'BBParser',
-    'UniversalParser'
 ]

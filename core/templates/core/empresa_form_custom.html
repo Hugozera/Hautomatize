@@ -38,26 +38,26 @@
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
                 
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle me-2"></i>
-                    <strong>Importante:</strong> Faça o upload do certificado digital (.pfx) para preencher automaticamente os dados da empresa.
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle me-2"></i>
+                    O upload do certificado digital (.pfx) é opcional; ele serve apenas para preencher automaticamente os campos. Você pode ignorar este passo e cadastrar manualmente.
                 </div>
                 
                 <!-- Upload do Certificado -->
                 <div class="row g-4 mb-4">
                     <div class="col-md-7">
                         <label class="form-label fw-semibold">
-                            <i class="bi bi-file-lock me-1 text-success"></i>Certificado Digital (.pfx) *
+                            <i class="bi bi-file-lock me-1 text-success"></i>Certificado Digital (.pfx) <small class="text-muted">(opcional)</small>
                         </label>
-                        <input type="file" name="certificado" id="id_certificado" class="form-control" accept=".pfx" required>
+                        <input type="file" name="certificado" id="id_certificado" class="form-control" accept=".pfx">
                     </div>
                     
                     <div class="col-md-5">
                         <label class="form-label fw-semibold">
-                            <i class="bi bi-key me-1 text-success"></i>Senha do Certificado *
+                            <i class="bi bi-key me-1 text-success"></i>Senha do Certificado <small class="text-muted">(opcional)</small>
                         </label>
                         <div class="input-group">
-                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control" required>
+                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control">
                             <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
                                 <i class="bi bi-eye" id="olhoSenha"></i>
                             </button>
@@ -86,7 +86,12 @@
                         <label class="form-label fw-semibold">
                             <i class="bi bi-qr-code me-1 text-success"></i>CNPJ *
                         </label>
-                        <input type="text" name="cnpj" id="id_cnpj" class="form-control" maxlength="18" required>
+                        <div class="input-group">
+                            <input type="text" name="cnpj" id="id_cnpj" class="form-control" maxlength="18" required>
+                            <button type="button" class="btn btn-outline-success" onclick="buscarCNPJ()">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="col-md-6">
@@ -192,6 +197,50 @@
 
 {% block extra_js %}
 <script>
+// Função para buscar CNPJ (pode ser chamada do botão lupa)
+function buscarCNPJ() {
+    const cnpj = document.getElementById('id_cnpj').value.replace(/\D/g, '');
+    if (cnpj.length !== 14) {
+        alert('CNPJ inválido! Digite um CNPJ com 14 dígitos.');
+        return;
+    }
+    const btn = event && event.target ? event.target : document.querySelector('button[onclick="buscarCNPJ()"]');
+    const original = btn ? btn.innerHTML : null;
+    if (btn) { btn.innerHTML = '<i class="bi bi-hourglass-split"></i>'; btn.disabled = true; }
+    fetch('{% url "buscar_cnpj" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ cnpj: cnpj })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.status === 'OK') {
+            document.getElementById('id_razao_social').value = data.nome || '';
+            document.getElementById('id_nome_fantasia').value = data.fantasia || '';
+            document.getElementById('id_inscricao_estadual').value = data.ie || '';
+            document.getElementById('id_inscricao_municipal').value = data.im || '';
+            document.getElementById('id_cep').value = data.cep || '';
+            document.getElementById('id_logradouro').value = data.logradouro || '';
+            document.getElementById('id_numero').value = data.numero || '';
+            document.getElementById('id_bairro').value = data.bairro || '';
+            document.getElementById('id_municipio').value = data.municipio || '';
+            document.getElementById('id_uf').value = data.uf || '';
+        }
+    })
+    .finally(() => { if (btn) { btn.innerHTML = original; btn.disabled = false; } });
+}
+
+// Auto-trigger buscarCNPJ on blur when CNPJ length ok
+function atachedCnpjBlur(){
+    const el = document.getElementById('id_cnpj');
+    if (!el) return;
+    el.addEventListener('blur', function(){
+        const v = this.value.replace(/\D/g,'');
+        if (v.length===14) buscarCNPJ();
+    });
+}
+window.addEventListener('DOMContentLoaded', atachedCnpjBlur);
+
 // Função para extrair dados do certificado
 function buscarEmpresaCertificado() {
     const fileInput = document.getElementById('id_certificado');

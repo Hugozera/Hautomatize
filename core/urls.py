@@ -4,6 +4,7 @@ from . import upload_router
 from . import upload_router
 from . import views
 from . import views_conversor
+from . import views as core_views
 
 urlpatterns = [
     # Home / inicial
@@ -72,11 +73,27 @@ urlpatterns = [
 
     # Conversor de Arquivos
     path('conversor/', views_conversor.conversor_index, name='conversor_index'),
+    path('sieg/', core_views.sieg_index, name='sieg_index'),
+    path('sieg/call/', core_views.sieg_call, name='sieg_call'),
+    path('sieg/certificados/', core_views.sieg_certificados, name='sieg_certificados'),
+    path('sieg/empresas/', core_views.sieg_empresas, name='sieg_empresas'),
+    path('sieg/downloads/', core_views.sieg_downloads, name='sieg_downloads'),
+    path('sieg/endpoints/', core_views.sieg_endpoints, name='sieg_endpoints'),
+    path('sieg/download/execute/', core_views.sieg_execute_download, name='sieg_execute_download'),
+    path('sieg/tag/<slug:tag_slug>/', core_views.sieg_tag, name='sieg_tag'),
     path('upload/', upload_router.upload_router, name='upload_router'),    path('conversor/processar/<int:conversao_id>/', views_conversor.processar_conversao, name='processar_conversao'),
     path('conversor/status/<int:conversao_id>/', views_conversor.status_conversao, name='status_conversao'),
+    path('conversor/progresso/<int:conversao_id>/', views_conversor.progresso_conversao, name='progresso_conversao'),
     path('conversor/historico/', views_conversor.historico_conversoes, name='historico_conversoes'),
     path('conversor/download/<int:conversao_id>/', views_conversor.download_arquivo, name='download_arquivo'),
+    path('conversor/ver_ofx/<int:conversao_id>/', views_conversor.ver_ofx, name='ver_ofx'),
+    path('conversor/original/<int:conversao_id>/', views_conversor.download_original, name='download_original'),
+    path('conversor/salvar_ofx/<int:conversao_id>/', views_conversor.salvar_ofx_editado, name='salvar_ofx_editado'),
+    path('conversor/salvar_transacoes/<int:conversao_id>/', views_conversor.salvar_transacoes_editadas, name='salvar_transacoes_editadas'),
     path('conversor/formatos/', views_conversor.info_formatos, name='info_formatos'),
+    path('conversor/create_from_text/', views_conversor.create_ofx_from_text, name='create_ofx_from_text'),
+    path('conversor/api/preview_from_text/', views_conversor.api_preview_from_text, name='api_preview_from_text'),
+    path('conversor/api/generate_ofx/', views_conversor.api_generate_ofx, name='api_generate_ofx'),
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

@@ -1,0 +1,569 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4" style="min-height:100vh;">
+  <style>
+    .wd-removed { background: #ffecec; padding: 0 2px; border-radius:2px; }
+    .wd-added { background: #eaffea; padding: 0 2px; border-radius:2px; }
+    #diffLeft td, #diffRight td { font-family: monospace; white-space: pre-wrap; }
+    #btnWordDiff.active { background-color: #198754; color: #fff; }
+    /* Compact transactions table: reduce visual size by ~40% (use 60% scale), tighter padding */
+    .transactions-table { height: 100% !important; display: flex; flex-direction: column; }
+    /* slightly larger to avoid cut text; allow wrapping */
+    .transactions-table table { font-size: 0.5rem !important; width:100%; border-collapse: collapse; box-sizing: border-box; table-layout: fixed; }
+    .transactions-table thead { display: table; width: 100%; table-layout: fixed; }
+    .transactions-table tbody { display: block; width: 100%; overflow-y: auto; height: calc(100% - 48px); }
+    .transactions-table tbody tr { display: table; width: 100%; table-layout: fixed; box-sizing: border-box; }
+    .transactions-table td, .transactions-table th { padding: 6px 8px !important; line-height: 1.05 !important; vertical-align: middle; white-space: normal !important; word-break: break-word; overflow-wrap: anywhere; }
+    .transactions-table tbody tr { border-bottom: 1px solid rgba(0,0,0,0.04); }
+    /* Zebra with very subtle gradient */
+    .transactions-table tbody tr:nth-child(odd) { background: linear-gradient(90deg, rgba(255,255,255,0.0), rgba(248,252,248,0.02)); }
+    .transactions-table tbody tr:nth-child(even) { background: linear-gradient(90deg, rgba(250,250,250,0.0), rgba(244,250,244,0.03)); }
+    /* column alignment */
+    #transactionsTable td.tx-desc {font-size: small; text-align: left; padding-left: 10px; width:66%; overflow:hidden; text-overflow:ellipsis; }
+    #transactionsTable td.tx-amount {font-size: small; text-align: right; padding-right: 12px; width:12%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #transactionsTable td.tx-date { font-size: small; text-align: center; width:16%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    #transactionsTable td.tx-type { font-size: small; text-align: center; width:6%; white-space:nowrap; }
+    #transactionsTable td { max-width: 100%; }
+    /* Ensure headers obey widths and alignments */
+    #transactionsTable thead th { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    /* Sticky header with soft gradient */
+    .transactions-table thead th { position: sticky; top: 0; z-index: 5; background: linear-gradient(180deg, #ffffff, #f7fbf7); }
+    /* Ensure no horizontal scroll for viewers */
+    #pdfViewerContainer, #ofxViewerContainer { overflow-x: hidden; }
+  </style>
+  <div class="d-flex justify-content-end align-items-center mb-2">
+    <form method="post" enctype="multipart/form-data" class="d-flex gap-2 align-items-center" style="background:linear-gradient(90deg,#ffffff,#f4fbf4); padding:6px; border-radius:8px; box-shadow:0 1px 4px rgba(0,0,0,0.04);">
+      {% csrf_token %}
+      <label class="btn btn-sm btn-outline-secondary mb-0" style="display:flex; align-items:center; gap:8px;">
+        Escolher arquivo
+        <input type="file" name="ofx_file" accept=".ofx,.txt" style="display:none;" />
+      </label>
+      <button class="btn btn-sm btn-success" type="submit">Importar</button>
+      <button type="button" id="btnShowPdf" class="btn btn-sm btn-outline-secondary">Mostrar PDF</button>
+      <button type="button" id="btnShowOfx" class="btn btn-sm btn-outline-secondary">Mostrar OFX</button>
+    </form>
+  </div>
+
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <h3 class="mb-0">Visualizador OFX</h3>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button id="btnSortDates" class="btn btn-sm btn-outline-primary" title="Ordenar transações por data">Ordenar: Início do mês</button>
+      <a href="{% url 'conversor_index' %}" class="btn btn-outline-secondary">Voltar</a>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6" id="pdfColumn">
+      <div class="card mb-3">
+        <div class="card-header">PDF Original</div>
+        <div class="card-body text-center">
+          {% if pdf_view_url or pdf_url %}
+            <div id="pdfViewerControls" class="mb-2 d-flex justify-content-center align-items-center gap-2">
+              <button id="pdfFirst" class="btn btn-sm btn-outline-secondary">Primeira</button>
+              <button id="pdfPrev" class="btn btn-sm btn-outline-secondary">Anterior</button>
+              <button id="pdfNext" class="btn btn-sm btn-outline-secondary">Próxima</button>
+              <button id="pdfLast" class="btn btn-sm btn-outline-secondary">Última</button>
+              <span id="pdfPageInfo" class="ms-2">Página <span id="pdfPageNum">1</span> / <span id="pdfPageCount">-</span></span>
+              <button id="pdfZoomOut" class="btn btn-sm btn-outline-secondary ms-3">-</button>
+              <button id="pdfZoomIn" class="btn btn-sm btn-outline-secondary">+</button>
+            </div>
+            <div id="pdfViewerContainer" style="width:100%; height:calc(100vh - 160px); overflow-y:auto; overflow-x:hidden; display:block;">
+              <!-- Canvas pages will be rendered here (infinite vertical scroll). -->
+            </div>
+            <div id="pdfLoadError" class="text-danger mt-2 d-none">Não foi possível renderizar o PDF.</div>
+          {% else %}
+            <p class="text-muted">PDF não disponível.</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6" id="ofxColumn" style="display:flex; flex-direction:column;">
+      <!-- import controls moved to page header -->
+
+      <div class="card mb-3" style="flex:1 1 auto; display:flex; flex-direction:column;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+          <span>OFX Gerado</span>
+          <div class="btn-group btn-group-sm">
+            <button id="ofxZoomOut" class="btn btn-sm btn-outline-secondary">-</button>
+            <button id="ofxZoomIn" class="btn btn-sm btn-outline-secondary">+</button>
+            <button id="ofxZoomReset" class="btn btn-sm btn-outline-secondary">Reset</button>
+          </div>
+        </div>
+        <div class="card-body p-2" style="flex:1 1 auto; display:flex; flex-direction:column;">
+          <div id="ofxViewerContainer" style="width:100%; height:calc(100vh - 160px); overflow-y:auto; overflow-x:hidden; flex:1 1 auto;">
+            {% if generated_ofx %}
+              <!-- keep raw OFX hidden; editing is done via the transactions table below -->
+              <textarea id="generatedOfxEditable" style="display:none;">{{ generated_ofx }}</textarea>
+              <div class="d-flex gap-2 mb-2">
+                <button id="btnSaveTrans" class="btn btn-sm btn-success">Salvar transações corrigidas</button>
+                <a id="lnkDownloadUpdated" class="btn btn-sm btn-outline-primary" href="#" style="display:none;">Baixar OFX corrigido</a>
+              </div>
+
+              {% if generated_transacoes %}
+                <div class="table-responsive mt-2 transactions-table" style="max-height:550px; overflow:auto;">
+                  <table id="transactionsTable" class="table table-sm table-bordered mb-0" style="font-size:12px;">
+                    <thead class="table-light">
+                      <tr>
+                        <th style="width:16%">Data</th>
+                        <th style="width:6%">Tipo</th>
+                        <th style="width:12%; text-align: right;">Valor</th>
+                        <th style="width:66%">Descrição completa</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for t in generated_transacoes %}
+                      <tr>
+                        <td contenteditable="true" class="tx-date">{{ t.date }}</td>
+                        <td contenteditable="true" class="tx-type">{% if t.tipo %}{{ t.tipo }}{% else %}{% endif %}</td>
+                        <td contenteditable="true" class="tx-amount">{{ t.amount }}</td>
+                        <td contenteditable="true" class="tx-desc">{{ t.name }}{% if t.destino %} / {{ t.destino }}{% endif %}</td>
+                      </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+
+            {% else %}
+              <div class="text-muted">OFX gerado não encontrado.</div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      <!-- Removed 'Comparar com OFX enviado' card to free vertical space -->
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const btn = document.getElementById('btnToggleUploaded');
+  if (btn) {
+    btn.addEventListener('click', function(e){
+      e.preventDefault();
+      const el = document.getElementById('uploadedOfx');
+      if (!el) return;
+      el.style.display = (el.style.display === 'none' || el.style.display === '') ? 'block' : 'none';
+    });
+  }
+
+  // Diff controls
+  const btnShowDiff = document.getElementById('btnShowDiff');
+  const btnShowRaw = document.getElementById('btnShowRaw');
+  const btnWordDiff = document.getElementById('btnWordDiff');
+  let wordMode = false;
+  if (btnShowDiff && btnShowRaw) {
+    btnShowDiff.addEventListener('click', function(e){
+      e.preventDefault();
+      wordMode = false;
+      buildDiffView(wordMode);
+      document.getElementById('diffArea').style.display = 'block';
+      document.getElementById('uploadedOfx').style.display = 'none';
+    });
+    btnShowRaw.addEventListener('click', function(e){
+      e.preventDefault();
+      document.getElementById('diffArea').style.display = 'none';
+      document.getElementById('uploadedOfx').style.display = 'block';
+    });
+    if (btnWordDiff) {
+      btnWordDiff.addEventListener('click', function(e){
+        e.preventDefault();
+        wordMode = !wordMode;
+        btnWordDiff.classList.toggle('active', wordMode);
+        btnWordDiff.textContent = wordMode ? 'Diff por palavra: ON' : 'Diff por palavra';
+        buildDiffView(wordMode);
+        document.getElementById('diffArea').style.display = 'block';
+        document.getElementById('uploadedOfx').style.display = 'none';
+      });
+    }
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function wordLevelDiff(left, right) {
+    const wa = left.trim() ? left.split(/(\s+)/) : [];
+    const wb = right.trim() ? right.split(/(\s+)/) : [];
+    const na = wa.length, nb = wb.length;
+    const dp = Array(na+1).fill(null).map(()=>Array(nb+1).fill(0));
+    for (let i=na-1;i>=0;--i){
+      for (let j=nb-1;j>=0;--j){
+        if (wa[i] === wb[j]) dp[i][j] = dp[i+1][j+1]+1; else dp[i][j]=Math.max(dp[i+1][j], dp[i][j+1]);
+      }
+    }
+    let i=0,j=0; const leftHtml=[]; const rightHtml=[];
+    while (i<na && j<nb){
+      if (wa[i] === wb[j]) { leftHtml.push(escapeHtml(wa[i])); rightHtml.push(escapeHtml(wb[j])); i++; j++; }
+      else if (dp[i+1][j] >= dp[i][j+1]) { leftHtml.push('<span class="wd-removed">'+escapeHtml(wa[i])+'</span>'); i++; }
+      else { rightHtml.push('<span class="wd-added">'+escapeHtml(wb[j])+'</span>'); j++; }
+    }
+    while (i<na){ leftHtml.push('<span class="wd-removed">'+escapeHtml(wa[i])+'</span>'); i++; }
+    while (j<nb){ rightHtml.push('<span class="wd-added">'+escapeHtml(wb[j])+'</span>'); j++; }
+    return {left: leftHtml.join(''), right: rightHtml.join('')};
+  }
+
+  function buildDiffView(wordMode) {
+    const genEl = document.getElementById('generatedOfx');
+    const upEl = document.getElementById('uploadedOfx');
+    if (!genEl || !upEl) return;
+    const a = genEl.textContent.split(/\r?\n/);
+    const b = upEl.textContent.split(/\r?\n/);
+
+    // compute LCS table
+    const n = a.length, m = b.length;
+    const dp = Array(n+1).fill(null).map(()=>Array(m+1).fill(0));
+    for (let i= n-1; i>=0; --i) {
+      for (let j = m-1; j>=0; --j) {
+        if (a[i] === b[j]) dp[i][j] = dp[i+1][j+1] + 1;
+        else dp[i][j] = Math.max(dp[i+1][j], dp[i][j+1]);
+      }
+    }
+
+    // backtrack
+    const rows = [];
+    let i=0, j=0;
+    while (i < n && j < m) {
+      if (a[i] === b[j]) {
+        rows.push({type:'same', left: a[i], right: b[j]});
+        i++; j++;
+      } else if (dp[i+1][j] >= dp[i][j+1]) {
+        rows.push({type:'removed', left: a[i], right: ''});
+        i++;
+      } else {
+        rows.push({type:'added', left: '', right: b[j]});
+        j++;
+      }
+    }
+    while (i < n) { rows.push({type:'removed', left: a[i], right: ''}); i++; }
+    while (j < m) { rows.push({type:'added', left: '', right: b[j]}); j++; }
+
+    // render
+    const leftTable = document.getElementById('diffLeft');
+    const rightTable = document.getElementById('diffRight');
+    leftTable.innerHTML = '';
+    rightTable.innerHTML = '';
+    rows.forEach(r => {
+      const lrow = document.createElement('tr');
+      const lcell = document.createElement('td');
+      const rrow = document.createElement('tr');
+      const rcell = document.createElement('td');
+      lcell.style.padding = '4px 8px'; rcell.style.padding = '4px 8px';
+      if (r.type === 'same') {
+        lcell.innerHTML = escapeHtml(r.left || '');
+        rcell.innerHTML = escapeHtml(r.right || '');
+      } else if (wordMode) {
+        const w = wordLevelDiff(r.left || '', r.right || '');
+        lcell.innerHTML = w.left || '';
+        rcell.innerHTML = w.right || '';
+      } else {
+        lcell.innerHTML = escapeHtml(r.left || '');
+        rcell.innerHTML = escapeHtml(r.right || '');
+        if (r.type === 'removed') lcell.style.background = '#ffecec';
+        if (r.type === 'added') rcell.style.background = '#eaffea';
+      }
+      lrow.appendChild(lcell); leftTable.appendChild(lrow);
+      rrow.appendChild(rcell); rightTable.appendChild(rrow);
+    });
+  }
+});
+</script>
+<!-- PDF.js viewer -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const pdfUrl = ("{{ pdf_view_url|default:pdf_url }}").replace('//', '/');
+  if (!pdfUrl) return;
+
+  if (window['pdfjsLib']) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+  }
+
+  let pdfDoc = null;
+  let lastRendered = 0;
+  // sensible initial scale (increased by ~30%)
+  let scale = 1.3;
+  const container = document.getElementById('pdfViewerContainer');
+  const pageCountEl = document.getElementById('pdfPageCount');
+  const pageNumEl = document.getElementById('pdfPageNum');
+
+  // quality multiplier uses devicePixelRatio for crisp rendering
+  function qualityMultiplier() { return Math.min(3, Math.max(1, (window.devicePixelRatio || 1) * 2)); }
+
+  function createPageCanvas(pageNum) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pdf-page-wrapper';
+    wrapper.dataset.page = pageNum;
+    wrapper.style.margin = '8px 0';
+    const canvas = document.createElement('canvas');
+    canvas.className = 'pdf-page-canvas';
+    canvas.style.display = 'block';
+    canvas.style.margin = '0 auto';
+    wrapper.appendChild(canvas);
+    return {wrapper, canvas};
+  }
+
+  function renderPageToContainer(pageNum) {
+    if (!pdfDoc) return;
+    if (container.querySelector('[data-page="'+pageNum+'"]')) return; // already rendered
+    return pdfDoc.getPage(pageNum).then(function(page){
+      const qm = qualityMultiplier();
+      const viewport = page.getViewport({scale: scale * qm});
+      const {wrapper, canvas} = createPageCanvas(pageNum);
+      canvas.width = Math.round(viewport.width);
+      canvas.height = Math.round(viewport.height);
+      canvas.style.width = Math.round(viewport.width / qm) + 'px';
+      canvas.style.height = Math.round(viewport.height / qm) + 'px';
+      container.appendChild(wrapper);
+      const ctx = canvas.getContext('2d');
+      try { if ('imageSmoothingEnabled' in ctx) ctx.imageSmoothingEnabled = true; if ('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high'; } catch(e){}
+      return page.render({canvasContext: ctx, viewport: viewport}).promise.then(function(){ lastRendered = Math.max(lastRendered, pageNum); updateVisiblePage(); });
+    }).catch(function(err){ console.error('Erro renderPageToContainer', err); document.getElementById('pdfLoadError').classList.remove('d-none'); });
+  }
+
+  function renderInitialPages() {
+    // render first 2 pages to start
+    renderPageToContainer(1);
+    if (pdfDoc.numPages >= 2) renderPageToContainer(2);
+    pageCountEl.textContent = pdfDoc.numPages;
+  }
+
+  function updateVisiblePage(){
+    // determine which page top is closest to scrollTop
+    const wrappers = Array.from(container.querySelectorAll('.pdf-page-wrapper'));
+    if (!wrappers.length) return;
+    const top = container.scrollTop;
+    let best = wrappers[0]; let bestDist = Infinity;
+    for (const w of wrappers) {
+      const offset = w.offsetTop - top;
+      const dist = Math.abs(offset);
+      if (dist < bestDist) { bestDist = dist; best = w; }
+    }
+    const p = best ? parseInt(best.dataset.page || '1', 10) : 1;
+    pageNumEl.textContent = p;
+  }
+
+  function ensureMorePagesOnScroll() {
+    const scrollBottom = container.scrollTop + container.clientHeight;
+    const lastWrapper = container.querySelector('.pdf-page-wrapper:last-child');
+    if (!lastWrapper) return;
+    const lastBottom = lastWrapper.offsetTop + lastWrapper.offsetHeight;
+    // if within 600px of bottom, render next page
+    if (scrollBottom + 600 >= lastBottom) {
+      const next = lastRendered + 1;
+      if (pdfDoc && next <= pdfDoc.numPages) {
+        renderPageToContainer(next);
+      }
+    }
+  }
+
+  function reRenderAll() {
+    // clear and render up to lastRendered
+    const toRender = Math.max(1, lastRendered);
+    container.innerHTML = '';
+    const n = Math.min(pdfDoc.numPages, toRender);
+    const promises = [];
+    for (let i=1;i<=n;i++) promises.push(renderPageToContainer(i));
+    return Promise.all(promises).then(updateVisiblePage);
+  }
+
+  // navigation helpers
+  function goToFirst(){
+    container.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(updateVisiblePage, 300);
+  }
+  function goToLast(){
+    const target = Math.max(0, container.scrollHeight - container.clientHeight);
+    container.scrollTo({ top: target, behavior: 'smooth' });
+    setTimeout(updateVisiblePage, 300);
+  }
+  function goToNext(){
+    const target = Math.min(container.scrollHeight - container.clientHeight, container.scrollTop + container.clientHeight);
+    container.scrollTo({ top: target, behavior: 'smooth' });
+    setTimeout(updateVisiblePage, 250);
+  }
+  function goToPrev(){
+    const target = Math.max(0, container.scrollTop - container.clientHeight);
+    container.scrollTo({ top: target, behavior: 'smooth' });
+    setTimeout(updateVisiblePage, 250);
+  }
+
+  // click zoom: left-click zoom in, right-click zoom out (suppress context menu)
+  container.addEventListener('click', function(e){
+    // left click
+    scale = Math.min(4, +(scale * 1.15).toFixed(2));
+    reRenderAll();
+  });
+  container.addEventListener('contextmenu', function(e){
+    e.preventDefault();
+    scale = Math.max(0.2, +(scale / 1.15).toFixed(2));
+    reRenderAll();
+    return false;
+  });
+
+  container.addEventListener('scroll', function(){ updateVisiblePage(); ensureMorePagesOnScroll(); });
+
+  document.getElementById('pdfFirst')?.addEventListener('click', function(e){ e.preventDefault(); goToFirst(); });
+  document.getElementById('pdfPrev')?.addEventListener('click', function(e){ e.preventDefault(); goToPrev(); });
+  document.getElementById('pdfNext')?.addEventListener('click', function(e){ e.preventDefault(); goToNext(); });
+  document.getElementById('pdfLast')?.addEventListener('click', function(e){ e.preventDefault(); goToLast(); });
+
+  // load PDF
+  try {
+    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    loadingTask.promise.then(function(pdf) {
+      pdfDoc = pdf;
+      lastRendered = 0;
+      renderInitialPages();
+    }).catch(function(err){ console.error('Erro ao carregar PDF:', err); document.getElementById('pdfLoadError').classList.remove('d-none'); });
+  } catch (e) {
+    console.error('PDF.js erro', e);
+    document.getElementById('pdfLoadError').classList.remove('d-none');
+  }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const ofxInner = document.getElementById('ofxInner');
+  const ofxViewer = document.getElementById('ofxViewerContainer');
+  const pdfViewer = document.getElementById('pdfViewerContainer');
+  let ofxScale = 1.0;
+
+  function applyOfxScale() {
+    if (!ofxInner) return;
+    ofxInner.style.transform = `scale(${ofxScale})`;
+    // keep width 100% so scale only affects visual size
+    ofxInner.style.width = '100%';
+  }
+
+  function syncOfxHeight() {
+    if (!ofxViewer || !pdfViewer) return;
+    try {
+      const h = pdfViewer.clientHeight;
+      ofxViewer.style.height = h + 'px';
+    } catch(e) { /* ignore */ }
+  }
+
+  document.getElementById('ofxZoomIn')?.addEventListener('click', function(){ ofxScale = Math.min(2.5, +(ofxScale + 0.1).toFixed(2)); applyOfxScale(); });
+  document.getElementById('ofxZoomOut')?.addEventListener('click', function(){ ofxScale = Math.max(0.5, +(ofxScale - 0.1).toFixed(2)); applyOfxScale(); });
+  document.getElementById('ofxZoomReset')?.addEventListener('click', function(){ ofxScale = 1.0; applyOfxScale(); });
+
+  // Keep OFX height in sync with PDF viewer
+  syncOfxHeight();
+  window.addEventListener('resize', syncOfxHeight);
+
+  // Observe canvas size changes to keep heights matched
+  const pdfCanvas = document.getElementById('pdfCanvas');
+  if (pdfCanvas) {
+    const mo = new MutationObserver(function(m){ syncOfxHeight(); });
+    mo.observe(pdfCanvas, { attributes: true, attributeFilter: ['width','height','style'] });
+  }
+});
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const btnSave = document.getElementById('btnSaveTrans');
+  const lnk = document.getElementById('lnkDownloadUpdated');
+  if (!btnSave) return;
+
+  function getCookie(name) {
+    const v = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return v ? v.pop() : '';
+  }
+
+  btnSave.addEventListener('click', function(e){
+    e.preventDefault();
+    btnSave.disabled = true;
+    btnSave.textContent = 'Salvando...';
+
+    const rows = Array.from(document.querySelectorAll('#transactionsTable tbody tr'));
+    const transacoes = rows.map(r => ({
+      date: r.querySelector('.tx-date')?.textContent.trim() || '',
+      tipo: r.querySelector('.tx-type')?.textContent.trim() || '',
+      amount: r.querySelector('.tx-amount')?.textContent.trim() || '0',
+      name: r.querySelector('.tx-desc')?.textContent.trim() || ''
+    }));
+
+    fetch('{% url "salvar_transacoes_editadas" conversao.id %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=UTF-8',
+        'X-CSRFToken': getCookie('csrftoken')
+      },
+      body: JSON.stringify({ transacoes: transacoes })
+    }).then(r => r.json()).then(j => {
+      btnSave.disabled = false;
+      btnSave.textContent = 'Salvar transações corrigidas';
+      if (j.status === 'ok' && j.url) {
+        lnk.href = j.url;
+        lnk.style.display = 'inline-block';
+        // trigger download
+        window.location = j.url;
+      } else if (j.url) {
+        lnk.href = j.url; lnk.style.display = 'inline-block';
+      } else if (j.erro) {
+        alert('Erro ao salvar: ' + j.erro);
+      }
+    }).catch(err => {
+      btnSave.disabled = false;
+      btnSave.textContent = 'Salvar transações corrigidas';
+      alert('Erro no envio: ' + err);
+    });
+  });
+});
+</script>
+<script>
+// Sorting transactions by date toggle
+document.addEventListener('DOMContentLoaded', function(){
+  const btnSort = document.getElementById('btnSortDates');
+  if (!btnSort) return;
+  let desc = false; // start = início do mês (asc)
+
+  function parseCellDate(text) {
+    if (!text) return new Date(0);
+    // expected DD/MM/YYYY[ HH:MM:SS]
+    const parts = text.trim().split(' ');
+    const dpart = parts[0] || '';
+    const tpart = parts[1] || '00:00:00';
+    const m = dpart.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if (!m) return new Date(0);
+    const day = parseInt(m[1],10), mon = parseInt(m[2],10)-1, year = parseInt(m[3],10);
+    const tt = tpart.split(':').map(s=>parseInt(s||'0',10));
+    const hh = tt[0]||0, mm = tt[1]||0, ss = tt[2]||0;
+    return new Date(year, mon, day, hh, mm, ss);
+  }
+
+  function sortTransactions() {
+    const table = document.getElementById('transactionsTable');
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    rows.sort((a,b)=>{
+      const da = parseCellDate(a.querySelector('.tx-date')?.textContent||'');
+      const db = parseCellDate(b.querySelector('.tx-date')?.textContent||'');
+      return desc ? db - da : da - db;
+    });
+    // Re-append in new order
+    rows.forEach(r => tbody.appendChild(r));
+  }
+
+  btnSort.addEventListener('click', function(e){
+    e.preventDefault();
+    desc = !desc;
+    btnSort.textContent = desc ? 'Ordenar: Fim do mês' : 'Ordenar: Início do mês';
+    sortTransactions();
+    // scroll to top of transactions container
+    const txContainer = document.querySelector('.transactions-table tbody');
+    if (txContainer) txContainer.scrollTop = 0;
+  });
+});
+</script>
+{% endblock %}

@@ -92,6 +92,7 @@ class Empresa(models.Model):
     certificado_validade = models.DateField(null=True, blank=True)
     certificado_emitente = models.CharField(max_length=255, blank=True)
     certificado_arquivo = models.FileField(upload_to='certificados/', blank=True, null=True)
+    certificado_antigo = models.BooleanField(default=False)
     ultimo_zip = models.FileField(upload_to='empresas/zips/', blank=True, null=True,
                                    help_text='Último arquivo ZIP gerado para esta empresa')
     
@@ -222,6 +223,7 @@ class ArquivoConversao(models.Model):
     formato_destino = models.CharField(max_length=10)
     tamanho_original = models.IntegerField(default=0)  # em bytes
     tamanho_convertido = models.IntegerField(default=0, null=True, blank=True)
+    banco = models.CharField(max_length=50, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
     mensagem_erro = models.TextField(blank=True)
     data_criacao = models.DateTimeField(auto_now_add=True)
@@ -281,3 +283,8 @@ class NotaFiscal(models.Model):
         verbose_name = 'Nota Fiscal'
         verbose_name_plural = 'Notas Fiscais'
         ordering = ['-data_emissao']
+
+
+# `SiegCredential` removed: SIEG integration now uses a global key configured
+# in settings (`SIEG_API_KEY`) or the `SIEG_API_KEY` environment variable.
+# The migration to delete the model is included under core/migrations/.
