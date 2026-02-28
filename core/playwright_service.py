@@ -31,6 +31,10 @@ class EmissorNacionalPlaywright:
 
     def __init__(self, empresa, download_path=None, headless=True):
         self.empresa = empresa
+        if not empresa.certificado_arquivo:
+            raise Exception("Objeto Empresa sem arquivo de certificado")
+        if not empresa.certificado_senha:
+            raise Exception("Objeto Empresa sem senha de certificado")
         self.cert_path = empresa.certificado_arquivo.path
         self.senha = empresa.certificado_senha
         self.base_url = "https://www.nfse.gov.br"
@@ -379,6 +383,12 @@ def baixar_com_playwright_otimizado(empresa, tipo, data_inicio, data_fim,
     os.makedirs(pasta_destino, exist_ok=True)
 
     cliente = None
+    # validações antecipadas para evitar erros confusos durante a inicialização
+    if not empresa.certificado_arquivo:
+        raise Exception("Empresa não possui certificado. Faça upload antes de tentar o download.")
+    if not empresa.certificado_senha:
+        raise Exception("Senha do certificado não está configurada para esta empresa.")
+
     try:
         # Tentativa 1: Com cookies
         cliente = EmissorNacionalPlaywright(empresa, pasta_destino, headless=headless)

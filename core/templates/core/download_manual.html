@@ -256,15 +256,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div id="uploadStatus" class="alert d-none"></div>
                 </form>
             </div>
-            <!-- Downloads Recentes -->
-{% if tarefas_recentes %}
+            <!-- uploads only; recent downloads moved below modal -->
+            
+            <!-- end modal-body -->
+        </div>
+        <!-- end modal-content -->
+    </div>
+    <!-- end modal-dialog -->
+</div>
+<!-- end modal -->
+
+{% comment %} download history card rendered outside when present {% endcomment %}
+{% if not precisa_certificado and tarefas_recentes %}
 <div class="card mt-4">
     <div class="card-header bg-transparent">
         <i class="bi bi-clock-history me-2 text-success"></i>
         Downloads Recentes
     </div>
     <div class="card-body">
-                <div class="table-responsive table-scrollable">
+        <div class="table-responsive table-scrollable">
             <table class="table table-hover table--compact">
                 <thead>
                     <tr>
@@ -420,20 +430,24 @@ function uploadCertificado() {
             
             // Recria o formulário original e submete
             setTimeout(() => {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.action = window.location.href;
-                
-                form.innerHTML = `
-                    {% csrf_token %}
-                    <input type="hidden" name="empresa" value="${empresaId}">
-                    <input type="hidden" name="tipo" value="${tipo}">
-                    <input type="hidden" name="data_inicio" value="${dataInicio}">
-                    <input type="hidden" name="data_fim" value="${dataFim}">
-                `;
-                
-                document.body.appendChild(form);
-                form.submit();
+                // if we already had type and dates, continue the download automatically
+                if (tipo && dataInicio && dataFim) {
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = window.location.href;
+                    form.innerHTML = `
+                        {% csrf_token %}
+                        <input type="hidden" name="empresa" value="${empresaId}">
+                        <input type="hidden" name="tipo" value="${tipo}">
+                        <input type="hidden" name="data_inicio" value="${dataInicio}">
+                        <input type="hidden" name="data_fim" value="${dataFim}">
+                    `;
+                    document.body.appendChild(form);
+                    form.submit();
+                } else {
+                    // otherwise just reload page with empresa selected so user can fill the rest
+                    window.location.href = window.location.pathname + '?empresa=' + empresaId;
+                }
             }, 1500);
         } else {
             clearInterval(interval);

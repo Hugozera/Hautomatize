@@ -59,16 +59,16 @@
                         <label class="form-label fw-semibold">
                             <i class="bi bi-qr-code me-1 text-success"></i>CNPJ *
                         </label>
-                        <input type="text" name="cnpj" id="id_cnpj" class="form-control" 
-                               value="{{ form.cnpj.value|default:'' }}" maxlength="18" 
-                               {% if form.instance.pk %}readonly{% endif %} required>
-                        {% if not form.instance.pk %}
-                        <div class="form-text">
-                            <button type="button" class="btn btn-sm btn-outline-success mt-1" onclick="buscarCNPJ()">
-                                <i class="bi bi-search"></i> Buscar dados do CNPJ
+                        <div class="input-group">
+                            <input type="text" name="cnpj" id="id_cnpj" class="form-control" 
+                                   value="{{ form.cnpj.value|default:'' }}" maxlength="18" 
+                                   {% if form.instance.pk %}readonly{% endif %} required>
+                            {% if not form.instance.pk %}
+                            <button type="button" class="btn btn-outline-success" onclick="buscarCNPJ()">
+                                <i class="bi bi-search"></i>
                             </button>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
                     
                     <div class="col-md-6">
@@ -191,25 +191,24 @@
                         Este certificado precisa do arquivo .pfx porque não pôde ser exportado da loja do Windows. Faça upload do .pfx e informe a senha para salvá-lo.
                     {% else %}
                         {% if form.instance.pk %}
-                            Deixe em branco para manter o certificado atual.
+                            Deixe em branco para manter o certificado atual; o upload é opcional.
                         {% else %}
-                            Faça upload do certificado (.pfx) e informe a senha.
+                            O certificado é opcional. Você pode fazer upload do .pfx e informar a senha para preencher campos automaticamente, ou cadastrá-lo depois.
                         {% endif %}
                     {% endif %}
                 </div>
                 
                 <div class="row g-4">
                     <div class="col-md-6">
-                        <label class="form-label fw-semibold">Arquivo do Certificado (.pfx)</label>
+                        <label class="form-label fw-semibold">Arquivo do Certificado (.pfx) <small class="text-muted">(opcional)</small></label>
                         <input type="file" name="certificado" id="id_certificado" class="form-control" 
-                               accept=".pfx" {% if not form.instance.pk or require_pfx %}required{% endif %}>
+                               accept=".pfx" {% if require_pfx %}required{% endif %}>
                     </div>
                     
                     <div class="col-md-4">
-                        <label class="form-label fw-semibold">Senha do Certificado</label>
+                        <label class="form-label fw-semibold">Senha do Certificado <small class="text-muted">(opcional)</small></label>
                         <div class="input-group">
-                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control" 
-                                   {% if not form.instance.pk %}required{% endif %}>
+                            <input type="password" name="certificado_senha" id="id_certificado_senha" class="form-control">
                             <button type="button" class="btn btn-outline-secondary" onclick="toggleSenha()">
                                 <i class="bi bi-eye" id="olhoSenha"></i>
                             </button>

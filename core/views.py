@@ -58,8 +58,8 @@ def download_manual(request):
     else:
         empresas = Empresa.objects.none()
     
-    # Tarefas recentes do usuário
-    if hasattr(request.user, 'pessoa'):
+    # Tarefas recentes do usuário (não precisamos mostrar durante primeiro upload)
+    if hasattr(request.user, 'pessoa') and not precisa_certificado:
         tarefas_recentes = TarefaDownload.objects.filter(
             usuario=request.user.pessoa
         ).order_by('-data_criacao')[:5]
@@ -780,7 +780,7 @@ def empresa_create_custom(request):
     # Usa o ModelForm para preencher/validar visualmente o formulário
     form = EmpresaForm(request.POST or None, request.FILES or None)
 
-    # se veio show_upload na URL, requer upload (novo cadastro já exige upload por padrão)
+    # se veio show_upload na URL, requer upload; por padrão o certificado é opcional
     require_pfx = bool(request.GET.get('show_upload') == '1')
 
     if request.method == 'POST':
@@ -792,11 +792,12 @@ def empresa_create_custom(request):
         # Se o fluxo exige PFX por show_upload, valide a presença do arquivo
         if require_pfx and not certificado_file:
             msg = 'Upload do arquivo .pfx é obrigatório para este certificado.'
-        # Validações básicas (mantém comportamento atual)
+        # Validações básicas
         elif not cnpj:
             msg = 'CNPJ é obrigatório.'
-        elif not certificado_file and not certificado_senha:
-            msg = 'Certificado e senha são obrigatórios.'
+        # se enviou certificado sem senha, avise
+        elif certificado_file and not certificado_senha:
+            msg = 'Senha do certificado é obrigatória quando um arquivo for enviado.'
         else:
             try:
                 certificado_thumbprint = ''
@@ -858,6 +859,7 @@ def empresa_create_custom(request):
                     defaults={
                         'razao_social': request.POST.get('razao_social', form.initial.get('razao_social', '')),
                         'nome_fantasia': request.POST.get('nome_fantasia', form.initial.get('nome_fantasia', '')),
+                        'certificado_antigo': False,
                         'inscricao_municipal': request.POST.get('inscricao_municipal', form.initial.get('inscricao_municipal', '')),
                         'inscricao_estadual': request.POST.get('inscricao_estadual', form.initial.get('inscricao_estadual', '')),
                         'tipo': request.POST.get('tipo', 'matriz'),
@@ -1253,7 +1255,6 @@ def download_progress(request, historico_id):
 
 # ========== VIEWS DE CONSULTA (APIs) ==========
 
-@login_required
 @csrf_exempt
 def buscar_cnpj(request):
     """Endpoint AJAX para buscar dados de CNPJ"""
