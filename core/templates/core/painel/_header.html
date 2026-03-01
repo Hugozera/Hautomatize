@@ -1,0 +1,24 @@
+{% comment %}Header fragment for painel screens: role, breadcrumbs and quick links{% endcomment %}
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <div>
+    {% if title %}<h2 class="mb-0">{{ title }}</h2>{% endif %}
+    {% if subtitle %}<div class="text-muted small">{{ subtitle }}</div>{% endif %}
+  </div>
+  <div>
+  </div>
+</div>
+<script>
+document.addEventListener('click', function(e){
+  const t = e.target.closest('[data-target-tab]');
+  if(!t) return;
+  e.preventDefault();
+  const id = t.getAttribute('data-target-tab');
+  try{
+    const tabEl = document.querySelector('#'+id+'-tab');
+    if(tabEl){ new bootstrap.Tab(tabEl); tabEl.click(); }
+    // Also scroll into view
+    const pane = document.getElementById(id);
+    if(pane) pane.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(e){}
+});
+</script>

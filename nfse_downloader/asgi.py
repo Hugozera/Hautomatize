@@ -10,7 +10,13 @@ https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 import os
 
 from django.core.asgi import get_asgi_application
+import os
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'nfse_downloader.settings')
 
-application = get_asgi_application()
+# Import the ProtocolTypeRouter application assembled in painel.routing
+try:
+	from painel.routing import application
+except Exception:
+	# Fallback to default ASGI app if painel routing isn't available
+	application = get_asgi_application()

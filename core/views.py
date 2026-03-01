@@ -3,6 +3,11 @@
 from .tasks import iniciar_download_tarefa
 from .models import TarefaDownload
 from django.http import JsonResponse
+from django.http import HttpResponseForbidden
+from django.contrib import messages
+from django.core.serializers.json import DjangoJSONEncoder
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 # ========== IMPORTS PADRÃO ==========
 import json
 import os
@@ -58,6 +63,9 @@ def download_manual(request):
     else:
         empresas = Empresa.objects.none()
     
+    # inicializa flag antes do uso para evitar UnboundLocalError
+    precisa_certificado = False
+
     # Tarefas recentes do usuário (não precisamos mostrar durante primeiro upload)
     if hasattr(request.user, 'pessoa') and not precisa_certificado:
         tarefas_recentes = TarefaDownload.objects.filter(
@@ -65,10 +73,9 @@ def download_manual(request):
         ).order_by('-data_criacao')[:5]
     else:
         tarefas_recentes = []
-    
+
     msg = None
     empresa_selecionada = None
-    precisa_certificado = False
     
     # Verifica se tem empresa na URL
     empresa_id = request.GET.get('empresa') or request.POST.get('empresa')
@@ -229,55 +236,29 @@ def upload_certificado_temporario(request):
     except Exception as e:
         print('DEBUG request introspect failed:', repr(e))
 
-    # Try to parse multipart body first (avoids request.body after request.POST issue)
-    empresa_id = None
-    senha = ''
-    certificado_file = None
+    # Prefer Django's standard parsing (works with test client and real requests).
+    empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
+    senha = request.POST.get('senha', '')
+    certificado_file = request.FILES.get('certificado')
 
-    content_type = request.META.get('CONTENT_TYPE', '')
-    if content_type.startswith('multipart/form-data'):
+    # If Django didn't populate request.FILES (some test client cases), try
+    # parsing from `request.body` without consuming the request stream.
+    if not certificado_file and request.body:
         try:
             import io
             from django.http.multipartparser import MultiPartParser
-            from django.core.files.base import ContentFile
-            # Read raw stream to inspect content then parse from BytesIO
-            stream = getattr(request, '_stream', None) or getattr(request, 'stream', None)
-            try:
-                raw = stream.read()
-                print('DEBUG upload_certificado_temporario raw length:', len(raw))
-                print('DEBUG upload_certificado_temporario raw preview:', raw[:400])
-            except Exception as e:
-                raw = None
-                print('DEBUG failed to read raw stream:', repr(e))
-            parser = MultiPartParser(request.META, io.BytesIO(raw) if raw is not None else stream, request.upload_handlers)
+            parser = MultiPartParser(request.META, io.BytesIO(request.body), request.upload_handlers)
             post_data, files_data = parser.parse()
-            try:
-                print('DEBUG multipart parse sizes post:', len(post_data), 'files:', len(files_data))
-            except Exception:
-                pass
-            empresa_id = post_data.get('empresa_id') or post_data.get('empresa')
-            senha = post_data.get('senha') or ''
+            empresa_id = empresa_id or post_data.get('empresa_id') or post_data.get('empresa')
+            senha = senha or post_data.get('senha', '')
             if files_data and files_data.get('certificado'):
                 up = files_data.get('certificado')
-                # up may be an UploadedFile or list; handle both
                 try:
-                    filename = up.name
                     certificado_file = up
                 except Exception:
-                    # assume first item
-                    filename = up[0].name
                     certificado_file = up[0]
-                print('DEBUG parsed certificado via MultiPartParser, filename:', filename)
         except Exception as e:
-            print('DEBUG multipart initial parse failed:', repr(e))
-
-    # Fallback to Django parsing
-    if not empresa_id:
-        empresa_id = request.POST.get('empresa_id') or request.POST.get('empresa')
-    if not senha:
-        senha = request.POST.get('senha', '')
-    if not certificado_file:
-        certificado_file = request.FILES.get('certificado')
+            print('DEBUG upload_certificado_temporario body parse failed:', repr(e))
 
     if not empresa_id or not certificado_file or not senha:
         return JsonResponse({'status': 'ERRO', 'msg': 'Dados incompletos'})
@@ -1622,6 +1603,165 @@ def certificado_list(request):
 
 
 @login_required
+def empresa_search(request):
+    """AJAX endpoint: search empresas by q (cnpj, nome, razao_social)."""
+    q = request.GET.get('q', '').strip()
+    results = []
+    if q:
+        qs = Empresa.objects.filter(
+            models.Q(nome_fantasia__icontains=q) | models.Q(razao_social__icontains=q) | models.Q(cnpj__icontains=q)
+        )[:20]
+        for e in qs:
+            results.append({
+                'id': e.pk,
+                'nome': e.nome_fantasia,
+                'razao': e.razao_social,
+                'cnpj': e.cnpj,
+                'inscricao_municipal': e.inscricao_municipal,
+                'inscricao_estadual': e.inscricao_estadual,
+                'tipo': e.tipo,
+                'cep': e.cep,
+                'logradouro': e.logradouro,
+                'numero': e.numero,
+                'complemento': e.complemento,
+                'bairro': e.bairro,
+                'municipio': e.municipio,
+                'uf': e.uf,
+            })
+    else:
+        # provide a small mock example to help UX when no companies exist
+        results = [
+            {'id': 0, 'nome': 'ACME Ltda', 'razao': 'ACME Indústria', 'cnpj': '00000000000000', 'inscricao_municipal': '', 'inscricao_estadual': '', 'tipo': 'matriz', 'cep': '', 'logradouro': '', 'numero': '', 'complemento': '', 'bairro': '', 'municipio': '', 'uf': ''},
+            {'id': 0, 'nome': 'Exemplo SA', 'razao': 'Empresa Exemplo', 'cnpj': '11111111000111', 'inscricao_municipal': '', 'inscricao_estadual': '', 'tipo': 'matriz', 'cep': '', 'logradouro': '', 'numero': '', 'complemento': '', 'bairro': '', 'municipio': '', 'uf': ''},
+        ]
+    return JsonResponse({'results': results})
+
+
+def can_manage_departamento(user):
+    """Permission helper: who can manage departments.
+
+    Superusers or users with explicit painel.manage_departamento permission.
+    """
+    if not user or getattr(user, 'is_anonymous', True):
+        return False
+    if user.is_superuser or getattr(user, 'is_staff', False):
+        return True
+    pessoa = getattr(user, 'pessoa', None)
+    if pessoa and pessoa.has_perm_code('painel.manage_departamento'):
+        return True
+    return False
+
+
+@login_required
+def departamento_list(request):
+    if not can_manage_departamento(request.user):
+        return HttpResponseForbidden('Permissão negada')
+    from .models import Departamento
+    departamentos = Departamento.objects.all()
+    return render(request, 'core/painel/departamento_list.html', {'departamentos': departamentos})
+
+
+@login_required
+def departamento_create(request):
+    if not can_manage_departamento(request.user):
+        return HttpResponseForbidden('Permissão negada')
+    from .models import Departamento, Analista
+    from django.contrib.auth.models import User
+    users = User.objects.all()
+    if request.method == 'POST':
+        nome = (request.POST.get('nome') or '').strip()
+        if not nome:
+            messages.error(request, 'Nome do departamento é obrigatório.')
+            return render(request, 'core/painel/departamento_form.html', {'departamento': None, 'users': users})
+        d = Departamento.objects.create(nome=nome)
+        ids = request.POST.getlist('analistas')
+        # assign selected users as Analista for this department
+        selected = set(int(x) for x in ids if x.isdigit())
+        for uid in selected:
+            try:
+                u = User.objects.get(pk=uid)
+            except User.DoesNotExist:
+                continue
+            analista, created = Analista.objects.get_or_create(user=u, defaults={'departamento': d})
+            if not created and analista.departamento_id != d.id:
+                analista.departamento = d
+                analista.save()
+        messages.success(request, 'Departamento criado com sucesso.')
+        return redirect('painel:departamento_list')
+    return render(request, 'core/painel/departamento_form.html', {'departamento': None, 'users': users})
+
+
+@login_required
+def departamento_edit(request, pk):
+    if not can_manage_departamento(request.user):
+        return HttpResponseForbidden('Permissão negada')
+    from .models import Departamento, Analista
+    from django.contrib.auth.models import User
+    departamento = get_object_or_404(Departamento, pk=pk)
+    users = User.objects.all()
+    if request.method == 'POST':
+        nome = (request.POST.get('nome') or '').strip()
+        if not nome:
+            messages.error(request, 'Nome do departamento é obrigatório.')
+            return render(request, 'core/painel/departamento_form.html', {'departamento': departamento, 'users': users})
+        departamento.nome = nome
+        departamento.save()
+        ids = request.POST.getlist('analistas')
+        selected = set(int(x) for x in ids if x.isdigit())
+        # assign selected users as analistas for this department
+        for uid in selected:
+            try:
+                u = User.objects.get(pk=uid)
+            except User.DoesNotExist:
+                continue
+            analista, created = Analista.objects.get_or_create(user=u, defaults={'departamento': departamento})
+            if not created and analista.departamento_id != departamento.id:
+                analista.departamento = departamento
+                analista.save()
+        # remove Analista rows for users that were unselected (department field is non-nullable)
+        Analista.objects.filter(departamento=departamento).exclude(user__pk__in=selected).delete()
+        messages.success(request, 'Departamento atualizado.')
+        return redirect('painel:departamento_list')
+    return render(request, 'core/painel/departamento_form.html', {'departamento': departamento, 'users': users})
+
+
+@login_required
+def painel_department_api(request, departamento_id):
+    """Return JSON payload with analistas and atendimentos for a department."""
+    from .models import Departamento, Analista, Atendimento
+    departamento = get_object_or_404(Departamento, pk=departamento_id)
+    analistas_qs = Analista.objects.filter(departamento=departamento)
+    atendimentos_qs = Atendimento.objects.filter(departamento=departamento).order_by('criado_em')[:200]
+    analistas = []
+    for a in analistas_qs:
+        analistas.append({'id': a.pk, 'name': a.user.get_full_name() or a.user.username, 'disponivel': bool(a.disponivel)})
+    atendimentos = []
+    for at in atendimentos_qs:
+        # Do not expose company name for pure pending items (only show after claimed)
+        empresa_field = at.empresa if getattr(at, 'status', None) and at.status != 'pendente' else None
+        atendimentos.append({
+            'id': at.pk,
+            'empresa': empresa_field,
+            'motivo': at.motivo,
+            'status': at.status,
+            'criado_em': at.criado_em.isoformat() if at.criado_em else None,
+            'iniciado_em': at.iniciado_em.isoformat() if at.iniciado_em else None,
+            'finalizado_em': at.finalizado_em.isoformat() if at.finalizado_em else None,
+            'analista': {'id': at.analista.pk, 'name': at.analista.user.get_full_name()} if getattr(at, 'analista', None) else None,
+        })
+    return JsonResponse({'departamento': {'id': departamento.pk, 'nome': departamento.nome}, 'analistas': analistas, 'atendimentos': atendimentos}, encoder=DjangoJSONEncoder)
+
+
+@login_required
+def api_users(request):
+    """Return small JSON list of users for chat selector."""
+    from django.contrib.auth.models import User
+    users = User.objects.filter(is_active=True).order_by('first_name', 'username')[:500]
+    out = [{'id': u.pk, 'name': (u.get_full_name() or u.username)} for u in users]
+    return JsonResponse({'users': out})
+
+
+@login_required
 @csrf_exempt
 def remover_certificado(request, pk):
     """Remove o certificado (FileField) da empresa informada."""
@@ -1774,28 +1914,19 @@ def certificado_edit(request, pk):
         certificado_file = None
         certificado_senha = None
 
-        # Try parsing multipart body first (to avoid accessing request.body after stream was read)
-        content_type = request.META.get('CONTENT_TYPE', '')
-        if content_type.startswith('multipart/form-data'):
+        # Prefer standard Django parsing first.
+        certificado_senha = request.POST.get('certificado_senha', '')
+        certificado_file = request.FILES.get('certificado')
+
+        # If Django didn't populate request.FILES (test client edge cases),
+        # try parsing from request.body safely.
+        if not certificado_file and request.body:
             try:
                 import io
                 from django.http.multipartparser import MultiPartParser
-                # Read raw stream to inspect content then parse from BytesIO
-                stream = getattr(request, '_stream', None) or getattr(request, 'stream', None)
-                try:
-                    raw = stream.read()
-                    print('DEBUG certificado_edit raw length:', len(raw))
-                    print('DEBUG certificado_edit raw preview:', raw[:400])
-                except Exception as e:
-                    raw = None
-                    print('DEBUG failed to read raw stream in certificado_edit:', repr(e))
-                parser = MultiPartParser(request.META, io.BytesIO(raw) if raw is not None else stream, request.upload_handlers)
+                parser = MultiPartParser(request.META, io.BytesIO(request.body), request.upload_handlers)
                 post_data, files_data = parser.parse()
-                try:
-                    print('DEBUG certificado_edit multipart parse sizes post:', len(post_data), 'files:', len(files_data))
-                except Exception:
-                    pass
-                certificado_senha = post_data.get('certificado_senha')
+                certificado_senha = certificado_senha or post_data.get('certificado_senha', '')
                 if files_data and files_data.get('certificado'):
                     up = files_data.get('certificado')
                     try:
@@ -1804,15 +1935,8 @@ def certificado_edit(request, pk):
                     except Exception:
                         certificado_file = up[0]
                         filename = up[0].name
-                    print('DEBUG parsed certificado via MultiPartParser in certificado_edit, filename:', filename)
             except Exception as e:
-                print('DEBUG certificado_edit multipart fallback failed:', repr(e))
-
-        # Fallback: use standard Django parsing if not parsed above
-        if not certificado_senha:
-            certificado_senha = request.POST.get('certificado_senha', '')
-        if not certificado_file:
-            certificado_file = request.FILES.get('certificado')
+                print('DEBUG certificado_edit body parse failed:', repr(e))
 
         if certificado_file:
             empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=False)

@@ -1,0 +1,61 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container">
+  <h2>Meu Painel - {{ departamento.nome }}</h2>
+  <p>Analista: <strong>{{ analista }}</strong></p>
+  <div class="mb-3">
+    <form method="post" action="{% url 'painel:puxar_proximo' %}">{% csrf_token %}
+      <button class="btn btn-primary">Puxar Próximo Atendimento</button>
+    </form>
+  </div>
+  <ul class="nav nav-tabs" id="meuPainelTabs" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="pendentes-tab" data-bs-toggle="tab" data-bs-target="#pendentes" type="button" role="tab">Pendentes</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="meus-tab" data-bs-toggle="tab" data-bs-target="#meus" type="button" role="tab">Meus Atendimentos</button>
+    </li>
+  </ul>
+  <div class="tab-content mt-3">
+    <div class="tab-pane fade show active" id="pendentes" role="tabpanel">
+      <ul class="list-group" id="meu-pendentes">
+        {% for a in atendimentos_pendentes %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{% if a.status != 'pendente' %}{{ a.empresa }}{% else %}&mdash;{% endif %}</strong><br>
+            <small class="text-muted">Motivo: {{ a.motivo }}</small>
+          </div>
+          <div>
+            <a href="{% url 'painel:atendimento_analista' a.id %}" class="btn btn-sm btn-outline-secondary">Abrir</a>
+          </div>
+        </li>
+        {% empty %}
+        <li class="list-group-item">Nenhum atendimento pendente.</li>
+        {% endfor %}
+      </ul>
+    </div>
+    <div class="tab-pane fade" id="meus" role="tabpanel">
+      <ul class="list-group">
+        {% for a in meus_atendimentos %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div>
+            <strong>{{ a.empresa }}</strong><br>
+            <small class="text-muted">Status: {{ a.get_status_display }} • Motivo: {{ a.motivo }}</small>
+          </div>
+          <div>
+            <a href="{% url 'painel:atendimento_analista' a.id %}" class="btn btn-sm btn-outline-secondary">Abrir</a>
+          </div>
+        </li>
+        {% empty %}
+        <li class="list-group-item">Nenhum atendimento atribuído.</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  <div class="mt-4 alert alert-info">
+    <strong>Exemplo (mock):</strong> se nenhuma empresa existir, você verá sugestões de exemplo ao buscar no formulário de registrar OS.
+  </div>
+</div>
+{% endblock %}

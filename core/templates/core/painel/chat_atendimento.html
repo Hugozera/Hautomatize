@@ -1,0 +1,38 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container">
+	<h2>Chat do Atendimento</h2>
+	<div id="chat-log"></div>
+	<input id="chat-message-input" type="text" class="form-control" placeholder="Digite sua mensagem...">
+	<button id="chat-message-send" class="btn btn-primary mt-2">Enviar</button>
+</div>
+<script>
+const roomName = '{{ atendimento.id }}';
+const chatSocket = new WebSocket((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/chat/' + roomName + '/');
+	chatSocket.onmessage = function(e) {
+	const data = JSON.parse(e.data);
+	const log = document.querySelector('#chat-log');
+	const meUser = '{{ request.user.username|default:"" }}';
+	const isMe = (data.user === meUser);
+	const wrapper = document.createElement('div'); wrapper.className = 'message ' + (isMe ? 'me' : 'other');
+	const meta = document.createElement('div'); meta.className = 'meta';
+	const timeStr = data.created ? new Date(data.created).toLocaleTimeString() : new Date().toLocaleTimeString();
+	meta.innerHTML = '<b>' + (data.user || 'Anônimo') + '</b> <span class="ms-2 text-muted" style="font-size:.85rem">' + timeStr + '</span>';
+	const body = document.createElement('div'); body.className = 'body'; body.textContent = data.message;
+	wrapper.appendChild(meta); wrapper.appendChild(body);
+	log.appendChild(wrapper);
+	log.scrollTop = log.scrollHeight;
+};
+chatSocket.onclose = function(e) { alert('Chat desconectado. Recarregue a página.'); };
+const inputEl = document.querySelector('#chat-message-input');
+document.querySelector('#chat-message-send').onclick = function(e) {
+	const message = inputEl.value;
+	if (message.trim() !== '') { chatSocket.send(JSON.stringify({ 'message': message })); inputEl.value = ''; }
+};
+// send on Enter (no Shift)
+inputEl.addEventListener('keydown', function(ev){
+	if(ev.key === 'Enter' && !ev.shiftKey){ ev.preventDefault(); document.querySelector('#chat-message-send').click(); }
+});
+</script>
+{% endblock %}

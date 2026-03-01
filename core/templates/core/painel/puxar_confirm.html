@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container">
+  <h2>Puxar Próximo Atendimento</h2>
+  {% if not atendimento %}
+    <div class="alert alert-info">Nenhum atendimento pendente no seu departamento.</div>
+    <a href="{% url 'painel:index' %}" class="btn btn-secondary">Voltar</a>
+  {% else %}
+    <div class="card mb-3">
+      <div class="card-body">
+        <p><strong>ID:</strong> {{ atendimento.id }}</p>
+        <p><strong>Empresa:</strong> {{ atendimento.empresa }}</p>
+        <p><strong>Motivo:</strong> {{ atendimento.motivo }}</p>
+        <form method="post" class="d-inline">
+          {% csrf_token %}
+          <button class="btn btn-primary">Confirmar e Puxar</button>
+        </form>
+        <a href="{% url 'painel:index' %}" class="btn btn-link">Cancelar</a>
+      </div>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

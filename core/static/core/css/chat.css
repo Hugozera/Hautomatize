@@ -1,0 +1,19 @@
+/* Chat styles for atendimento chat */
+#chat-log {
+  height: 300px;
+  overflow-y: auto;
+  border: 1px solid #e6e6e6;
+  padding: 12px;
+  margin-bottom: 10px;
+  background: var(--surface-1);
+}
+
+#chat-log .message { margin-bottom: 10px; display: flex; flex-direction: column; max-width: 86%; }
+#chat-log .message .meta { font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
+#chat-log .message .body { padding: 8px 12px; border-radius: 12px; background: #f1f5f9; color: #0f1720; }
+#chat-log .message.me .body { background: var(--primary-600); color: white; align-self: flex-end; }
+#chat-log .message.other .body { align-self: flex-start; }
+
+/* timestamp small styling when used in meta */
+.message .meta .text-muted { opacity: 0.8; font-size: 0.85rem; }
+

@@ -32,6 +32,42 @@ html body.dark-mode .pessoa-form-card .select2-container--bootstrap-5 .select2-s
     color: var(--text-color) !important;
 }
 
+/* make default select arrow visible in dark mode */
+body.dark-mode .form-select {
+    color: var(--text-color) !important;
+}
+body.dark-mode .form-select::-ms-expand {
+    filter: invert(1);
+    color: var(--text-color);
+}
+body.dark-mode .form-select::after {
+    filter: invert(1);
+    color: var(--text-color);
+}
+body.dark-mode .form-select::after {
+    filter: invert(1);
+    color: var(--text-color);
+}
+
+/* dark-mode checkboxes: make checked icon visible */
+body.dark-mode .form-check-input:checked {
+    background-color: var(--verde-deep) !important;
+    border-color: var(--verde-deep) !important;
+    box-shadow: 0 0 0 2px var(--verde-deep) !important;
+}
+body.dark-mode .form-check-input:checked::after {
+    filter: invert(1) !important;
+    color: #fff !important;
+    opacity: 1 !important;
+}
+body.dark-mode .form-check-input {
+    background-color: #222 !important;
+    border-color: #666 !important;
+}
+body.dark-mode .form-check-input:focus {
+    outline: 2px solid var(--verde-deep) !important;
+}
+
 /* Some browsers apply background to inner input; force the input inside .form-control to match */
 html body.dark-mode .pessoa-form-card .form-control input,
 html body.dark-mode .pessoa-form-card .form-select select {

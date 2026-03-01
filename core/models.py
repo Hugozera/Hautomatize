@@ -32,6 +32,10 @@ class Pessoa(models.Model):
                     own.append(p)
         return own
 
+    def has_perm_code(self, code):
+        """Retorna True se o usuário tem a permissão, seja direta ou via papel (role)."""
+        return code in self.perm_list()
+
     class Meta:
         verbose_name = 'Pessoa'
         verbose_name_plural = 'Pessoas'
@@ -283,6 +287,93 @@ class NotaFiscal(models.Model):
         verbose_name = 'Nota Fiscal'
         verbose_name_plural = 'Notas Fiscais'
         ordering = ['-data_emissao']
+ 
+
+# --- Models migrated from painel app ---
+class Departamento(models.Model):
+    nome = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.nome
+
+    class Meta:
+        app_label = 'painel'
+        permissions = []
+
+
+class Analista(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
+    disponivel = models.BooleanField(default=True)
+    disponivel_em = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
+
+    class Meta:
+        app_label = 'painel'
+        permissions = []
+
+
+class Atendimento(models.Model):
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('atendendo', 'Atendendo'),
+        ('finalizado', 'Finalizado'),
+    ]
+    departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
+    analista = models.ForeignKey(Analista, on_delete=models.SET_NULL, null=True, blank=True)
+    empresa_obj = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='atendimentos')
+    empresa = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    iniciado_em = models.DateTimeField(null=True, blank=True)
+    finalizado_em = models.DateTimeField(null=True, blank=True)
+    motivo = models.TextField(blank=True)
+    resolucao = models.TextField(blank=True)
+    historico = models.TextField(blank=True)
+
+    class Meta:
+        app_label = 'painel'
+        permissions = []
+
+    def __str__(self):
+        return f"{self.departamento} - {self.empresa} ({self.status})"
+
+
+class AtendimentoAnexo(models.Model):
+    """Arquivos enviados durante um atendimento (prints, logs, etc.)."""
+    atendimento = models.ForeignKey(Atendimento, on_delete=models.CASCADE, related_name='anexos')
+    arquivo = models.FileField(upload_to='painel/anexos/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Anexo {self.id} - {self.atendimento}"
+
+    class Meta:
+        app_label = 'painel'
+        verbose_name = 'Anexo de Atendimento'
+        verbose_name_plural = 'Anexos de Atendimento'
+
+
+class ChatMessage(models.Model):
+    """Mensagens do chat vinculadas a um Atendimento.
+
+    Armazenadas para histórico e recuperação quando um usuário abrir o chat.
+    """
+    atendimento = models.ForeignKey(Atendimento, on_delete=models.CASCADE, related_name='mensagens')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    message = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.criado_em}] {self.user or 'Anon'}: {self.message[:40]}"
+
+    class Meta:
+        app_label = 'painel'
+        verbose_name = 'Mensagem de Chat'
+        verbose_name_plural = 'Mensagens de Chat'
+        ordering = ['criado_em']
 
 
 # `SiegCredential` removed: SIEG integration now uses a global key configured

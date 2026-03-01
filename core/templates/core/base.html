@@ -93,6 +93,24 @@
                     {% load permissions_tags %}
                     {% if request.user.is_authenticated %}
                     <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#submenuPainel" role="button" aria-expanded="false" aria-controls="submenuPainel">
+                            <i class="bi bi-kanban"></i>
+                            <span class="nav-text">OS / Painel</span>
+                            <i class="bi bi-caret-down-fill float-end"></i>
+                        </a>
+                        <div class="collapse" id="submenuPainel">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:index' %}">Meu Painel</a></li>
+                                {% if request.user.is_superuser %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:relatorio_gestor' %}">Dashboard / Relatórios</a></li>
+                                {% endif %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:secretaria_painel' %}">Secretaria</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:departamento_list' %}">Departamentos</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:tv_index' %}">Painel TV</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
                             <i class="bi bi-people"></i>
                             <span class="nav-text">Usuários</span>
@@ -188,9 +206,15 @@
                 var modal = new bootstrap.Modal(modalEl);
                 modal.show();
             }
-            // initialize any select2 elements (forms load script earlier may run before jQuery)
+            // initialize any select2 elements only if plugin is loaded
             if (window.jQuery) {
-                $('.select2').select2({width: '100%', theme: 'bootstrap-5'});
+                try {
+                    if ($.fn && $.fn.select2) {
+                        $('.select2').select2({width: '100%', theme: 'bootstrap-5'});
+                    }
+                } catch (e) {
+                    console.warn('select2 init skipped:', e);
+                }
             }
         });
 
@@ -263,34 +287,117 @@
             }
         });
     </script>
-    
-    <!-- allow pages to inject modals at body-end so stacking contexts work -->
-    {% block extra_modals %}{% endblock %}
-</body>
-</html>
+    <!-- Floating chat bubble (visible on all pages) -->
+    <style>
+    .chat-bubble{position:fixed;right:18px;bottom:18px;width:56px;height:56px;border-radius:50%;background:#ffc107;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.18);cursor:pointer;z-index:3000}
+    .chat-bubble.dark{background:#34495e;color:#fff}
+    </style>
+        <div id="chatBubble" class="chat-bubble" title="Chat/Painel">
+                <i class="bi bi-chat-dots-fill" style="font-size:20px"></i>
+        </div>
+                <!-- Chat panel (non-blocking) -->
+                <div id="globalChatPanel" style="display:none; position:fixed; right:20px; bottom:80px; width:360px; max-width:90vw; z-index:5000; box-shadow:0 8px 30px rgba(0,0,0,.25); border-radius:8px; overflow:hidden; background:#fff;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:.5rem .75rem;border-bottom:1px solid #eee;background:#f8f9fa;">
+                        <strong>Chat</strong>
+                        <div>
+                            <button id="chat-minimize" class="btn btn-sm btn-light" type="button">_</button>
+                            <button id="chat-close" class="btn btn-sm btn-light" type="button">×</button>
+                        </div>
+                    </div>
+                    <div style="padding:.75rem;height:320px;overflow:auto;background:#fff;" id="chat-body">
+                        <div style="margin-bottom:.5rem;font-size:.9rem;color:#666;">Carregando...</div>
+                        <div id="chat-content"></div>
+                    </div>
+                    <div style="padding:.5rem; border-top:1px solid #eee; background:#fafafa; display:flex;gap:.5rem;">
+                        <input id="chat-input" type="text" class="form-control form-control-sm" placeholder="Digite uma mensagem...">
+                        <button id="chat-send" class="btn btn-sm btn-primary" type="button">Enviar</button>
+                    </div>
+                </div>
+                <script>
+                // reposition chat bubble to middle-right but keep it interactive
+                (function(){
+                    const chatBubble = document.getElementById('chatBubble');
+                    if(chatBubble){
+                        chatBubble.style.right = '18px';
+                        chatBubble.style.top = '50%';
+                        chatBubble.style.bottom = 'auto';
+                        chatBubble.style.transform = 'translateY(-50%)';
+                        chatBubble.style.zIndex = 4500;
+                    }
 
-    </script>
+                    const panel = document.getElementById('globalChatPanel');
+                    const body = document.getElementById('chat-body');
+                    const content = document.getElementById('chat-content');
+                    const input = document.getElementById('chat-input');
+                    const send = document.getElementById('chat-send');
+
+                    function loadLists(){
+                        content.innerHTML = '<div style="color:#666">Carregando atendimentos...</div>';
+                        fetch(window.location.origin + '/painel/secretaria/', {headers: {'X-Requested-With':'XMLHttpRequest'}})
+                            .then(r=>r.json()).then(json=>{
+                                content.innerHTML = '';
+                                (json.ultimas||[]).slice(0,50).forEach(function(a){
+                                    const el = document.createElement('div'); el.className='mb-2';
+                                    el.innerHTML = `<a href="/painel/chat/${a.id}/" class="text-decoration-none">[${a.id}] ${a.empresa || '—'} — ${a.status}</a> <small class="text-muted">${a.criado_em? new Date(a.criado_em).toLocaleString():''}</small>`;
+                                    content.appendChild(el);
+                                });
+                            }).catch(()=>{ content.innerText='Não foi possível carregar atendimentos.'; });
+
+                        // users
+                        const usersHeader = document.createElement('div'); usersHeader.className='mt-2'; usersHeader.style.fontWeight='600'; usersHeader.innerText='Usuários:'; content.appendChild(usersHeader);
+                        fetch(window.location.origin + '/api/users/')
+                            .then(r=>r.json()).then(json=>{
+                                (json.users||[]).slice(0,50).forEach(function(u){
+                                    const el = document.createElement('div'); el.className='mb-1';
+                                    el.innerHTML = `<a href="/pessoa/${u.id}/" class="text-decoration-none">${u.name}</a>`;
+                                    content.appendChild(el);
+                                });
+                            }).catch(()=>{ const el=document.createElement('div'); el.innerText='Não foi possível carregar usuários.'; content.appendChild(el); });
+                    }
+
+                    let panelVisible = false;
+                    function showPanel(){ panel.style.display='block'; panelVisible=true; loadLists(); }
+                    function hidePanel(){ panel.style.display='none'; panelVisible=false; }
+
+                    document.getElementById('chatBubble').addEventListener('click', function(e){
+                        e.preventDefault();
+                        if(panelVisible) hidePanel(); else showPanel();
+                    });
+                    document.getElementById('chat-close').addEventListener('click', hidePanel);
+                    document.getElementById('chat-minimize').addEventListener('click', function(){
+                        if(body.style.display === 'none'){ body.style.display='block'; input.style.display='inline-block'; send.style.display='inline-block'; }
+                        else { body.style.display='none'; input.style.display='none'; send.style.display='none'; }
+                    });
+
+                    // send placeholder (no backend yet)
+                    send.addEventListener('click', function(){
+                        const v = input.value && input.value.trim(); if(!v) return; const el = document.createElement('div'); el.className='mb-1'; el.innerHTML = `<div><strong>Você:</strong> ${v}</div>`; content.appendChild(el); input.value=''; body.scrollTop = body.scrollHeight; });
+                })();
+                </script>
     
-    {% block extra_js %}{% endblock %}
-    <!-- fixed dark mode button -->
-    <button id="dark-toggle-fixed" class="btn btn-primary" style="position:fixed;bottom:20px;right:20px;z-index:2000;width:50px;height:50px;border-radius:50%;font-size:1.5rem;">🌞</button>
-    <script>
-      (function(){
-        const btn = document.getElementById('dark-toggle-fixed');
-        if (!btn) return;
-        const apply = enabled=>{
-          document.body.classList.toggle('dark-mode', enabled);
-          btn.classList.toggle('dark', enabled);
-          btn.textContent = enabled ? '☀️' : '🌙';
-        };
-        let enabled = localStorage.getItem('darkMode') === '1';
-        apply(enabled);
-        btn.addEventListener('click', ()=>{
-          enabled = !enabled;
-          apply(enabled);
-          localStorage.setItem('darkMode', enabled ? '1' : '0');
-        });
-      })();
-    </script>
+        <!-- allow pages to inject modals at body-end so stacking contexts work -->
+        {% block extra_modals %}{% endblock %}
+
+        {% block extra_js %}{% endblock %}
+        <!-- fixed dark mode button -->
+        <button type="button" id="dark-toggle-fixed" class="btn btn-primary" style="position:fixed;bottom:20px;right:20px;z-index:4000;width:50px;height:50px;border-radius:50%;font-size:1.5rem;pointer-events:auto;">🌞</button>
+        <script>
+            (function(){
+                const btn = document.getElementById('dark-toggle-fixed');
+                if (!btn) return;
+                const apply = enabled=>{
+                    document.body.classList.toggle('dark-mode', enabled);
+                    btn.classList.toggle('dark', enabled);
+                    btn.textContent = enabled ? '☀️' : '🌙';
+                };
+                let enabled = localStorage.getItem('darkMode') === '1';
+                apply(enabled);
+                btn.addEventListener('click', ()=>{
+                    enabled = !enabled;
+                    apply(enabled);
+                    localStorage.setItem('darkMode', enabled ? '1' : '0');
+                });
+            })();
+        </script>
 </body>
 </html>

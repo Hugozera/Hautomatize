@@ -1,0 +1,119 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<!-- Atendimento do analista (migrado para core) -->
+<div class="container">
+	{% if atendimento.departamento %}
+		{% include 'core/painel/_header.html' with title='Atendimento' subtitle=atendimento.departamento.nome %}
+	{% else %}
+		{% include 'core/painel/_header.html' with title='Atendimento' subtitle='Atendimento' %}
+	{% endif %}
+	<div class="card mb-3">
+		<div class="card-header">
+			<strong>Empresa:</strong> {{ atendimento.empresa }}<br>
+			<strong>Status:</strong> {{ atendimento.get_status_display }}<br>
+			<strong>Iniciado em:</strong> {{ atendimento.iniciado_em|date:'d/m/Y H:i' }}
+		</div>
+		<div class="card-body">
+			<form method="post" enctype="multipart/form-data" onsubmit="syncRichText()">
+				{% csrf_token %}
+				<div class="mb-3">
+					<label for="motivo" class="form-label">Motivo do Atendimento</label>
+					<textarea class="form-control" id="motivo" name="motivo" rows="2">{{ atendimento.motivo }}</textarea>
+				</div>
+				<div class="mb-3">
+					<label for="historico" class="form-label">Histórico / Observações (rich)</label>
+					<div class="mb-2">
+						<div class="btn-group mb-1" role="group" aria-label="format">
+							<button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.execCommand('bold',false,null)"><strong>B</strong></button>
+							<button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.execCommand('italic',false,null)"><em>I</em></button>
+							<input type="color" id="txtColor" class="form-control form-control-color" title="Escolher cor" onchange="document.execCommand('foreColor',false,this.value)">
+						</div>
+						<div id="historico_rich" class="border p-2" contenteditable="true">
+							{{ atendimento.historico|safe }}
+						</div>
+					</div>
+					<textarea class="form-control d-none" id="historico" name="historico" rows="3">{{ atendimento.historico }}</textarea>
+				</div>
+				<div class="mb-3">
+					<label for="resolucao" class="form-label">Resolução</label>
+					<textarea class="form-control" id="resolucao" name="resolucao" rows="2">{{ atendimento.resolucao }}</textarea>
+				</div>
+				<div class="mb-3">
+					<label class="form-label">Anexos (prints, logs)</label>
+					<div class="d-flex gap-2 align-items-start">
+						<input type="file" id="anexos_input" multiple class="form-control" />
+						<button id="uploadAnexosBtn" type="button" class="btn btn-outline-primary">Upload</button>
+					</div>
+					<div id="anexos_preview" class="mt-2 d-flex flex-wrap gap-2"></div>
+					<ul id="anexos_list" class="mt-2">
+						{% if anexos %}
+							{% for anexo in anexos %}
+								<li><a href="{{ anexo.arquivo.url }}" target="_blank">{{ anexo.arquivo.name }}</a> <small class="text-muted">({{ anexo.criado_em|date:'d/m/Y H:i' }})</small></li>
+							{% endfor %}
+						{% else %}
+							<li class="text-muted">Nenhum anexo.</li>
+						{% endif %}
+					</ul>
+				</div>
+				<button type="submit" class="btn btn-primary">Salvar</button>
+				{% if atendimento.status != 'finalizado' %}
+				<button type="submit" name="finalizar" class="btn btn-success">Finalizar Atendimento</button>
+				{% endif %}
+			</form>
+		</div>
+	</div>
+	<a href="{% url 'painel:index' %}" class="btn btn-secondary">Voltar ao Meu Painel</a>
+</div>
+
+<script>
+function syncRichText(){
+	var rich = document.getElementById('historico_rich');
+	var hidden = document.getElementById('historico');
+	if(rich && hidden){ hidden.value = rich.innerHTML.trim(); }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+	const input = document.getElementById('anexos_input');
+	const preview = document.getElementById('anexos_preview');
+	const uploadBtn = document.getElementById('uploadAnexosBtn');
+	const list = document.getElementById('anexos_list');
+	const atendimentoId = '{{ atendimento.id }}';
+	const csrftoken = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '';
+
+	function makePreview(file){
+		const wrap = document.createElement('div'); wrap.style.width='120px'; wrap.style.textAlign='center';
+		if(file.type.startsWith('image/')){
+			const img = document.createElement('img'); img.style.maxWidth='100%'; img.style.maxHeight='80px'; img.src = URL.createObjectURL(file);
+			wrap.appendChild(img);
+		} else {
+			const ico = document.createElement('div'); ico.textContent = file.name; ico.style.fontSize='12px'; wrap.appendChild(ico);
+		}
+		return wrap;
+	}
+
+	input.addEventListener('change', function(){
+		preview.innerHTML = '';
+		Array.from(input.files||[]).forEach(f => preview.appendChild(makePreview(f)));
+	});
+
+	uploadBtn.addEventListener('click', function(){
+		if(!(input.files && input.files.length)) { alert('Selecione arquivos para upload'); return; }
+		Array.from(input.files).forEach(function(file){
+			const fd = new FormData(); fd.append('atendimento_id', atendimentoId); fd.append('anexo', file);
+			fetch('{% url "painel:atendimento_anexo_upload" %}', { method: 'POST', headers: {'X-CSRFToken': csrftoken}, body: fd })
+			.then(r=>r.json()).then(json=>{
+				if(json.status==='ok'){
+					const li = document.createElement('li'); li.innerHTML = `<a href="${json.url}" target="_blank">${json.name}</a>`; list.appendChild(li);
+				} else {
+					alert('Erro ao enviar: '+(json.msg||''));
+				}
+			}).catch(err=>{ console.error(err); alert('Erro de rede ao enviar anexo'); });
+		});
+		// clear selection & preview
+		input.value=''; preview.innerHTML='';
+	});
+});
+</script>
+
+{% endblock %}

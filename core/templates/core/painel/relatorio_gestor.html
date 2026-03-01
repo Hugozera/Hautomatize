@@ -1,0 +1,98 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+  {% include 'core/painel/_header.html' with title='Relatório do Gestor' subtitle='Métricas e lista de atendimentos' %}
+  <div class="mb-3">
+    <form method="get" class="row g-2">
+      <div class="col-auto">
+        <select name="departamento" class="form-select">
+          <option value="">Todos departamentos</option>
+          {% for d in departamentos %}
+            <option value="{{ d.id }}" {% if departamento_id and departamento_id == d.id|stringformat:'s' %}selected{% endif %}>{{ d.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-auto">
+        <select name="status" class="form-select">
+          <option value="">Todos status</option>
+          <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendentes</option>
+          <option value="atendendo" {% if status == 'atendendo' %}selected{% endif %}>Em atendimento</option>
+          <option value="finalizado" {% if status == 'finalizado' %}selected{% endif %}>Finalizados</option>
+        </select>
+      </div>
+      <div class="col-auto">
+        <button class="btn btn-primary">Filtrar</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3">
+      <div class="card p-3">
+        <h5>Total</h5>
+        <div class="display-6">{{ metrics.total }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <h6>Pendentes</h6>
+        <div class="h3">{{ metrics.pendentes }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <h6>Em atendimento</h6>
+        <div class="h3">{{ metrics.atendendo }}</div>
+      </div>
+    </div>
+    <div class="col-md-3">
+      <div class="card p-3">
+        <h6>Finalizados</h6>
+        <div class="h3">{{ metrics.finalizado }}</div>
+      </div>
+    </div>
+  </div>
+
+  <h4>Atendimentos recentes</h4>
+  <table class="table table-striped">
+    <thead><tr><th>ID</th><th>Empresa</th><th>Departamento</th><th>Status</th><th>Criado</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for a in atendimentos %}
+      <tr>
+        <td>{{ a.id }}</td>
+        <td>{{ a.empresa }}</td>
+        <td>{% if a.departamento %}{{ a.departamento.nome }}{% else %}&mdash;{% endif %}</td>
+        <td>{{ a.status }}</td>
+        <td>{{ a.criado_em }}</td>
+        <td><a class="btn btn-sm btn-outline-primary" href="{% url 'painel:atendimento_analista' a.id %}">Abrir</a></td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6">Nenhum atendimento encontrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function(){
+    const deptSelect = document.querySelector('select[name=departamento]');
+    const statusSelect = document.querySelector('select[name=status]');
+    function refresh(){
+      const dept = deptSelect.value || '';
+      if(!dept) return; // only refresh when a department selected
+      fetch('/painel/api/department/'+dept+'/')
+        .then(r=>r.json()).then(data=>{
+          const tbody = document.querySelector('table.table-striped tbody');
+          tbody.innerHTML = '';
+          (data.atendimentos||[]).slice(0,50).forEach(function(a){
+            const tr=document.createElement('tr');
+            tr.innerHTML = '<td>'+a.id+'</td><td>'+ (a.empresa||'') +'</td><td>'+ (a.departamento||'') +'</td><td>'+ (a.status||'') +'</td><td>'+ (a.criado_em? new Date(a.criado_em).toLocaleString() : '') +'</td><td><a class="btn btn-sm btn-outline-primary" href="/painel/atendimento/'+a.id+'/">Abrir</a></td>';
+            tbody.appendChild(tr);
+          });
+        }).catch(()=>{});
+    }
+    deptSelect && deptSelect.addEventListener('change', refresh);
+    setInterval(function(){ if(deptSelect && deptSelect.value) refresh(); }, 10000);
+  });
+  </script>
+
+{% endblock %}

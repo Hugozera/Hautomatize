@@ -29,6 +29,8 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'core',  # ✅ Seu app principal
+    'painel',  # App de painel de atendimento
+    'channels',
 ]
 
 MIDDLEWARE = [
@@ -63,6 +65,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'nfse_downloader.wsgi.application'
+ASGI_APPLICATION = 'painel.routing.application'
+
+# Configuração básica do Channels (usar Redis em produção)
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    },
+}
 
 # Database
 DATABASES = {

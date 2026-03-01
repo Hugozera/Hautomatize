@@ -216,26 +216,26 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="modal-body">
                 <p>A empresa <strong>{{ empresa_selecionada.nome_fantasia }}</strong> não possui um certificado cadastrado.</p>
                 <p>Para realizar o download, faça o upload do arquivo .pfx do certificado:</p>
-                
+
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle me-2"></i>
                     O certificado será salvo e usado para este e futuros downloads.
                 </div>
-                
+
                 <form id="formUploadCertificado">
                     {% csrf_token %}
                     <input type="hidden" name="empresa_id" value="{{ empresa_selecionada.pk }}">
                     <input type="hidden" name="tipo" value="{{ tipo }}">
                     <input type="hidden" name="data_inicio" value="{{ data_inicio }}">
                     <input type="hidden" name="data_fim" value="{{ data_fim }}">
-                    
+
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
                             <i class="bi bi-file-earmark-lock me-1"></i>Arquivo do Certificado (.pfx) *
                         </label>
                         <input type="file" name="certificado" id="certificadoFile" class="form-control" accept=".pfx" required>
                     </div>
-                    
+
                     <div class="mb-3">
                         <label class="form-label fw-semibold">
                             <i class="bi bi-key me-1"></i>Senha do Certificado *
@@ -247,18 +247,23 @@ document.addEventListener('DOMContentLoaded', function() {
                             </button>
                         </div>
                     </div>
-                    
+
                     <div class="progress mb-3 d-none" id="uploadProgress">
                         <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
                              role="progressbar" style="width: 0%">0%</div>
                     </div>
-                    
+
                     <div id="uploadStatus" class="alert d-none"></div>
                 </form>
             </div>
-            <!-- uploads only; recent downloads moved below modal -->
-            
-            <!-- end modal-body -->
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="history.back()">
+                    <i class="bi bi-x-circle me-2"></i>Cancelar
+                </button>
+                <button type="button" class="btn btn-success" onclick="uploadCertificado()">
+                    <i class="bi bi-cloud-upload me-2"></i>Upload e Continuar
+                </button>
+            </div>
         </div>
         <!-- end modal-content -->
     </div>
@@ -266,7 +271,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 <!-- end modal -->
 
-{% comment %} download history card rendered outside when present {% endcomment %}
+{% comment %} download history card rendered when there are recent tasks and no certificate is needed {% endcomment %}
 {% if not precisa_certificado and tarefas_recentes %}
 <div class="card mt-4">
     <div class="card-header bg-transparent">

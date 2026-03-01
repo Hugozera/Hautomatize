@@ -1,0 +1,43 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container">
+  <h2>{% if departamento %}Editar{% else %}Criar{% endif %} Departamento</h2>
+  <form method="post">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Nome</label>
+      <input name="nome" class="form-control" value="{{ departamento.nome|default_if_none:'' }}" required />
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Usuários (marque para tornar Analista)</label>
+      <select name="analistas" class="form-control select2-analistas" multiple size="8">
+        {% for u in users %}
+          {% with u_analista=u.analista|default_if_none:'' %}
+            {% if departamento and u_analista and u_analista.departamento.id == departamento.id %}
+              <option value="{{ u.pk }}" selected>{{ u.get_full_name|default:u.username }} ({{ u.pk }})</option>
+            {% else %}
+              <option value="{{ u.pk }}">{{ u.get_full_name|default:u.username }} ({{ u.pk }})</option>
+            {% endif %}
+          {% endwith %}
+        {% empty %}
+          <option disabled>Nenhum usuário disponível</option>
+        {% endfor %}
+      </select>
+      <div class="form-text">Segure Ctrl (Cmd) para selecionar múltiplos analistas.</div>
+    </div>
+    <script>
+      (function(){
+        try{
+          if (window.jQuery && jQuery().select2){
+            jQuery('.select2-analistas').select2({width: '100%', placeholder: 'Selecione analistas'});
+          }
+        }catch(e){
+          console.warn('select2 init failed', e);
+        }
+      })();
+    </script>
+    <button class="btn btn-primary">Salvar</button>
+    <a href="{% url 'painel:departamento_list' %}" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}
