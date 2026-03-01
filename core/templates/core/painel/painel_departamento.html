@@ -1,339 +1,257 @@
-{% extends 'core/base.html' %}
+{% extends 'core/base_tv.html' %}
 {% load static %}
+
 {% block content %}
-<!-- Painel de departamento (migrado para core) -->
 
-<div class="container-fluid">
-  {% include 'core/painel/_header.html' with title="Painel - "|add:departamento.nome subtitle='Visão do departamento em tempo real' %}
-	<div class="mb-3">
-		<div class="btn-group" role="group" aria-label="Navegação do painel">
-				<button id="tv-toggle" class="btn btn-sm btn-danger">Entrar</button>
-				<button id="tv-fullscreen" class="btn btn-sm btn-outline-light">Fullscreen</button>
-			</div>
-		</div>
-	</div>
+<div class="container">
 
-	{# If this page is rendered as TV (public), show the TV layout (unified in this template) #}
-	{% if tv_mode %}
-	<div id="tvWrapper" class="p-3">
-		<div class="d-flex justify-content-between align-items-center mb-2">
-			<h2>Painel TV - {{ departamento.nome }}</h2>
-			<div>
-				<button id="fullscreenBtn" class="btn btn-outline-light">Fullscreen</button>
-			</div>
-		</div>
+    <!-- ================= ANALISTAS DISPONÍVEIS ================= -->
+    <div class="column">
+        <h2>👥 ANALISTAS DISPONÍVEIS</h2>
 
-		<div id="analystContainer" class="mb-2">
-			<div id="analystList" class="analyst-list"></div>
-		</div>
+        {% for analista in analistas_disponiveis %}
+        <div class="card {% if analista.disponivel %}green{% else %}red{% endif %} analyst-item" 
+             data-analista-id="{{ analista.id }}">
 
-		<div id="tvGrid" class="row g-2"></div>
-	</div>
-	{% else %}
-	<div class="row">
-		<!-- Analistas disponíveis -->
-		<div class="col-md-3 analyst-column">
-			<h4>Analistas</h4>
-			<ul class="list-group">
-				{% for analista in analistas %}
-				<li class="list-group-item d-flex justify-content-between align-items-center analyst-item {% if analista.disponivel %}analyst-available{% else %}analyst-unavailable{% endif %}" data-analista-id="{{ analista.id }}">
-					<div>
-						<span class="analista-name">{{ analista }}</span>
-					</div>
-					<div class="d-flex align-items-center">
-						{% if analista.disponivel %}
-							<span class="badge availability-badge" data-analista-id="{{ analista.id }}">Disponível</span>
-						{% else %}
-							<span class="badge availability-badge" data-analista-id="{{ analista.id }}">Indisponível</span>
-						{% endif %}
-						<span class="avail-timer ms-2" data-disponivel-em="{% if analista.disponivel_em %}{{ analista.disponivel_em|date:'c' }}{% endif %}"></span>
-					</div>
-				</li>
-				{% empty %}
-				<li class="list-group-item">Nenhum analista cadastrado.</li>
-				{% endfor %}
-			</ul>
-		</div>
-		<!-- Atendimentos pendentes -->
-		<div class="col-md-5 pendentes-column">
-			<h4>Atendimentos Pendentes</h4>
-			<ul class="list-group" id="lista-pendentes">
-				{% for a in pendentes %}
-					<li class="list-group-item pendente" data-id="{{ a.id }}" data-criado="{{ a.criado_em|date:'U' }}" data-atualizado="{{ a.atualizado_em|date:'U' }}" data-empresa="{{ a.empresa|escape }}">
-						<div class="field-box">
-							<div style="display:flex; flex-direction:column;">
-								<div class="atendimento-label">Atendimento #{{ a.id }}</div>
-								<div class="small text-muted motivo d-none">{{ a.motivo|truncatechars:80 }}</div>
-							</div>
-							<div class="tempo small text-muted">{{ a.criado_em|timesince }} atrás</div>
-						</div>
-					</li>
-				{% empty %}
-					<li class="list-group-item">Nenhum atendimento pendente.</li>
-				{% endfor %}
-			</ul>
-		</div>
-		<!-- Atendimentos em andamento -->
-		<div class="col-md-4 andamento-column">
-			<h4>Em Atendimento</h4>
-			<ul class="list-group">
-				{% for atendimento in atendimentos_andamento %}
-				<li class="list-group-item attending-item">
-					<div class="field-box">
-						<div style="display:flex; flex-direction:column;">
-							<div class="atendimento-label">Atendimento #{{ atendimento.id }}</div>
-							<div class="empresa">{{ atendimento.empresa }}</div>
-							<div class="analista small text-muted">{{ atendimento.analista }}</div>
-						</div>
-						<div class="tempo small text-muted"><div class="tempo-atendimento" data-iniciado="{{ atendimento.iniciado_em|date:'c' }}"></div></div>
-					</div>
-				</li>
-				{% empty %}
-				<li class="list-group-item">Nenhum atendimento em andamento.</li>
-				{% endfor %}
-			</ul>
-		</div>
-	</div>
+            <span class="label">{{ analista }}</span>
+
+            <span class="time avail-timer"
+                  data-disponivel-em="{% if analista.disponivel_em %}{{ analista.disponivel_em|date:'c' }}{% endif %}">
+                {% if not analista.disponivel %}--:--:--{% endif %}
+            </span>
+        </div>
+        {% empty %}
+        <div class="card green">
+            <span class="label">Nenhum analista disponível</span>
+            <span class="time">--:--:--</span>
+        </div>
+        {% endfor %}
+
+        <div class="stats-footer">
+            <span>🟢 {{ analistas_disponiveis|length }} disponíveis</span>
+            <span>⚡ Aguardando</span>
+        </div>
+    </div>
+
+    <!-- ================= PENDENTES ================= -->
+    <div class="column">
+        <h2>⏳ PENDENTES</h2>
+
+        {% for a in atendimentos_pendentes %}
+        <div class="card pending-item green" 
+             data-id="{{ a.id }}"
+             data-criado="{{ a.criado_em|date:'c' }}">
+
+            <span class="label">📞 {{ a.empresa|default:"ATENDIMENTO" }}</span>
+
+            <span class="time tempo-espera"
+                  data-criado="{{ a.criado_em|date:'c' }}">
+            </span>
+        </div>
+        {% empty %}
+        <div class="card green">
+            <span class="label">Nenhum pendente</span>
+            <span class="time">00:00:00</span>
+        </div>
+        {% endfor %}
+
+        <div class="spacer"></div>
+
+        <div class="stats-footer">
+            <span>📊 Total: {{ atendimentos_pendentes|length }}</span>
+            <span>⏰ Aguardando</span>
+        </div>
+    </div>
+
+    <!-- ================= EM ATENDIMENTO ================= -->
+    <div class="column">
+        <h2>🎧 EM ATENDIMENTO</h2>
+
+        {% for atendimento in atendimentos_andamento %}
+        <div class="card attending-item green" 
+             data-id="{{ atendimento.id }}"
+             data-iniciado="{{ atendimento.iniciado_em|date:'c' }}">
+
+            <span class="label">{{ atendimento.analista }} • {{ atendimento.empresa }}</span>
+
+            <span class="time tempo-atendimento"
+                  data-iniciado="{{ atendimento.iniciado_em|date:'c' }}">
+            </span>
+        </div>
+        {% empty %}
+        <div class="card green">
+            <span class="label">Nenhum atendimento</span>
+            <span class="time">00:00:00</span>
+        </div>
+        {% endfor %}
+
+        <div class="spacer"></div>
+
+        <div class="stats-footer">
+            <span>📞 {{ atendimentos_andamento|length }} ativos</span>
+            <span>⚡ Meta: 20min</span>
+        </div>
+    </div>
+
 </div>
+
 <script>
-// Small CSS for timer backgrounds (inline so TV mode picks it up)
-const style = document.createElement('style');
-style.textContent = `
-	/* High-contrast palette for TV/large displays */
-	.wait-green{background:#007a3d !important; color:#ffffff !important}
-	.wait-yellow{background:#ffb703 !important; color:#000000 !important}
-	.wait-red{background:#d62828 !important; color:#ffffff !important}
-	.att-green{background:#007a3d !important; color:#ffffff !important}
-	.att-yellow{background:#ffb703 !important; color:#000000 !important}
-	.att-red{background:#d62828 !important; color:#ffffff !important}
-
-	/* Larger, more legible text and spacing when in TV mode */
-	.tv-mode .list-group-item { font-size: 2.2rem !important; padding: 1.1rem 1.25rem !important; border-radius: 8px !important; margin-bottom: 0.5rem; }
-	.tv-mode .atendimento-label { font-size: 2.6rem !important; font-weight:700 !important; }
-	.tv-mode .empresa { font-size: 2.2rem !important; font-weight:700 !important; }
-	.tv-mode .tempo-espera, .tv-mode .tempo-atendimento { font-size: 1.8rem !important; font-weight:600 !important; }
-	.tv-mode .analista-name { font-size: 1.8rem !important; font-weight:700 !important; }
-
-	/* Make badges and small text readable on TV */
-	.tv-mode .badge { font-size: 1.1rem !important; padding: .5rem 0.7rem !important; }
-
-	/* Ensure text contrast inside colored backgrounds */
-	.wait-yellow, .att-yellow { text-shadow: 0 0 2px rgba(255,255,255,0.15); }
-	/* Field container to stand out on TV */
-	.field-box { background:#cfe8ff; padding: .6rem .8rem; border-radius:6px; display:flex; align-items:flex-start; justify-content:space-between; }
-	.field-box .empresa { color:#000000 !important; font-weight:700 !important; }
-	.field-box .atendimento-label { color:#000000 !important; }
-	/* TV adjustments for the container */
-	.tv-mode .field-box { background:#b8ddff !important; padding:1.2rem 1.6rem !important; border-radius:10px !important; }
-	.tv-mode .field-box .empresa { font-size:2.6rem !important; }
-`;
-document.head.appendChild(style);
-/* painel JS (mantido no core) */
-// Atualiza os tempos de espera e atendimento em tempo real
-function updateTimers() {
-	document.querySelectorAll('.tempo-espera').forEach(function(el) {
-		var criado = new Date(el.getAttribute('data-criado'));
-		if (isNaN(criado)) { el.textContent = ''; return; }
-		var agora = new Date();
-		var diff = Math.floor((agora - criado) / 1000);
-		var min = Math.floor(diff / 60);
-		var sec = diff % 60;
-		el.innerHTML = min + 'm ' + sec + 's';
-		el.classList.remove('timer-green','timer-yellow','timer-red');
-		const li = el.closest('li');
-		li && li.classList.remove('wait-green','wait-yellow','wait-red');
-		if (min >= 20) { el.classList.add('timer-red'); li && li.classList.add('wait-red'); }
-		else if (min >= 10) { el.classList.add('timer-yellow'); li && li.classList.add('wait-yellow'); }
-		else { el.classList.add('timer-green'); li && li.classList.add('wait-green'); }
-	});
-	document.querySelectorAll('.tempo-atendimento').forEach(function(el) {
-		var iniciado = new Date(el.getAttribute('data-iniciado'));
-		if (isNaN(iniciado)) { el.textContent = ''; return; }
-		var agora = new Date();
-		var diff = Math.floor((agora - iniciado) / 1000);
-		var min = Math.floor(diff / 60);
-		var sec = diff % 60;
-		el.innerHTML = min + 'm ' + sec + 's';
-		el.classList.remove('timer-green','timer-yellow','timer-red');
-		const li = el.closest('li');
-		li && li.classList.remove('att-green','att-yellow','att-red');
-		if (min >= 20) { el.classList.add('timer-red'); li && li.classList.add('att-red'); }
-		else if (min >= 10) { el.classList.add('timer-yellow'); li && li.classList.add('att-yellow'); }
-		else { el.classList.add('timer-green'); li && li.classList.add('att-green'); }
-	});
-	// availability timers
-	document.querySelectorAll('.avail-timer').forEach(function(el){
-		var dispo = el.getAttribute('data-disponivel-em');
-		if (!dispo) { el.textContent = ''; return; }
-		var d = new Date(dispo);
-		if (isNaN(d)) { el.textContent = ''; return; }
-		var diff = Math.floor((new Date() - d) / 1000);
-		var min = Math.floor(diff / 60);
-		var sec = diff % 60;
-		el.textContent = min + 'm ' + sec + 's';
-		el.classList.remove('timer-green','timer-yellow','timer-red');
-		if (min >= 20) el.classList.add('timer-red');
-		else if (min >= 10) el.classList.add('timer-yellow');
-		else el.classList.add('timer-green');
-	});
+function formatTime(diff){
+    if(diff < 0) return "--:--:--";
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const s = diff % 60;
+    return String(h).padStart(2,'0') + ':' + 
+           String(m).padStart(2,'0') + ':' + 
+           String(s).padStart(2,'0');
 }
+
+function updateTimers(){
+    const now = new Date();
+
+    document.querySelectorAll('.tempo-espera').forEach(function(el){
+        const criado = new Date(el.dataset.criado);
+        if(isNaN(criado)) return;
+
+        const diff = Math.floor((now - criado) / 1000);
+        el.textContent = formatTime(diff);
+
+        const card = el.closest('.card');
+        if(diff >= 1200){ // 20 minutos
+            card.classList.remove('green');
+            card.classList.add('red', 'alert');
+        } else {
+            card.classList.remove('red', 'alert');
+            card.classList.add('green');
+        }
+    });
+
+    document.querySelectorAll('.tempo-atendimento').forEach(function(el){
+        const iniciado = new Date(el.dataset.iniciado);
+        if(isNaN(iniciado)) return;
+
+        const diff = Math.floor((now - iniciado) / 1000);
+        el.textContent = formatTime(diff);
+
+        const card = el.closest('.card');
+        if(diff >= 1200){ // 20 minutos
+            card.classList.remove('green');
+            card.classList.add('red', 'alert');
+        } else {
+            card.classList.remove('red', 'alert');
+            card.classList.add('green');
+        }
+    });
+
+    document.querySelectorAll('.avail-timer').forEach(function(el){
+        const dispo = el.dataset.disponivelEm;
+        if(!dispo) return;
+
+        const diff = Math.floor((now - new Date(dispo)) / 1000);
+        el.textContent = formatTime(diff);
+    });
+}
+
 setInterval(updateTimers, 1000);
 updateTimers();
 
-// WebSocket para atualização em tempo real do painel
 const departamentoId = '{{ departamento.id }}';
-const painelSocket = new WebSocket((window.location.protocol === 'https:' ? 'wss://' : 'ws://') + window.location.host + '/ws/painel/' + departamentoId + '/');
+const painelSocket = new WebSocket(
+    (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+    window.location.host +
+    '/ws/painel/' + departamentoId + '/'
+);
+
 painelSocket.onmessage = function(e) {
-	const data = JSON.parse(e.data);
-	if (data.analistas) {
-		data.analistas.forEach(function(a){
-			const badge = document.querySelector('.availability-badge[data-analista-id="'+a.id+'"]');
-			const li = document.querySelector('.analyst-item[data-analista-id="'+a.id+'"]');
-			if (badge) {
-				badge.textContent = a.disponivel ? 'Disponível' : 'Indisponível';
-				badge.classList.toggle('bg-success', !!a.disponivel);
-				badge.classList.toggle('bg-danger', !a.disponivel);
-				badge.setAttribute('data-available', a.disponivel ? 'true' : 'false');
-			}
-			if (li) {
-				li.classList.toggle('analyst-available', !!a.disponivel);
-				li.classList.toggle('analyst-unavailable', !a.disponivel);
-				const timerEl = li.querySelector('.avail-timer');
-				if (timerEl) {
-					if (a.disponivel_em) timerEl.setAttribute('data-disponivel-em', a.disponivel_em);
-					else timerEl.removeAttribute('data-disponivel-em');
-				}
-			}
-		});
-	}
-	if (data.atendimentos_pendentes) renderPendentes(data.atendimentos_pendentes);
-	if (data.atendimentos_andamento) renderAndamento(data.atendimentos_andamento);
-	updateTimers();
+    const data = JSON.parse(e.data);
+    
+    // Atualiza todas as colunas com os novos dados
+    if (data.analistas_disponiveis) renderAnalistasDisponiveis(data.analistas_disponiveis);
+    if (data.atendimentos_pendentes) renderPendentes(data.atendimentos_pendentes);
+    if (data.atendimentos_andamento) renderAndamento(data.atendimentos_andamento);
+    
+    updateTimers();
 };
-painelSocket.onclose = function(e) { console.warn('WebSocket do painel desconectado. Recarregue para atualizar.'); };
 
-// Lightweight polling fallback when WebSocket is unavailable.
-let pollIntervalId = null;
-let pollInFlight = false;
-let pollFailures = 0;
-const POLL_BASE = 2000; // 2s
-function startPolling(){
-	if(pollIntervalId) return;
-	pollIntervalId = setInterval(()=>{
-		if(pollInFlight) return; // avoid overlapping requests
-		pollOnce();
-	}, POLL_BASE);
-}
-function stopPolling(){ if(pollIntervalId){ clearInterval(pollIntervalId); pollIntervalId = null; pollFailures = 0; } }
-function pollOnce(){
-	pollInFlight = true;
-	fetch('/painel/api/department/' + departamentoId + '/', { credentials: 'same-origin' })
-		.then(r=>{ if(!r.ok) throw new Error('bad status'); return r.json(); })
-		.then(data=>{
-			pollFailures = 0;
-			if(data.atendimentos_pendentes) renderPendentes(data.atendimentos_pendentes);
-			if(data.atendimentos_andamento) renderAndamento(data.atendimentos_andamento);
-			updateTimers();
-		}).catch(err=>{
-			pollFailures++;
-			if(pollFailures > 10){ // progressive backoff if repeated failures
-				stopPolling();
-				console.warn('Polling stopped after repeated failures');
-			}
-		}).finally(()=>{ pollInFlight = false; });
+painelSocket.onclose = function() {
+    console.warn('WebSocket fechado.');
+};
+
+function renderAnalistasDisponiveis(analistas){
+    const colunaAnalistas = document.querySelector('.column:first-child');
+    if(!colunaAnalistas) return;
+
+    const footer = colunaAnalistas.querySelector('.stats-footer');
+    
+    colunaAnalistas.innerHTML = '<h2>👥 ANALISTAS DISPONÍVEIS</h2>';
+    
+    if(!analistas || analistas.length === 0){
+        colunaAnalistas.innerHTML += '<div class="card green"><span class="label">Nenhum analista disponível</span><span class="time">--:--:--</span></div>';
+    } else {
+        analistas.forEach(function(analista){
+            const cardHtml = 
+                '<div class="card green analyst-item" data-analista-id="'+analista.id+'">' +
+                    '<span class="label">'+analista.nome+'</span>' +
+                    '<span class="time avail-timer" data-disponivel-em="'+analista.disponivel_em+'">00:00:00</span>' +
+                '</div>';
+            colunaAnalistas.innerHTML += cardHtml;
+        });
+    }
+    
+    if(footer) colunaAnalistas.appendChild(footer);
 }
 
-// If WebSocket closes or errors, start polling as fallback; stop polling when socket opens.
-painelSocket.onopen = function(){ stopPolling(); };
-painelSocket.onerror = function(){ console.warn('WebSocket error, starting polling fallback'); startPolling(); };
-painelSocket.onclose = function(){ console.warn('WebSocket closed, starting polling fallback'); startPolling(); };
+function renderPendentes(pendentes){
+    const colunaPendentes = document.querySelector('.column:nth-child(2)');
+    if(!colunaPendentes) return;
 
-// If browser doesn't support WebSocket, start polling immediately
-if(!('WebSocket' in window)){
-	console.warn('WebSocket not supported, using polling fallback');
-	startPolling();
+    const footer = colunaPendentes.querySelector('.stats-footer');
+    const spacer = colunaPendentes.querySelector('.spacer');
+    
+    colunaPendentes.innerHTML = '<h2>⏳ PENDENTES</h2>';
+    
+    if(!pendentes || pendentes.length === 0){
+        colunaPendentes.innerHTML += '<div class="card green"><span class="label">Nenhum pendente</span><span class="time">00:00:00</span></div>';
+    } else {
+        pendentes.forEach(function(at){
+            const cardHtml = 
+                '<div class="card pending-item green" data-id="'+at.id+'" data-criado="'+at.criado_em+'">' +
+                    '<span class="label">📞 '+(at.empresa || 'ATENDIMENTO')+'</span>' +
+                    '<span class="time tempo-espera" data-criado="'+at.criado_em+'"></span>' +
+                '</div>';
+            colunaPendentes.innerHTML += cardHtml;
+        });
+    }
+    
+    if(spacer) colunaPendentes.appendChild(spacer);
+    if(footer) colunaPendentes.appendChild(footer);
 }
 
-document.addEventListener('DOMContentLoaded', function(){
-	function getCookie(name) {
-		let cookieValue = null;
-		if (document.cookie && document.cookie !== '') {
-			const cookies = document.cookie.split(';');
-			for (let i = 0; i < cookies.length; i++) {
-				const cookie = cookies[i].trim();
-				if (cookie.substring(0, name.length + 1) === (name + '=')) { cookieValue = decodeURIComponent(cookie.substring(name.length + 1)); break; }
-			}
-		}
-		return cookieValue;
-	}
-	const csrftoken = (document.querySelector('[name=csrfmiddlewaretoken]') || {}).value || getCookie('csrftoken');
-	function attachPendingHandlers() {
-		document.querySelectorAll('.pending-item').forEach(function(li){
-			li.removeEventListener('click', pendingClickHandler);
-			li.addEventListener('click', pendingClickHandler);
-			li.removeEventListener('keydown', pendingKeyHandler);
-			li.addEventListener('keydown', pendingKeyHandler);
-		});
-	}
-	function pendingKeyHandler(ev){ if(ev.key === 'Enter'){ ev.preventDefault(); pendingClickHandler.call(this); } }
-	function pendingClickHandler(){
-		const id = this.dataset.id;
-		if (!confirm('Deseja puxar este atendimento?')) return;
-		const form = document.createElement('form');
-		form.method = 'POST';
-		form.action = `/painel/atendimento/${id}/`;
-		const inpCsrf = document.createElement('input'); inpCsrf.type='hidden'; inpCsrf.name='csrfmiddlewaretoken'; inpCsrf.value = csrftoken; form.appendChild(inpCsrf);
-		const inpClaim = document.createElement('input'); inpClaim.type='hidden'; inpClaim.name='claim'; inpClaim.value='1'; form.appendChild(inpClaim);
-		document.body.appendChild(form);
-		form.submit();
-	}
-	attachPendingHandlers();
-	document.querySelectorAll('.panel-nav').forEach(function(btn){ btn.addEventListener('click', function(){ const target=btn.dataset.target; const colAnalistas=document.querySelector('.col-md-3'); const colPendentes=document.querySelector('.col-md-5'); const colAndamento=document.querySelector('.col-md-4'); if(target==='fila'){ colAnalistas.style.display=''; colPendentes.style.display=''; colAndamento.style.display=''; } else if(target==='analistas'){ colAnalistas.style.display=''; colPendentes.style.display='none'; colAndamento.style.display='none'; } }); });
-	// TV controls
-	let tvMode=false; let autoRotateTimer=null;
-	const tvToggle=document.getElementById('tv-toggle');
-	const tvFullscreen=document.getElementById('tv-fullscreen');
-	const tvInterval=document.getElementById('tv-interval');
-	function enterTVMode(){ document.documentElement.classList.add('tv-mode'); tvMode=true; if(tvToggle){ tvToggle.textContent='Sair'; tvToggle.classList.remove('btn-danger'); tvToggle.classList.add('btn-success'); } }
-	function exitTVMode(){ document.documentElement.classList.remove('tv-mode'); tvMode=false; if(tvToggle){ tvToggle.textContent='Entrar'; tvToggle.classList.remove('btn-success'); tvToggle.classList.add('btn-danger'); } stopAutoRotate(); exitFullscreen(); }
-	if (tvToggle) tvToggle.addEventListener('click', function(){ if(!tvMode) enterTVMode(); else exitTVMode(); });
-	if (tvFullscreen) tvFullscreen.addEventListener('click', function(){ if(!document.fullscreenElement) requestFullscreen(document.documentElement); else exitFullscreen(); });
-	if (tvInterval) tvInterval.addEventListener('change', function(){ const val=parseInt(tvInterval.value,10); if(val>0) startAutoRotate(val); else stopAutoRotate(); });
-	function startAutoRotate(interval){ stopAutoRotate(); autoRotateTimer=setInterval(function(){ rotateView(); }, interval); }
-	function stopAutoRotate(){ if(autoRotateTimer){ clearInterval(autoRotateTimer); autoRotateTimer=null; } }
-	function rotateView(){ const colPendentes=document.querySelector('.col-md-5'); const colAnalistas=document.querySelector('.col-md-3'); const colAndamento=document.querySelector('.col-md-4'); if(colPendentes.style.display==='none'){ colPendentes.style.display=''; colAnalistas.style.display=''; colAndamento.style.display=''; } else if(colAnalistas.style.display==='none' || colAndamento.style.display==='none'){ colAnalistas.style.display=''; colPendentes.style.display='none'; colAndamento.style.display='none'; } else { colAnalistas.style.display='none'; colPendentes.style.display='none'; colAndamento.style.display=''; } }
-	function requestFullscreen(el){ if(el.requestFullscreen) el.requestFullscreen(); else if(el.webkitRequestFullscreen) el.webkitRequestFullscreen(); else if(el.msRequestFullscreen) el.msRequestFullscreen(); }
-	function exitFullscreen(){ if(document.exitFullscreen) document.exitFullscreen(); else if(document.webkitExitFullscreen) document.webkitExitFullscreen(); else if(document.msExitFullscreen) document.msExitFullscreen(); }
-	// render helpers
-	function renderPendentes(pendentes){
-		const ul = document.getElementById('lista-pendentes'); if(!ul) return; ul.innerHTML='';
-		if(!pendentes || pendentes.length===0){ const li=document.createElement('li'); li.className='list-group-item'; li.textContent='Nenhum atendimento pendente.'; ul.appendChild(li); return; }
-		pendentes.forEach(function(at){
-			const li = document.createElement('li');
-			li.className = 'list-group-item pending-item';
-			li.style.cursor = 'pointer';
-			li.dataset.id = at.id;
-			li.dataset.empresa = at.empresa || '';
-			li.innerHTML = '<div class="field-box"><div style="display:flex;flex-direction:column;"><div class="atendimento-label">Atendimento #'+(at.id||'')+'</div><div class="motivo text-muted d-none">'+(at.motivo||'')+'</div></div><div class="tempo small text-muted">'+(at.criado_em? timeSinceText(at.criado_em) : '')+'</div></div>';
-			ul.appendChild(li);
-		});
-		attachPendingHandlers();
-	}
+function renderAndamento(andamento){
+    const colunaAtendimento = document.querySelector('.column:nth-child(3)');
+    if(!colunaAtendimento) return;
 
-	function renderAndamento(andamento){
-		const container = document.querySelector('.col-md-4 ul.list-group'); if(!container) return; container.innerHTML='';
-		if(!andamento || andamento.length===0){ const li=document.createElement('li'); li.className='list-group-item'; li.textContent='Nenhum atendimento em andamento.'; container.appendChild(li); return; }
-		andamento.forEach(function(at){
-			const li = document.createElement('li'); li.className='list-group-item attending-item';
-			li.innerHTML = '<div class="field-box"><div style="display:flex;flex-direction:column;"><div class="atendimento-label">Atendimento #'+(at.id||'')+'</div><div class="empresa">'+(at.empresa||'')+'</div><div class="analista small text-muted">'+(at.analista||'')+'</div></div><div class="tempo small text-muted">'+(at.iniciado_em? timeSinceText(at.iniciado_em) : '')+'</div></div>';
-			container.appendChild(li);
-		});
-	}
-
-	// helper to format timesince from ISO string (fallback for client-side render)
-	function timeSinceText(iso){ try{ const d=new Date(iso); if(isNaN(d)) return ''; const diff=Math.floor((new Date() - d)/1000); const m=Math.floor(diff/60); const s=diff%60; return m+'m '+s+'s'; }catch(e){ return ''; } }
-});
+    const footer = colunaAtendimento.querySelector('.stats-footer');
+    const spacer = colunaAtendimento.querySelector('.spacer');
+    
+    colunaAtendimento.innerHTML = '<h2>🎧 EM ATENDIMENTO</h2>';
+    
+    if(!andamento || andamento.length === 0){
+        colunaAtendimento.innerHTML += '<div class="card green"><span class="label">Nenhum atendimento</span><span class="time">00:00:00</span></div>';
+    } else {
+        andamento.forEach(function(at){
+            const cardHtml = 
+                '<div class="card attending-item green" data-id="'+at.id+'" data-iniciado="'+at.iniciado_em+'">' +
+                    '<span class="label">'+at.analista+' • '+at.empresa+'</span>' +
+                    '<span class="time tempo-atendimento" data-iniciado="'+at.iniciado_em+'"></span>' +
+                '</div>';
+            colunaAtendimento.innerHTML += cardHtml;
+        });
+    }
+    
+    if(spacer) colunaAtendimento.appendChild(spacer);
+    if(footer) colunaAtendimento.appendChild(footer);
+}
 </script>
-{% endif %}
 
 {% endblock %}

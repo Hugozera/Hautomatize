@@ -1,6 +1,7 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from . import upload_router
+
+from .painel_views import RelatorioGestorView
 from . import upload_router
 from . import views
 from . import views_conversor
@@ -71,6 +72,8 @@ urlpatterns = [
     path('download/api/progresso/<int:tarefa_id>/', views.api_progresso_download, name='api_progresso_download'),
     path('download/lista/', views.listar_downloads, name='lista_downloads'),
     
+    path('relatorio/', RelatorioGestorView.as_view(), name='relatorio'),
+    path('api/departamento/<int:departamento_id>/dados/', core_views.dados_departamento_api, name='departamento_dados_api'),
 
     # Conversor de Arquivos
     path('conversor/', views_conversor.conversor_index, name='conversor_index'),

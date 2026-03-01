@@ -1,57 +1,276 @@
-/* Styles for department painel pages */
-.pending-item { cursor: pointer; transition: background .15s ease, transform .08s ease; padding: 12px; }
-.pending-item:hover { background: rgba(72,187,120,0.06); transform: translateY(-2px); }
-.pending-item strong { display:block; font-size:1.05rem; }
-.availability-badge { font-weight:600; padding: .35rem .6rem; border-radius: 6px; font-size:0.9rem; }
-.tv-mode .container-fluid { padding: 8px 16px; }
-
-/* Layout columns */
-.analyst-column { height: 100vh; overflow-y: auto; background: #f7f9fb; padding: 12px; }
-.pendentes-column { height: 100vh; overflow-y: auto; background: #ffffff; padding: 12px; border-left: 1px solid #e9ecef; }
-.andamento-column { height: 100vh; overflow-y: auto; background: #fafafa; padding: 12px; border-left: 1px solid #e9ecef; }
-
-/* Analyst items */
-.analyst-item { padding: 12px; margin-bottom: 6px; border-radius: 6px; }
-.analyst-available { background: linear-gradient(90deg, #e6ffed, #d4f8e5); border: 1px solid #b7e0bf; }
-.analyst-unavailable { background: linear-gradient(90deg, #fff0f0, #ffecec); border: 1px solid #f5c2c2; }
-
-.availability-badge { font-weight: 600; padding: 6px 8px; border-radius: 4px; }
-.availability-badge[data-available="true"] { background-color: #198754; color: #fff; }
-.availability-badge[data-available="false"] { background-color: #dc3545; color: #fff; }
-
-.analista-name { font-weight: 700; }
-.avail-timer { font-size: 0.9rem; font-weight: 600; }
-
-/* Pending / Atendimento items */
-.pending-item, .attending-item { padding: 12px; margin-bottom: 8px; border-radius: 6px; }
-.pending-item { background: #ffffff; border: 1px solid #eef3f7; }
-.attending-item { background: #fffdfa; border: 1px solid #f2ead6; }
-
-.pending-item .empresa { font-weight: 700; font-size: 1.05rem; }
-.pending-item .motivo { font-size: 0.9rem; }
-.tempo-espera, .tempo-atendimento { font-weight: 700; font-size: 0.95rem; }
-
-/* Timer color thresholds (default neutral) */
-.timer-green { color: #198754; }
-.timer-yellow { color: #ffc107; }
-.timer-red { color: #dc3545; }
-
-/* Responsive */
-@media (max-width: 767px) {
-	.analyst-column, .pendentes-column, .andamento-column { height: auto; }
+:root{
+    --azul-bg: linear-gradient(135deg, #1a2639, #2c3e50, #34495e);
+    --glass: rgba(0,0,0,0.3);
+    --glass-strong: rgba(255,255,255,0.06);
+    --verde: linear-gradient(145deg, #2ecc71, #27ae60);
+    --verde-escuro: #27ae60;
+    --vermelho: linear-gradient(145deg, #e74c3c, #c0392b);
+    --amarelo: #f1c40f;
+    --texto: white;
+    --texto-escuro: #1e3a2a;
 }
 
-/* timers */
-.tempo-espera, .tempo-atendimento { font-weight: 700; color: var(--muted-strong); }
-.tempo-espera.alert-long { color: var(--danger-600); }
+/* FUNDO */
+html, body {
+    margin:0;
+    padding:0;
+    width:100vw;
+    min-height:100vh;
+    overflow-y:auto; /* allow scrolling when needed */
+    background: linear-gradient(135deg, #1a2639, #2c3e50, #34495e);
+    color: white;
+}
 
-/* small layout helpers */
-.panel-nav { cursor:pointer; }
+/* CONTAINER PRINCIPAL */
+.painel-wrapper {
+    min-height:100vh;
+    padding:20px;
+    display:flex;
+    flex-direction:column;
+}
 
-/* highlight items in atendimento (in-progress) */
-.attending-item { background: linear-gradient(90deg, rgba(34,197,94,0.06), rgba(34,197,94,0.02)); border-left: 4px solid rgba(34,197,94,0.9); }
-.attending-item .empresa { color: var(--primary-600); font-weight:700; }
+/* HEADER */
+.tv-header {
+    height: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 4%;
+    backdrop-filter: blur(6px);
+    background: rgba(0,0,0,0.3);
+    border-bottom: 2px solid rgba(255,255,255,0.15);
+    border-radius: 20px 20px 0 0;
+    margin-bottom: 1.5%;
+}
 
-/* make availability visually prominent */
-.availability-badge.bg-success { background: linear-gradient(90deg,var(--primary-500),#16a34a); color: white; box-shadow: var(--sombra-suave); }
+.tv-header h1 {
+    font-size: 2.6rem;
+    font-weight: 500;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
 
+#clock {
+    font-size: 2rem;
+    color: #E8FFF6;
+    font-weight: 500;
+    text-shadow: 0 0 10px rgba(232,255,246,0.5);
+}
+
+/* GRID OCUPANDO TUDO */
+.painel-tv-grid {
+    flex:1 1 auto;
+    display: flex;
+    gap: 1.5%;
+}
+
+/* COLUNAS */
+.painel-col {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    padding: 2%;
+    border-radius: 24px;
+    backdrop-filter: blur(12px);
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.15);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+}
+
+/* TÍTULOS */
+.painel-col-title {
+    font-size: 1.8rem;
+    font-weight: 400;
+    margin-bottom: 1.8rem;
+    text-align: center;
+    letter-spacing: 1.5px;
+    color: rgba(255,255,255,0.9);
+    text-transform: uppercase;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 10px;
+}
+
+/* LISTA */
+.painel-list {
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    gap: 1rem;
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Scroll personalizado */
+.painel-list::-webkit-scrollbar {
+    width: 6px;
+}
+
+.painel-list::-webkit-scrollbar-track {
+    background: rgba(255,255,255,0.05);
+    border-radius: 10px;
+}
+
+.painel-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 10px;
+}
+
+/* CARDS */
+.list-group-item {
+    border: none !important;
+    border-radius: 16px !important;
+    padding: 1.3rem 1.8rem !important;
+    font-size: 1.3rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: all 0.3s ease;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.list-group-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(0,0,0,0.4);
+}
+
+/* LINHA INTERNA */
+.linha-unica {
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap: 30px;
+}
+
+/* ANALISTAS - Disponível */
+.analyst-available {
+    background: linear-gradient(145deg, #2ecc71, #27ae60) !important;
+    color: #1e3a2a !important;
+    border-left: 5px solid #f1c40f !important;
+}
+
+/* ANALISTAS - Indisponível */
+.analyst-unavailable {
+    background: linear-gradient(145deg, #e74c3c, #c0392b) !important;
+    color: white !important;
+    border-left: 5px solid #f39c12 !important;
+}
+
+/* PENDENTES - Normal */
+.pending-item.status-normal {
+    background: linear-gradient(145deg, #2ecc71, #27ae60) !important;
+    color: #1e3a2a !important;
+    border-left: 5px solid #f1c40f !important;
+}
+
+/* PENDENTES - Crítico (mais de 20min) */
+.pending-item.status-critico {
+    background: linear-gradient(145deg, #e74c3c, #c0392b) !important;
+    color: white !important;
+    border-left: 5px solid #e67e22 !important;
+    animation: pulse 1.2s infinite;
+}
+
+/* EM ATENDIMENTO - Normal */
+.attending-item.status-normal {
+    background: linear-gradient(145deg, #2ecc71, #27ae60) !important;
+    color: #1e3a2a !important;
+    border-left: 5px solid #f1c40f !important;
+}
+
+/* EM ATENDIMENTO - Crítico (mais de 20min) */
+.attending-item.status-critico {
+    background: linear-gradient(145deg, #e74c3c, #c0392b) !important;
+    color: white !important;
+    border-left: 5px solid #e67e22 !important;
+    animation: pulse 1.2s infinite;
+}
+
+/* ANIMAÇÃO DE PULSO */
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231,76,60,0.7); }
+    50% { transform: scale(1.02); box-shadow: 0 0 20px rgba(231,76,60,0.5); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(231,76,60,0); }
+}
+
+/* TEXTOS */
+.analista-name {
+    font-size: 1.4rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.analista-name::before {
+    content: "●";
+    font-size: 1.5rem;
+    color: #f1c40f;
+}
+
+.empresa {
+    font-size: 1.2rem;
+    opacity: 0.95;
+    background: rgba(0,0,0,0.1);
+    padding: 3px 12px;
+    border-radius: 20px;
+}
+
+.atendimento-label {
+    font-size: 1.3rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.atendimento-label::before {
+    content: "📞";
+    font-size: 1.4rem;
+}
+
+/* TEMPOS */
+.tempo-espera,
+.tempo-atendimento,
+.avail-timer {
+    font-size: 1.3rem;
+    font-weight: 700;
+    background: rgba(0,0,0,0.2);
+    padding: 5px 12px;
+    border-radius: 30px;
+    letter-spacing: 1px;
+    border: 1px solid rgba(255,255,255,0.15);
+}
+
+/* ÍCONES ESPECÍFICOS */
+.analyst-unavailable .analista-name::before {
+    color: #f39c12;
+}
+
+.pending-item.status-critico .atendimento-label::before {
+    content: "⚠️";
+}
+
+.attending-item.status-critico .analista-name::before {
+    content: "⚠️";
+    color: white;
+}
+
+/* REMOVE ESTILO BOOTSTRAP */
+.list-group {
+    background: transparent !important;
+    border: none !important;
+}
+
+.list-group-item {
+    background-clip: padding-box;
+    margin-bottom: 0 !important;
+}
+
+/* RESPONSIVO */
+@media (max-width: 1400px) {
+    .tv-header h1 { font-size: 2rem; }
+    .list-group-item { font-size: 1.1rem; padding: 1rem !important; }
+    .analista-name { font-size: 1.2rem; }
+    .tempo-espera, .tempo-atendimento { font-size: 1.1rem; }
+}

@@ -16,6 +16,7 @@ from core.painel_views import (
 )
 from core import views as core_views
 from core.views import painel_department_api
+from core.views import api_state_counts, api_monthly_counts
 
 app_name = 'painel'
 
@@ -36,5 +37,7 @@ urlpatterns = [
     path('secretaria/', SecretariaPainelView.as_view(), name='secretaria_painel'),
     path('atendimento/transfer/', TransferAtendimentoView.as_view(), name='transfer_atendimento'),
     path('api/department/<int:departamento_id>/', painel_department_api, name='painel_api_department'),
+    path('api/state_counts/', api_state_counts, name='painel_api_state_counts'),
+    path('api/monthly_counts/', api_monthly_counts, name='painel_api_monthly_counts'),
     path('anexo/upload/', AtendimentoAnexoUploadView.as_view(), name='atendimento_anexo_upload'),
 ]

@@ -1,5 +1,9 @@
 # views.py - Completo e Organizado
 # HDowloader - Sistema de Download Automático de NFSe
+from django.http import JsonResponse
+from django.views import View
+from core.models import Departamento, Analista, Atendimento, Empresa
+from core.painel_utils import notificar_painel_departamento
 from .tasks import iniciar_download_tarefa
 from .models import TarefaDownload
 from django.http import JsonResponse
@@ -45,6 +49,9 @@ from .sieg_service import SiegClient
 from django.views.decorators.http import require_POST
 from django.http import HttpResponseBadRequest
 import json
+from django.db.models import Count
+from django.db.models.functions import TruncMonth
+from django.utils.dateparse import parse_date
 
 # ========== VIEWS DE DOWNLOAD ==========
 @login_required
@@ -158,6 +165,57 @@ def download_manual(request):
         'msg': msg,
         'empresa_selecionada': empresa_selecionada,
         'precisa_certificado': precisa_certificado,
+    })
+
+def dados_departamento_api(request, departamento_id):
+    departamento = get_object_or_404(Departamento, id=departamento_id)
+    
+    # Pendentes
+    pendentes = Atendimento.objects.filter(
+        departamento=departamento, 
+        status='pendente'
+    ).order_by('criado_em').values('id', 'empresa', 'criado_em')
+    
+    # Em andamento - CORRIGIDO!
+    andamento = Atendimento.objects.filter(
+        departamento=departamento, 
+        status='atendendo'
+    ).order_by('iniciado_em').select_related('analista__user').values(
+        'id', 
+        'empresa', 
+        'iniciado_em'
+    )
+    
+    # Formata as datas e pega o nome do analista separadamente
+    pendentes_list = []
+    for at in pendentes:
+        pendentes_list.append({
+            'id': at['id'],
+            'empresa': at['empresa'],
+            'criado_em': at['criado_em'].isoformat() if at['criado_em'] else None
+        })
+    
+    andamento_list = []
+    for at in andamento:
+        # Busca o atendimento completo para pegar o analista
+        atendimento = Atendimento.objects.get(id=at['id'])
+        nome_analista = "Analista"
+        if atendimento.analista:
+            if hasattr(atendimento.analista, 'user') and atendimento.analista.user:
+                nome_analista = atendimento.analista.user.get_full_name() or atendimento.analista.user.username
+            elif hasattr(atendimento.analista, 'nome'):
+                nome_analista = atendimento.analista.nome
+        
+        andamento_list.append({
+            'id': at['id'],
+            'analista': nome_analista,
+            'empresa': at['empresa'],
+            'iniciado_em': at['iniciado_em'].isoformat() if at['iniciado_em'] else None
+        })
+    
+    return JsonResponse({
+        'atendimentos_pendentes': pendentes_list,
+        'atendimentos_andamento': andamento_list,
     })
 
 @login_required
@@ -1750,6 +1808,76 @@ def painel_department_api(request, departamento_id):
             'analista': {'id': at.analista.pk, 'name': at.analista.user.get_full_name()} if getattr(at, 'analista', None) else None,
         })
     return JsonResponse({'departamento': {'id': departamento.pk, 'nome': departamento.nome}, 'analistas': analistas, 'atendimentos': atendimentos}, encoder=DjangoJSONEncoder)
+
+
+@login_required
+def api_state_counts(request):
+    """Return JSON counts of atendimentos grouped by empresa.uf (state).
+    Optional GET params: departamento, status, start_date (YYYY-MM-DD), end_date (YYYY-MM-DD)
+    """
+    qs = Atendimento.objects.all()
+    departamento = request.GET.get('departamento')
+    status = request.GET.get('status')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    if departamento and departamento.isdigit():
+        qs = qs.filter(departamento_id=int(departamento))
+    if status:
+        qs = qs.filter(status=status)
+    if start_date:
+        sd = parse_date(start_date)
+        if sd:
+            qs = qs.filter(criado_em__date__gte=sd)
+    if end_date:
+        ed = parse_date(end_date)
+        if ed:
+            qs = qs.filter(criado_em__date__lte=ed)
+
+    agg = qs.values(state= models.F('empresa__uf')).annotate(count=Count('pk')).order_by('-count')
+    labels = []
+    data = []
+    for row in agg:
+        state = row.get('state') or '—'
+        labels.append(state)
+        data.append(row.get('count') or 0)
+    return JsonResponse({'labels': labels, 'data': data})
+
+
+@login_required
+def api_monthly_counts(request):
+    """Return JSON monthly counts of atendimentos (YYYY-MM) optionally filtered.
+    Optional GET params: departamento, status, months (int), start_date, end_date
+    """
+    qs = Atendimento.objects.all()
+    departamento = request.GET.get('departamento')
+    status = request.GET.get('status')
+    months = request.GET.get('months')
+    start_date = request.GET.get('start_date')
+    end_date = request.GET.get('end_date')
+    if departamento and departamento.isdigit():
+        qs = qs.filter(departamento_id=int(departamento))
+    if status:
+        qs = qs.filter(status=status)
+    if start_date:
+        sd = parse_date(start_date)
+        if sd:
+            qs = qs.filter(criado_em__date__gte=sd)
+    if end_date:
+        ed = parse_date(end_date)
+        if ed:
+            qs = qs.filter(criado_em__date__lte=ed)
+
+    qs = qs.annotate(month=TruncMonth('criado_em')).values('month').annotate(count=Count('pk')).order_by('month')
+    labels = []
+    data = []
+    for row in qs:
+        m = row.get('month')
+        if m:
+            labels.append(m.strftime('%Y-%m'))
+        else:
+            labels.append('—')
+        data.append(row.get('count') or 0)
+    return JsonResponse({'labels': labels, 'data': data})
 
 
 @login_required

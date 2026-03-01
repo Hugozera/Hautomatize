@@ -81,6 +81,7 @@ body {
     background: var(--gradiente-principal);
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto; /* allow page vertical scrolling by default */
     color: var(--text-color);
     /* increase overall font sizes per request (~30% larger) */
     font-size: 1.35rem;
@@ -426,6 +427,65 @@ body.dark-mode .btn-outline-secondary {
 .tv-mode .col-md-3, .tv-mode .col-md-4, .tv-mode .col-md-5 { padding: 12px !important; }
 .tv-mode .panel-rotate-hidden { display: none !important; }
 
+/* ===== TV MODE + DARK MODE ADJUSTMENTS =====
+   When the user enables dark mode, make painel/TV cards and fields
+   follow the same dark-surface pattern used across the app so that
+   inputs and cards appear on a muted gray surface instead of pure black.
+*/
+body.tv-mode.dark-mode,
+body.dark-mode.tv-mode,
+.tv-mode body.dark-mode,
+body.dark-mode .tv-mode,
+.tv-mode.dark-mode {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+}
+
+.tv-mode.dark-mode .container-fluid,
+.tv-mode.dark-mode .column,
+.tv-mode.dark-mode .card,
+body.dark-mode .tv-mode .card {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border-color: rgba(255,255,255,0.04) !important;
+    box-shadow: none !important;
+}
+
+.tv-mode.dark-mode .card.green { background: rgba(16,185,129,0.06) !important; }
+.tv-mode.dark-mode .card.red { background: rgba(220,53,69,0.06) !important; }
+
+.tv-mode.dark-mode .label,
+.tv-mode.dark-mode .time,
+.tv-mode.dark-mode .analyst-item .label,
+.tv-mode.dark-mode .analyst-item .time {
+    color: var(--text-color) !important;
+}
+
+.tv-mode.dark-mode .stats-footer {
+    color: var(--muted) !important;
+}
+
+/* Ensure timers and small text contrast in dark mode */
+.tv-mode.dark-mode .time { color: var(--muted) !important; }
+
+/* Make list items and placeholders match other dark-mode styles */
+.tv-mode.dark-mode .list-group-item,
+.tv-mode.dark-mode .pending-item,
+.tv-mode.dark-mode .attending-item,
+.tv-mode.dark-mode .analyst-item {
+    background: var(--surface-2) !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+}
+
+/* Inputs shown in TV/admin views should use muted surfaces */
+.tv-mode.dark-mode input,
+.tv-mode.dark-mode select,
+.tv-mode.dark-mode textarea {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+}
+
 /* compact controls for non-tv mode too */
 .panel-controls { position: relative; display: inline-flex; gap: 8px; align-items: center; }
 .panel-controls .control-label { color: var(--muted); font-size: 0.95rem; margin-right: 6px; }
@@ -760,6 +820,13 @@ body.dark-mode .sidebar .nav-link .nav-text {
     margin-right: 0;
     position: relative;
     z-index: 1;
+}
+
+/* Ensure main content can scroll independently when content overflows */
+.main-content {
+    /* do not constrain height here; allow body to scroll naturally */
+    max-height: none;
+    overflow: visible;
 }
 
 /* Ajuste quando sidebar está colapsada */
@@ -1193,3 +1260,20 @@ html { font-size: clamp(14px, 1.2vw, 16px); }
 
 /* Provide a helper class to wrap tables when editing templates gradually */
 .table-scrollable { width: 100%; }
+
+/* ===== GLOBAL SCROLL FIX =====
+   Ensure pages can scroll vertically by default while preserving
+   the TV/painel mode which intentionally hides scrolling. This
+   overrides accidental `overflow:hidden` on large containers. */
+html, body, .app-wrapper, .main-content {
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Keep TV mode (full-screen panels) non-scrollable as originally intended */
+.tv-mode body, .tv-mode .container-fluid, .tv-mode .app-wrapper {
+    height: 100vh !important;
+    overflow: hidden !important;
+}

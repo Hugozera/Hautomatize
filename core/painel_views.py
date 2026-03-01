@@ -1,7 +1,9 @@
 from django.shortcuts import render, get_object_or_404
 from django.views import View
 from django.db.models import Q, Count, Avg, ExpressionWrapper, F, DurationField
+from django.db.models.functions import TruncDate, TruncMonth
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponseForbidden
 from django.urls import reverse
 from django.utils import timezone
@@ -63,13 +65,17 @@ class ClienteAtendimentosView(View):
                 empresa_obj.usuarios.add(request.user.pessoa)
 
         if empresa_obj and departamento_id and motivo:
-            Atendimento.objects.create(
+            at = Atendimento.objects.create(
                 empresa_obj=empresa_obj,
                 empresa=empresa_obj.nome_fantasia,
                 departamento_id=departamento_id,
                 motivo=motivo,
                 status='pendente',
             )
+            try:
+                notificar_painel_departamento(int(departamento_id))
+            except Exception:
+                pass
         departamentos = Departamento.objects.all()
         atendimentos = Atendimento.objects.filter(empresa=empresa).order_by('-criado_em')
         return render(request, 'core/painel/cliente_atendimentos.html', {'empresa': empresa, 'atendimentos': atendimentos, 'departamentos': departamentos})
@@ -88,21 +94,35 @@ class RelatorioGestorView(ModulePermissionRequiredMixin, View):
         departamentos = Departamento.objects.all()
         departamento_id = request.GET.get('departamento')
         status = request.GET.get('status')
-        atendimentos = Atendimento.objects.all().order_by('-criado_em')
+
+        # Period selection (days) or explicit start/end dates
+        periodo = request.GET.get('periodo') or request.GET.get('period') or '30'
+        try:
+            periodo_days = int(periodo)
+        except Exception:
+            periodo_days = 30
+        end_date = timezone.now().date()
+        start_date = end_date - timezone.timedelta(days=periodo_days - 1)
+
+        atendimentos_qs = Atendimento.objects.filter(criado_em__date__gte=start_date, criado_em__date__lte=end_date).order_by('-criado_em')
         if departamento_id:
-            atendimentos = atendimentos.filter(departamento_id=departamento_id)
+            atendimentos_qs = atendimentos_qs.filter(departamento_id=departamento_id)
         if status:
-            atendimentos = atendimentos.filter(status=status)
+            atendimentos_qs = atendimentos_qs.filter(status=status)
+
         # Basic metrics
-        metrics_qs = atendimentos
+        metrics_qs = atendimentos_qs
         total_atendimentos = metrics_qs.count()
         pendentes_count = metrics_qs.filter(status='pendente').count()
         atendendo_count = metrics_qs.filter(status='atendendo').count()
         finalizado_count = metrics_qs.filter(status='finalizado').count()
+        cancelados_count = metrics_qs.filter(status='cancelado').count() if hasattr(Atendimento._meta, 'get_field') else 0
+
         wait_expr = ExpressionWrapper(F('iniciado_em') - F('criado_em'), output_field=DurationField())
         handle_expr = ExpressionWrapper(F('finalizado_em') - F('iniciado_em'), output_field=DurationField())
         avg_wait = metrics_qs.filter(iniciado_em__isnull=False).annotate(wait=wait_expr).aggregate(avg_wait=Avg('wait'))['avg_wait']
         avg_handle = metrics_qs.filter(finalizado_em__isnull=False, iniciado_em__isnull=False).annotate(handle=handle_expr).aggregate(avg_handle=Avg('handle'))['avg_handle']
+
         def minutes_or_none(td):
             if not td:
                 return None
@@ -110,19 +130,136 @@ class RelatorioGestorView(ModulePermissionRequiredMixin, View):
                 return round(td.total_seconds() / 60, 1)
             except Exception:
                 return None
+
+        # Variacao em relação ao período anterior
+        prev_end = start_date - timezone.timedelta(days=1)
+        prev_start = prev_end - timezone.timedelta(days=periodo_days - 1)
+        prev_count = Atendimento.objects.filter(criado_em__date__gte=prev_start, criado_em__date__lte=prev_end)
+        if departamento_id:
+            prev_count = prev_count.filter(departamento_id=departamento_id)
+        prev_total = prev_count.count()
+        variacao_total = None
+        try:
+            if prev_total > 0:
+                variacao_total = round(((total_atendimentos - prev_total) / prev_total) * 100, 1)
+            else:
+                variacao_total = None
+        except Exception:
+            variacao_total = None
+
+        # Trend: atendimentos por dia
+        series = metrics_qs.annotate(d=TruncDate('criado_em')).values('d').annotate(c=Count('id')).order_by('d')
+        trend_labels = [s['d'].strftime('%Y-%m-%d') for s in series]
+        trend_data = [s['c'] for s in series]
+
+        # Monthly counts (last 12 months)
+        months_qs = metrics_qs.annotate(m=TruncMonth('criado_em')).values('m').annotate(c=Count('id')).order_by('m')
+        monthly_labels = [m['m'].strftime('%Y-%m') for m in months_qs]
+        monthly_data = [m['c'] for m in months_qs]
+
+        # Departments distribution
+        dept_qs = metrics_qs.values('departamento__nome').annotate(total=Count('id')).order_by('-total')
+        dept_labels = [d['departamento__nome'] or '—' for d in dept_qs]
+        dept_data = [d['total'] for d in dept_qs]
+
+        # Attendance by state (empresa.uf)
+        state_qs = metrics_qs.filter(empresa_obj__isnull=False).values('empresa_obj__uf').annotate(total=Count('id')).order_by('-total')
+        state_labels = [s['empresa_obj__uf'] or '—' for s in state_qs]
+        state_data = [s['total'] for s in state_qs]
+
+        # Ranking de analistas (por total de atendimentos no período)
+        analista_qs = metrics_qs.filter(analista__isnull=False).values('analista').annotate(total_atendimentos=Count('id'), nome=F('analista__user__first_name'), sobrenome=F('analista__user__last_name'), departamento_nome=F('analista__departamento__nome')).order_by('-total_atendimentos')
+        ranking_analistas = []
+        from django.utils.text import Truncator
+        for a in analista_qs:
+            nome = (a.get('nome') or '') + (' ' + (a.get('sobrenome') or '') if a.get('sobrenome') else '')
+            ranking_analistas.append({
+                'nome': Truncator(nome.strip()).chars(30),
+                'departamento': {'nome': a.get('departamento_nome')},
+                'total_atendimentos': a.get('total_atendimentos')
+            })
+
+        # Tempo médio por analista (em minutos) - média, min, max
+        tempo_analistas = []
+        handle_dur_expr = ExpressionWrapper(F('finalizado_em') - F('iniciado_em'), output_field=DurationField())
+        from django.db.models import Min, Max
+        analistas_handle = metrics_qs.filter(finalizado_em__isnull=False, iniciado_em__isnull=False, analista__isnull=False).values('analista', 'analista__user__first_name', 'analista__user__last_name').annotate(avg_handle=Avg(handle_dur_expr), min_handle=Min(handle_dur_expr), max_handle=Max(handle_dur_expr))
+        for a in analistas_handle:
+            def dur_to_min(td):
+                if not td:
+                    return None
+                try:
+                    return int(td.total_seconds() / 60)
+                except Exception:
+                    return None
+            nome = (a.get('analista__user__first_name') or '') + (' ' + (a.get('analista__user__last_name') or '') if a.get('analista__user__last_name') else '')
+            tempo_analistas.append({
+                'nome': nome.strip(),
+                'tempo_medio': dur_to_min(a.get('avg_handle')),
+                'tempo_min': dur_to_min(a.get('min_handle')),
+                'tempo_max': dur_to_min(a.get('max_handle')),
+            })
+
+        # Prepare atendimentos list and annotate tempo_atendimento (minutes)
+        atendimentos_list = list(metrics_qs)
+        for a in atendimentos_list:
+            if a.finalizado_em and a.iniciado_em:
+                try:
+                    delta = a.finalizado_em - a.iniciado_em
+                    a.tempo_atendimento = int(delta.total_seconds() / 60)
+                except Exception:
+                    a.tempo_atendimento = None
+            else:
+                a.tempo_atendimento = None
+
+        # Pagination
+        page = request.GET.get('page', 1)
+        paginator = Paginator(atendimentos_list, 25)
+        try:
+            atendimentos_page = paginator.page(page)
+        except PageNotAnInteger:
+            atendimentos_page = paginator.page(1)
+        except EmptyPage:
+            atendimentos_page = paginator.page(paginator.num_pages)
+
+        metrics = {
+            'total': total_atendimentos,
+            'variacao_total': variacao_total,
+            'pendentes': pendentes_count,
+            'atendendo': atendendo_count,
+            'finalizado': finalizado_count,
+            'cancelados': cancelados_count,
+            'pendentes_percentual': round((pendentes_count / total_atendimentos) * 100, 1) if total_atendimentos else 0,
+            'atendendo_percentual': round((atendendo_count / total_atendimentos) * 100, 1) if total_atendimentos else 0,
+            'finalizado_percentual': round((finalizado_count / total_atendimentos) * 100, 1) if total_atendimentos else 0,
+            'cancelados_percentual': round((cancelados_count / total_atendimentos) * 100, 1) if total_atendimentos else 0,
+            'avg_wait_min': minutes_or_none(avg_wait),
+            'avg_handle_min': minutes_or_none(avg_handle),
+            'tempo_medio_atendimento': minutes_or_none(avg_handle) or 0,
+            'tempo_medio_formatado': f"{minutes_or_none(avg_handle) or 0} min",
+            'sla': round((metrics_qs.filter(finalizado_em__isnull=False, iniciado_em__isnull=False).filter(**{"finalizado_em__lte": F('iniciado_em') + timezone.timedelta(minutes=20)}).count() / total_atendimentos) * 100, 1) if total_atendimentos else 0,
+            'satisfacao_media': None,
+            'stars_range': range(0),
+            'stars_has_half': False,
+        }
+
         context = {
             'departamentos': departamentos,
-            'atendimentos': atendimentos,
+            'atendimentos': atendimentos_page,
             'departamento_id': departamento_id,
             'status': status,
-            'metrics': {
-                'total': total_atendimentos,
-                'pendentes': pendentes_count,
-                'atendendo': atendendo_count,
-                'finalizado': finalizado_count,
-                'avg_wait_min': minutes_or_none(avg_wait),
-                'avg_handle_min': minutes_or_none(avg_handle),
-            }
+            'metrics': metrics,
+            'trend_labels': trend_labels,
+            'trend_data': trend_data,
+            'monthly_labels': monthly_labels,
+            'monthly_data': monthly_data,
+            'dept_labels': dept_labels,
+            'dept_data': dept_data,
+            'state_labels': state_labels,
+            'state_data': state_data,
+            'ranking_analistas': ranking_analistas,
+            'tempo_medio_analistas': tempo_analistas,
+            'request': request,
         }
         return render(request, 'core/painel/relatorio_gestor.html', context)
 
@@ -217,18 +354,42 @@ class PainelDepartamentoView(ModulePermissionRequiredMixin, View):
     action = 'view'
     def get(self, request, departamento_id):
         departamento = get_object_or_404(Departamento, id=departamento_id)
-        analistas = Analista.objects.filter(departamento=departamento)
-        # Allow forcing TV mode with ?tv=1 (useful for testing on the same machine).
-        force_tv = request.GET.get('tv') == '1'
-        # For public viewers (not an analyst of this department), show the TV-friendly view.
-        user_analista = getattr(request.user, 'analista', None)
-        if force_tv or not user_analista or user_analista.departamento_id != departamento.id:
-            # Render department painel in TV mode for general viewing
-            return render(request, 'core/painel/painel_departamento.html', {'departamento': departamento, 'tv_mode': True})
+        # analysts currently attending should be excluded from 'available'
+        analistas_em_atendimento = Atendimento.objects.filter(
+            status='atendendo',
+            analista__departamento=departamento
+        ).values_list('analista_id', flat=True)
 
-        # For analysts of the department, render the full interactive painel
+        analistas_disponiveis = Analista.objects.filter(
+            departamento=departamento
+        ).exclude(id__in=analistas_em_atendimento)
+        
+        # 👇 BUSCA OS ATENDIMENTOS 👇
         atendimentos_pendentes = Atendimento.objects.filter(departamento=departamento, status='pendente').order_by('criado_em')
         atendimentos_andamento = Atendimento.objects.filter(departamento=departamento, status='atendendo').order_by('iniciado_em')
+        
+        # Allow forcing TV mode with ?tv=1 (useful for testing on the same machine).
+        force_tv = request.GET.get('tv') == '1'
+        
+        # For public viewers (not an analyst of this department), show the TV-friendly view.
+        user_analista = getattr(request.user, 'analista', None)
+        
+        # 👇 CRIA O CONTEXT COM TÍTULO E SUBTÍTULO 👇
+        context = {
+            'departamento': departamento,
+            'analistas': analistas_disponiveis,
+            'analistas_disponiveis': analistas_disponiveis,
+            'atendimentos_pendentes': atendimentos_pendentes,  # Renomeado de 'pendentes'
+            'atendimentos_andamento': atendimentos_andamento,  # Já está correto
+            'title': f'Painel - {departamento.nome}',  # ← NOVO
+            'subtitle': 'Visão do departamento em tempo real',  # ← NOVO
+        }
+        
+        if force_tv or not user_analista or user_analista.departamento_id != departamento.id:
+            # Modo TV (público)
+            return render(request, 'core/painel/painel_departamento.html', context)
+        
+        # Modo analista (com permissões extras)
         pessoa = getattr(request.user, 'pessoa', None)
         user_can_manage = False
         try:
@@ -236,13 +397,9 @@ class PainelDepartamentoView(ModulePermissionRequiredMixin, View):
                 user_can_manage = True
         except Exception:
             user_can_manage = False
-        context = {
-            'departamento': departamento,
-            'analistas': analistas,
-            'atendimentos_pendentes': atendimentos_pendentes,
-            'atendimentos_andamento': atendimentos_andamento,
-            'user_can_manage_painel': user_can_manage,
-        }
+        
+        # Adiciona a permissão ao context existente
+        context['user_can_manage_painel'] = user_can_manage
         return render(request, 'core/painel/painel_departamento.html', context)
 
 class ToggleDisponibilidadeView(LoginRequiredMixin, View):
@@ -440,13 +597,17 @@ class SecretariaPainelView(LoginRequiredMixin, View):
             if changed:
                 empresa_obj.save()
         if empresa_obj and departamento_id and motivo:
-            Atendimento.objects.create(
+            at = Atendimento.objects.create(
                 empresa_obj=empresa_obj,
                 empresa=empresa_obj.nome_fantasia,
                 departamento_id=departamento_id,
                 motivo=motivo,
                 status='pendente',
             )
+            try:
+                notificar_painel_departamento(int(departamento_id))
+            except Exception:
+                pass
         departamentos = Departamento.objects.all()
         ultimas_qs = Atendimento.objects.all().order_by('-criado_em')[:20]
         if request.headers.get('x-requested-with') == 'XMLHttpRequest':
@@ -523,3 +684,5 @@ class TransferAtendimentoView(LoginRequiredMixin, View):
             return JsonResponse({'status': 'ok', 'msg': 'transferido_analista', 'analista': str(target)})
 
         return JsonResponse({'status': 'error', 'msg': 'nenhuma ação especificada'}, status=400)
+
+    
