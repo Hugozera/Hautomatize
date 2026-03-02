@@ -61,6 +61,43 @@
                 </div>
             </div>
 
+            <!-- Card de Junção de PDFs (Nova aba integrada) -->
+            <div class="card mb-4 animate__animated animate__fadeInUp">
+                <div class="card-header bg-transparent d-flex align-items-center">
+                    <i class="bi bi-files fs-4 me-2 icon-accent-azul"></i>
+                    <span class="fw-semibold">Junção de PDFs</span>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">Faça upload de vários PDFs e monte um novo PDF escolhendo páginas.</p>
+                    <form id="mergeUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor' %}">
+                        {% csrf_token %}
+                        <input type="file" id="mergeFiles" name="pdfs" multiple accept="application/pdf">
+                        <button type="submit" class="btn btn-outline-primary btn-sm mt-2" id="btnUploadMerge">Enviar e Preparar</button>
+                    </form>
+
+                    <div id="mergePanel" class="mt-3 d-none">
+                        <p><strong>Session:</strong> <span id="mergeSession"></span></p>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h6>Fontes</h6>
+                                <div id="mergeSources"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <h6>Sequência</h6>
+                                <ol id="mergeSequence"></ol>
+                                <form id="mergeSubmitForm" method="post" action="{% url 'merge_create' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="session_id" id="merge_session_input">
+                                    <input type="hidden" name="sequence" id="merge_sequence_input">
+                                    <input type="text" name="out_name" placeholder="nome_saida.pdf" class="form-control form-control-sm mt-2">
+                                    <button type="button" class="btn btn-success btn-sm mt-2" id="btnGenerateMerge">Gerar PDF</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Card de Configuração -->
             <div class="card mb-4 animate__animated animate__fadeInUp">
                 <div class="card-header bg-transparent d-flex align-items-center">
@@ -412,6 +449,98 @@ function processarArquivos(files) {
         compactarMultiplosArquivos(files);
     }
 }
+
+// --- Merge UI JS ---
+document.addEventListener('DOMContentLoaded', function(){
+    const btnUpload = document.getElementById('btnUploadMerge');
+    const fileInput = document.getElementById('mergeFiles');
+    const mergePanel = document.getElementById('mergePanel');
+    const mergeSessionEl = document.getElementById('mergeSession');
+    const mergeSourcesEl = document.getElementById('mergeSources');
+    const mergeSequenceOl = document.getElementById('mergeSequence');
+    const mergeSessionInput = document.getElementById('merge_session_input');
+    const mergeSequenceInput = document.getElementById('merge_sequence_input');
+    const btnGenerate = document.getElementById('btnGenerateMerge');
+
+    function clearMergeUI(){
+        mergeSourcesEl.innerHTML = '';
+        mergeSequenceOl.innerHTML = '';
+        mergePanel.classList.add('d-none');
+    }
+
+    // Submit the form to open the dedicated merge editor page (server will save files and render editor)
+    btnUpload.addEventListener('click', ()=>{
+        const files = fileInput.files;
+        if(!files || files.length===0){ alert('Selecione ao menos um PDF'); return; }
+        // Default form submit will POST to merge_editor and open the editor page
+        document.getElementById('mergeUploadForm').submit();
+    });
+
+    function setupMergeUI(session_id, sources, page_counts, thumbnails){
+        mergePanel.classList.remove('d-none');
+        mergeSessionEl.textContent = session_id;
+        mergeSessionInput.value = session_id;
+        mergeSourcesEl.innerHTML = '';
+        for(const k in sources){
+            const div = document.createElement('div');
+            div.className = 'mb-2';
+            const title = document.createElement('div'); title.textContent = k + ' — ' + sources[k];
+            div.appendChild(title);
+            const pc = page_counts[k] || 0;
+            const pager = document.createElement('div');
+            for(let i=1;i<=pc;i++){
+                const b = document.createElement('button'); b.type='button'; b.className = 'btn btn-sm btn-outline-secondary me-1 mb-1'; b.textContent = i;
+                // handle shift-click to add ranges
+                b.addEventListener('click', function(e){ addToSequence(k,i,e.shiftKey); });
+                // if thumbnail available, add image below the button
+                if(thumbnails && thumbnails[k] && thumbnails[k][i-1]){
+                    const img = document.createElement('img');
+                    img.src = thumbnails[k][i-1];
+                    img.style.width = '48px'; img.style.height = 'auto'; img.style.display = 'block'; img.style.marginTop='4px';
+                    const wrapper = document.createElement('span'); wrapper.style.display='inline-block'; wrapper.style.textAlign='center'; wrapper.appendChild(b); wrapper.appendChild(img);
+                    pager.appendChild(wrapper);
+                } else {
+                    pager.appendChild(b);
+                }
+            }
+            div.appendChild(pager);
+            mergeSourcesEl.appendChild(div);
+        }
+    }
+
+    function addToSequence(src, page, isRange){
+        if(isRange){
+            // find last item from same source
+            let last = null;
+            for(let i=mergeSequenceOl.children.length-1;i>=0;i--){
+                const it = mergeSequenceOl.children[i]; if(it.dataset.src===src){ last = parseInt(it.dataset.page,10); break; }
+            }
+            if(last){
+                const a = Math.min(last, page), b = Math.max(last, page);
+                for(let p=a;p<=b;p++) addToSequence(src,p,false);
+                return;
+            }
+        }
+        const li = document.createElement('li'); li.textContent = src+':'+page; li.dataset.src=src; li.dataset.page=page;
+        li.draggable = true;
+        li.addEventListener('click', ()=> li.remove());
+        // drag & drop handlers for reordering
+        li.addEventListener('dragstart', function(e){ e.dataTransfer.setData('text/plain', null); li.classList.add('dragging'); });
+        li.addEventListener('dragend', function(e){ li.classList.remove('dragging'); });
+        li.addEventListener('dragover', function(e){ e.preventDefault(); const dragging = document.querySelector('.dragging'); if(dragging && dragging!==li){ const rect = li.getBoundingClientRect(); const after = (e.clientY - rect.top) > (rect.height/2); if(after) li.parentNode.insertBefore(dragging, li.nextSibling); else li.parentNode.insertBefore(dragging, li); } });
+        mergeSequenceOl.appendChild(li);
+    }
+
+    btnGenerate.addEventListener('click', ()=>{
+        const items = [];
+        for(const li of mergeSequenceOl.children){ items.push({source: li.dataset.src, page: parseInt(li.dataset.page,10)}); }
+        if(items.length===0){ alert('Sequência vazia'); return; }
+        mergeSequenceInput.value = JSON.stringify(items);
+        // submit form to trigger file download
+        document.getElementById('mergeSubmitForm').submit();
+    });
+});
+
 
 // Função para atualizar interface com arquivo único
 function atualizarInterfaceArquivoUnico(file) {

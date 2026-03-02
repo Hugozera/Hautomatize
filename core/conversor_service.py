@@ -781,6 +781,52 @@ class ConversorService:
         return transacoes
 
     @classmethod
+    def merge_pdfs_by_sequence(cls, output_path: str, sources: Dict[str, str], sequence: List[Dict]):
+        """
+        Merge pages from multiple source PDFs into a single PDF according to a sequence.
+
+        - `sources`: mapping of source keys to file paths, e.g. {'p1': 'a.pdf', 'p2': 'b.pdf'}
+        - `sequence`: list of items describing which page to take, e.g.
+            [ {'source': 'p1', 'page': 1}, {'source': 'p2', 'page': 4}, ... ]
+
+        Pages are 1-based in the API (user friendly).
+        """
+        try:
+            from pypdf import PdfReader, PdfWriter
+        except Exception:
+            raise RuntimeError('pypdf is required for PDF merging')
+
+        # Load readers
+        readers = {}
+        for key, path in sources.items():
+            if not path or not os.path.exists(path):
+                raise FileNotFoundError(f"Source '{key}' file not found: {path}")
+            readers[key] = PdfReader(path)
+
+        writer = PdfWriter()
+
+        for idx, item in enumerate(sequence):
+            src = item.get('source')
+            page_no = int(item.get('page', 1))
+            if src not in readers:
+                raise KeyError(f"Unknown source key in sequence: {src}")
+            reader = readers[src]
+            if page_no < 1 or page_no > len(reader.pages):
+                raise IndexError(f"Page {page_no} out of range for source {src}")
+            # PdfReader pages are 0-indexed
+            writer.add_page(reader.pages[page_no - 1])
+
+        # Ensure output dir
+        outdir = os.path.dirname(output_path)
+        if outdir and not os.path.exists(outdir):
+            os.makedirs(outdir, exist_ok=True)
+
+        with open(output_path, 'wb') as f:
+            writer.write(f)
+
+        return output_path
+
+    @classmethod
     def _finalizar_transacao_caixa(cls, transacao: Dict) -> Optional[Dict]:
         """Finaliza uma transação específica da CAIXA."""
         if not transacao or transacao['valor'] == 0.0:
