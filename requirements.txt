@@ -55,6 +55,10 @@ vine==5.1.0
 wcwidth==0.6.0
 wheel==0.46.3
 
+# ASGI / Channels
+channels==4.3.2
+channels_redis==4.3.0
+
 # Pacotes opcionais / que exigem compilação nativa no Windows:
 # - psycopg2-binary: exige MSVC; instale apenas se tiver Build Tools.
 # - lxml: geralmente requer build tools (ou usar rodas pré-compiladas via conda).

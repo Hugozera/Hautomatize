@@ -22,6 +22,12 @@ from django.urls import reverse
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage
 import inspect
+import uuid
+import tempfile
+import shutil
+from django.conf import settings
+from django.http import HttpResponse
+import json as _json
 
 
 @login_required
@@ -398,6 +404,9 @@ def create_ofx_from_text(request):
 
             svc = conversor_service.ConversorService()
             import tempfile, os
+
+
+            
             fd, path = tempfile.mkstemp(suffix='.ofx')
             os.close(fd)
             svc.gerar_ofx(transacoes, path, banco_id=banco_id)
@@ -415,6 +424,284 @@ def create_ofx_from_text(request):
         'transacoes': transacoes,
         'banco_id': banco_id,
     })
+
+
+@login_required
+def merge_editor(request):
+    """Simple PDF merge editor: upload multiple PDFs, pick pages and download merged PDF."""
+    if request.method == 'GET':
+        return render(request, 'core/conversor/merge_editor.html', {})
+
+    # POST: files uploaded -> save to temp session and show page lists
+    files = request.FILES.getlist('pdfs')
+    if not files:
+        messages.error(request, 'Nenhum arquivo enviado')
+        return redirect('conversor_index')
+
+    session_id = uuid.uuid4().hex
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session_id)
+    os.makedirs(base_tmp, exist_ok=True)
+
+    sources = {}
+    page_counts = {}
+    try:
+        from pypdf import PdfReader
+    except Exception:
+        PdfReader = None
+
+    for i, f in enumerate(files, start=1):
+        key = f'p{i}'
+        filename = f"{key}_{f.name}"
+        path = os.path.join(base_tmp, filename)
+        with open(path, 'wb') as out:
+            for chunk in f.chunks():
+                out.write(chunk)
+        sources[key] = filename
+        if PdfReader:
+            try:
+                reader = PdfReader(path)
+                page_counts[key] = len(reader.pages)
+            except Exception:
+                page_counts[key] = None
+        else:
+            page_counts[key] = None
+    # Do NOT render all thumbnails here (heavy). Client will request single-page thumbnails on demand.
+    thumbnails = {}
+
+    # Prepare page ranges for template (avoid template dict access filters)
+    page_ranges = {}
+    for k, pc in page_counts.items():
+        try:
+            if isinstance(pc, int) and pc > 0:
+                page_ranges[k] = list(range(1, pc + 1))
+            else:
+                page_ranges[k] = []
+        except Exception:
+            page_ranges[k] = []
+
+    context = {
+        'session_id': session_id,
+        'sources': sources,
+        'page_counts': page_counts,
+        'page_ranges': page_ranges,
+        'thumbnails': thumbnails,
+    }
+
+    # prepare sources_list for template convenience
+    try:
+        sl = []
+        for k, fname in sources.items():
+            sl.append({'key': k, 'filename': fname, 'pages': page_ranges.get(k, [])})
+        context['sources_list'] = sl
+    except Exception:
+        context['sources_list'] = []
+
+    return render(request, 'core/conversor/merge_editor.html', context)
+
+
+@login_required
+def merge_create(request):
+    """Receive sequence and session_id, produce merged PDF and return as download."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+    session_id = request.POST.get('session_id') or request.POST.get('session')
+    sequence_text = request.POST.get('sequence')
+    out_name = request.POST.get('out_name') or f'merged_{uuid.uuid4().hex}.pdf'
+    # ensure filename has .pdf extension
+    try:
+        if not out_name.lower().endswith('.pdf'):
+            out_name = out_name + '.pdf'
+    except Exception:
+        out_name = f'merged_{uuid.uuid4().hex}.pdf'
+
+    if not session_id or not sequence_text:
+        return JsonResponse({'erro': 'session_id e sequence são obrigatórios'}, status=400)
+
+    try:
+        sequence = _json.loads(sequence_text)
+    except Exception:
+        return JsonResponse({'erro': 'sequence inválida (JSON esperado)'}, status=400)
+
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session_id)
+    if not os.path.exists(base_tmp):
+        return JsonResponse({'erro': 'session não encontrada ou expirada'}, status=400)
+
+    # build sources mapping expected by ConversorService
+    sources = {}
+    for fname in os.listdir(base_tmp):
+        if '_' in fname:
+            key = fname.split('_', 1)[0]
+            sources[key] = os.path.join(base_tmp, fname)
+
+    try:
+        outdir = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'merged')
+        os.makedirs(outdir, exist_ok=True)
+        out_path = os.path.join(outdir, out_name)
+        from .conversor_service import ConversorService
+        ConversorService.merge_pdfs_by_sequence(out_path, sources, sequence)
+    except Exception as e:
+        return JsonResponse({'erro': f'Falha ao gerar PDF: {str(e)}'}, status=500)
+
+    # Serve file as attachment
+    try:
+        response = FileResponse(open(out_path, 'rb'), as_attachment=True, filename=out_name)
+    except Exception as e:
+        return JsonResponse({'erro': f'Não foi possível ler o arquivo gerado: {str(e)}'}, status=500)
+
+    # Optional: cleanup temp session
+    try:
+        shutil.rmtree(base_tmp)
+    except Exception:
+        pass
+
+    return response
+
+
+@login_required
+def merge_upload_api(request):
+    """Ajax endpoint: receive PDFs, store in temp session and return JSON with session info."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+    files = request.FILES.getlist('pdfs')
+    if not files:
+        return JsonResponse({'erro': 'Nenhum arquivo enviado'}, status=400)
+
+    session_id = uuid.uuid4().hex
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session_id)
+    os.makedirs(base_tmp, exist_ok=True)
+
+    sources = {}
+    page_counts = {}
+    try:
+        from pypdf import PdfReader
+    except Exception:
+        PdfReader = None
+
+    for i, f in enumerate(files, start=1):
+        key = f'p{i}'
+        filename = f"{key}_{f.name}"
+        path = os.path.join(base_tmp, filename)
+        with open(path, 'wb') as out:
+            for chunk in f.chunks():
+                out.write(chunk)
+        sources[key] = filename
+        if PdfReader:
+            try:
+                reader = PdfReader(path)
+                page_counts[key] = len(reader.pages)
+            except Exception:
+                page_counts[key] = None
+        else:
+            page_counts[key] = None
+
+    # Avoid generating all thumbnails here (slow). Thumbnails will be generated per-page via a lightweight endpoint.
+    thumbnails = {}
+
+    # prepare page_ranges and sources_list for clients
+    page_ranges = {}
+    for k, pc in page_counts.items():
+        try:
+            if isinstance(pc, int) and pc > 0:
+                page_ranges[k] = list(range(1, pc + 1))
+            else:
+                page_ranges[k] = []
+        except Exception:
+            page_ranges[k] = []
+
+    sources_list = []
+    for k, fname in sources.items():
+        sources_list.append({'key': k, 'filename': fname, 'pages': page_ranges.get(k, [])})
+
+    return JsonResponse({'session_id': session_id, 'sources': sources, 'page_counts': page_counts, 'page_ranges': page_ranges, 'sources_list': sources_list, 'thumbnails': thumbnails})
+
+
+@login_required
+def merge_thumbnail(request):
+    """Return a single-page PNG thumbnail for a given session/source/page (generates on demand)."""
+    session = request.GET.get('session') or request.GET.get('session_id') or request.GET.get('s')
+    src = request.GET.get('src') or request.GET.get('source')
+    try:
+        page = int(request.GET.get('page') or request.GET.get('p') or 1)
+    except Exception:
+        page = 1
+
+    if not session or not src:
+        return JsonResponse({'erro': 'session e src são obrigatórios'}, status=400)
+
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session)
+    if not os.path.exists(base_tmp):
+        return JsonResponse({'erro': 'session não encontrada'}, status=404)
+
+    # find filename that starts with src + '_'
+    fname = None
+    for f in os.listdir(base_tmp):
+        if f.startswith(f"{src}_"):
+            fname = f
+            break
+
+    if not fname:
+        return JsonResponse({'erro': 'arquivo fonte não encontrado'}, status=404)
+
+    fpath = os.path.join(base_tmp, fname)
+    thumbs_dir = os.path.join(base_tmp, 'thumbnails')
+    os.makedirs(thumbs_dir, exist_ok=True)
+    # determine requested dpi (for preview quality); default 75
+    try:
+        dpi_for_name = int(request.GET.get('dpi') or request.GET.get('resolution') or 75)
+    except Exception:
+        dpi_for_name = 75
+    # cap dpi for safety
+    if dpi_for_name < 50:
+        dpi_for_name = 50
+    if dpi_for_name > 300:
+        dpi_for_name = 300
+
+    thumb_name = f"{src}_p{page}_d{dpi_for_name}.png"
+    thumb_path = os.path.join(thumbs_dir, thumb_name)
+
+    # If already rendered, return cached file
+    if os.path.exists(thumb_path):
+        try:
+            return FileResponse(open(thumb_path, 'rb'), content_type='image/png')
+        except Exception:
+            pass
+
+    # Try to render specific page
+    try:
+        from pdf2image import convert_from_path
+    except Exception:
+        return JsonResponse({'erro': 'pdf2image não disponível'}, status=500)
+
+    poppler_path = None
+    try:
+        from .conversor_service import ConversorService
+        poppler_path = ConversorService.POPPLER_PATH if hasattr(ConversorService, 'POPPLER_PATH') else None
+    except Exception:
+        poppler_path = None
+
+    try:
+        if poppler_path and os.path.exists(poppler_path):
+            pages = convert_from_path(fpath, dpi=dpi_for_name, first_page=page, last_page=page, poppler_path=poppler_path)
+        else:
+            pages = convert_from_path(fpath, dpi=dpi_for_name, first_page=page, last_page=page)
+    except Exception:
+        return JsonResponse({'erro': 'Falha ao renderizar página'}, status=500)
+
+    if not pages:
+        return JsonResponse({'erro': 'Página não encontrada'}, status=404)
+
+    img = pages[0]
+    try:
+        w, h = img.size
+        nw = 300
+        nh = int(h * (nw / w))
+        img_thumb = img.resize((nw, nh))
+        img_thumb.save(thumb_path, 'PNG')
+        return FileResponse(open(thumb_path, 'rb'), content_type='image/png')
+    except Exception:
+        return JsonResponse({'erro': 'Falha ao processar imagem'}, status=500)
 
 
 @login_required

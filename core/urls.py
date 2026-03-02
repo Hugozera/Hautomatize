@@ -115,6 +115,10 @@ urlpatterns = [
     path('conversor/create_from_text/', views_conversor.create_ofx_from_text, name='create_ofx_from_text'),
     path('conversor/api/preview_from_text/', views_conversor.api_preview_from_text, name='api_preview_from_text'),
     path('conversor/api/generate_ofx/', views_conversor.api_generate_ofx, name='api_generate_ofx'),
+    path('conversor/merge/', views_conversor.merge_editor, name='merge_editor'),
+    path('conversor/merge_create/', views_conversor.merge_create, name='merge_create'),
+    path('conversor/merge_upload/', views_conversor.merge_upload_api, name='merge_upload_api'),
+    path('conversor/merge_thumbnail/', views_conversor.merge_thumbnail, name='merge_thumbnail'),
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

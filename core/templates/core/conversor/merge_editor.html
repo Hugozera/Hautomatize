@@ -1,0 +1,183 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<h1>Editor de Junção de PDFs</h1>
+
+{% if not session_id %}
+<form method="post" enctype="multipart/form-data">
+  {% csrf_token %}
+  <label>Selecione arquivos PDF (vários)</label><br>
+  <input type="file" name="pdfs" multiple accept="application/pdf" required><br><br>
+  <button type="submit">Enviar e Preparar</button>
+</form>
+{% else %}
+<p><strong>Session:</strong> {{ session_id }}</p>
+<div style="display:flex;gap:20px;align-items:flex-start;">
+  <div style="flex:2">
+    <h3>Fontes e Páginas</h3>
+    {% for s in sources_list %}
+      <div class="source-panel" data-key="{{ s.key }}">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <strong>{{ s.key }}</strong>
+          <span style="font-size:0.9em;color:#666;">{{ s.filename }}</span>
+        </div>
+        <div class="pages-grid" id="grid_{{ s.key }}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px;">
+          {% if s.pages %}
+            {% for p in s.pages %}
+              <div class="page-tile" data-src="{{ s.key }}" data-page="{{ p }}" style="border:1px solid #ddd;padding:6px;text-align:center;cursor:pointer;">
+                <img class="page-thumb" data-src-url="{% url 'merge_thumbnail' %}?session={{ session_id }}&src={{ s.key }}&page={{ p }}" alt="Página {{ p }}" style="width:100%;height:auto;background:#f5f5f5;" loading="lazy">
+                <div class="page-number" style="font-size:0.9em;margin-top:6px;">{{ p }}</div>
+              </div>
+            {% endfor %}
+          {% else %}
+            <div style="color:#666">Sem informações de páginas</div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <div style="flex:1;min-width:280px;">
+    <h3>Sequência (clique nas miniaturas)</h3>
+    <ol id="sequence" style="min-height:160px;border:1px dashed #ccc;padding:8px;list-style:decimal;">
+    </ol>
+    <form id="mergeForm" method="post" action="{% url 'merge_create' %}">
+      {% csrf_token %}
+      <input type="hidden" name="session_id" value="{{ session_id }}">
+      <input type="hidden" name="sequence" id="sequence_input">
+      <div style="margin-top:8px;">
+        <input type="text" name="out_name" placeholder="nome_saida.pdf" style="width:100%;padding:6px;margin-bottom:8px;">
+        <button type="button" id="downloadBtn" style="width:100%;padding:8px;background:#2274A5;color:#fff;border:none;">Gerar PDF</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<style>
+  .page-tile img{display:block;border-radius:4px}
+  .page-tile.added{outline:3px solid #7bd389}
+</style>
+
+<script>
+// Note: do not inline Python objects directly to JS (may not be valid JSON).
+// The UI reads data from DOM attributes instead.
+
+// Lazy-load visible thumbnails: set img.src from data-src-url when in viewport
+function lazyLoadThumbnails(){
+  const imgs = document.querySelectorAll('img[data-src-url]');
+  const io = (window.IntersectionObserver ? new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting){
+        const img = e.target; img.src = img.dataset.srcUrl; img.removeAttribute('data-src-url');
+        io.unobserve(img);
+      }
+    });
+  }) : null);
+  imgs.forEach(img=>{ if(img.dataset.srcUrl){ if(io) io.observe(img); else { img.src = img.dataset.srcUrl } }});
+}
+
+// Build click handlers: clicking a tile adds to sequence
+// Use event delegation so newly added tiles or delayed images still work.
+document.addEventListener('click', function(e){
+  const tile = e.target.closest && e.target.closest('.page-tile');
+  if(!tile) return;
+  // prevent clicks on remove buttons inside sequence
+  if(tile.closest('#sequence')) return;
+  const src = tile.dataset.src; const page = parseInt(tile.dataset.page,10);
+  // If the clicked element is the image, show preview only
+  if(e.target.closest && e.target.closest('img.page-thumb')){
+    const imgEl = tile.querySelector('img.page-thumb');
+    // ensure high-quality preview requested (dpi param)
+    const baseUrl = imgEl.dataset && imgEl.dataset.srcUrl ? imgEl.dataset.srcUrl : imgEl.src;
+    const previewUrl = baseUrl + '&dpi=200';
+    showPreviewUrl(previewUrl);
+    return;
+  }
+
+  // If clicked element is the page number (or its text), add to sequence without preview
+  if(e.target.closest && e.target.closest('.page-number')){
+    // ensure thumbnail image is loaded (set src if needed)
+    const imgEl = tile.querySelector('img.page-thumb');
+    if(imgEl && imgEl.dataset && imgEl.dataset.srcUrl && !imgEl.src){ imgEl.src = imgEl.dataset.srcUrl }
+    addToSequence(src, page, tile);
+    return;
+  }
+
+  // default: add to sequence
+  const imgEl = tile.querySelector('img.page-thumb');
+  if(imgEl && imgEl.dataset && imgEl.dataset.srcUrl && !imgEl.src){ imgEl.src = imgEl.dataset.srcUrl }
+  addToSequence(src, page, tile);
+});
+
+function showPreviewFromTile(tile){
+  const imgEl = tile.querySelector('img.page-thumb');
+  const baseUrl = (imgEl && (imgEl.dataset && imgEl.dataset.srcUrl)) || (imgEl && imgEl.src) || null;
+  if(!baseUrl) return;
+  const previewUrl = baseUrl + '&dpi=200';
+  showPreviewUrl(previewUrl);
+}
+
+function showPreviewUrl(previewUrl){
+  // Fetch image as blob (include credentials) then show via object URL to handle auth and errors.
+  fetch(previewUrl, { credentials: 'include' })
+    .then(resp => {
+      if(!resp.ok) throw new Error('Falha ao obter preview: ' + resp.status);
+      return resp.blob();
+    })
+    .then(blob => {
+      let modal = document.getElementById('pdfPreviewModal');
+      if(!modal){
+        modal = document.createElement('div'); modal.id = 'pdfPreviewModal';
+        modal.style.position='fixed'; modal.style.left='0'; modal.style.top='0'; modal.style.right='0'; modal.style.bottom='0';
+        modal.style.background='rgba(0,0,0,0.6)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.zIndex=9999;
+        const content = document.createElement('div'); content.style.maxWidth='95%'; content.style.maxHeight='95%'; content.style.background='#fff'; content.style.padding='12px'; content.style.borderRadius='6px';
+        const img = document.createElement('img'); img.id='pdfPreviewImg'; img.style.maxWidth='100%'; img.style.maxHeight='90vh'; img.style.display='block'; img.style.objectFit='contain';
+        const btn = document.createElement('button'); btn.textContent='Fechar'; btn.style.display='block'; btn.style.marginTop='8px'; btn.addEventListener('click', ()=> { URL.revokeObjectURL(img.src); modal.remove(); });
+        content.appendChild(img); content.appendChild(btn); modal.appendChild(content); document.body.appendChild(modal);
+      }
+      const previewImg = document.getElementById('pdfPreviewImg');
+      const objectUrl = URL.createObjectURL(blob);
+      // revoke previous if any
+      try{ if(previewImg.src && previewImg.src.startsWith('blob:')) URL.revokeObjectURL(previewImg.src); }catch(e){}
+      previewImg.src = objectUrl;
+    })
+    .catch(err => { alert('Não foi possível carregar pré-visualização: ' + err.message); });
+}
+
+function addToSequence(src, page, tileEl){
+  const ol = document.getElementById('sequence');
+  // visual li with small thumbnail and label
+  const li = document.createElement('li'); li.style.display='flex'; li.style.alignItems='center'; li.style.gap='8px';
+  li.dataset.src = src; li.dataset.page = page;
+  const img = document.createElement('img');
+  const thumb = tileEl ? tileEl.querySelector('img') : null;
+  if(thumb){ img.src = thumb.src || thumb.dataset.srcUrl; }
+  img.style.width='64px'; img.style.height='auto'; img.style.border='1px solid #ddd'; img.style.borderRadius='4px';
+  const lbl = document.createElement('div'); lbl.textContent = src + ':' + page; lbl.style.flex='1';
+  const rem = document.createElement('button'); rem.type='button'; rem.textContent='Rem';
+  rem.addEventListener('click', ()=> li.remove());
+  li.appendChild(img); li.appendChild(lbl); li.appendChild(rem);
+  ol.appendChild(li);
+  if(tileEl) tileEl.classList.add('added');
+}
+
+document.getElementById('downloadBtn').addEventListener('click', ()=>{
+  const ol = document.getElementById('sequence');
+  const items = [];
+  for(const li of ol.children){ items.push({source: li.dataset.src, page: parseInt(li.dataset.page,10)}); }
+  if(items.length===0){ alert('Sequência vazia'); return; }
+  document.getElementById('sequence_input').value = JSON.stringify(items);
+  document.getElementById('mergeForm').submit();
+});
+
+// initialize after a short delay so DOM is ready and lazy loader can attach
+setTimeout(()=>{ lazyLoadThumbnails(); }, 150);
+
+// also re-run lazy loader if needed
+setTimeout(lazyLoadThumbnails, 800);
+</script>
+
+{% endif %}
+
+{% endblock %}
