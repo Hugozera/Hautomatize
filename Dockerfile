@@ -29,4 +29,4 @@ EXPOSE 8000
 
 ENV DJANGO_SETTINGS_MODULE=nfse_downloader.settings_prod
 
-CMD ["/app/entrypoint.sh", "gunicorn", "nfse_downloader.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3"]
+CMD ["/app/entrypoint.sh", "daphne", "-b", "0.0.0.0", "-p", "8000", "nfse_downloader.asgi:application"]

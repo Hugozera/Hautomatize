@@ -353,5 +353,39 @@
             }catch(e){}
         });
     </script>
+
+    <!-- Floating chat bubble + inline panel for painel pages (uses shared static chat assets) -->
+    <link rel="stylesheet" href="{% static 'core/css/chat.css' %}">
+    <div id="chatBubble" class="chat-bubble" title="Chat/Painel" style="right:20px;bottom:20px;">
+        <i class="bi bi-chat-dots-fill" style="font-size:20px"></i>
+    </div>
+    <div id="globalChatPanel" class="global-chat-panel" style="display:none; position:fixed; right:20px; bottom:80px; width:360px; max-width:90vw; z-index:5000; box-shadow:0 8px 30px rgba(0,0,0,.25); border-radius:8px; overflow:hidden;">
+        <div class="panel-header">
+            <strong>Chat</strong>
+            <div>
+                <button id="chat-minimize" class="btn btn-sm btn-light" type="button">_</button>
+                <button id="chat-close" class="btn btn-sm btn-light" type="button">×</button>
+            </div>
+        </div>
+        <div id="chat-body" class="chat-body">
+            <div style="margin-bottom:.5rem;font-size:.9rem;color:#666;">Carregando...</div>
+            <div id="chat-content"></div>
+        </div>
+        <div style="padding:.5rem; border-top:1px solid #eee; background:#fafafa; display:flex;gap:.5rem;">
+            <input id="chat-input" type="text" class="form-control form-control-sm" placeholder="Digite uma mensagem...">
+            <button id="chat-send" class="btn btn-sm btn-primary" type="button">Enviar</button>
+        </div>
+    </div>
+    <script src="{% static 'core/js/chat_panel.js' %}"></script>
+    <style>
+    /* Dark mode support for chat in painel TV layout */
+    body.dark-mode .chat-bubble{background:#0b1220;color:#fff}
+    body.dark-mode #globalChatPanel{background:#0b1220;color:#e6eef6;border:1px solid #172031}
+    body.dark-mode #globalChatPanel .btn{background:transparent;color:#fff}
+    body.dark-mode #chat-body{background:#071025;color:#d1d5db}
+    body.dark-mode #chat-content a{color:#8bd5ff}
+    body.dark-mode #chat-input{background:#0b1220;color:#e6eef6;border:1px solid #223042}
+    body.dark-mode #chat-send{background:#06b6d4;border-color:#06b6d4}
+    </style>
 </body>
 </html>

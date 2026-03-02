@@ -7,7 +7,8 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponseRedirect, JsonResponse, HttpResponseForbidden
 from django.urls import reverse
 from django.utils import timezone
-from core.models import Departamento, Analista, Atendimento, Empresa
+from core.models import Departamento, Analista, Atendimento, Empresa, Pessoa
+from django.db.models import Max
 from core.painel_utils import notificar_painel_departamento
 from django.db import DatabaseError
 
@@ -86,6 +87,60 @@ class ChatAtendimentoView(ModulePermissionRequiredMixin, View):
     def get(self, request, atendimento_id):
         atendimento = get_object_or_404(Atendimento, id=atendimento_id)
         return render(request, 'core/painel/chat_atendimento.html', {'atendimento': atendimento})
+
+
+class ChatIndexView(LoginRequiredMixin, View):
+    """Página principal do módulo de chat (lista de conversas)."""
+    def get(self, request):
+        # lista de atendimentos recentes para iniciar conversas
+        pessoa = getattr(request.user, 'pessoa', None)
+        analista = getattr(request.user, 'analista', None)
+
+        atendimentos = Atendimento.objects.none()
+        pessoas = Pessoa.objects.none()
+        ultimas_conversas = []
+
+        if pessoa:
+            atendimentos = Atendimento.objects.filter(
+                Q(analista=analista) |
+                Q(empresa_obj__usuarios=pessoa)
+            ).distinct().order_by('-criado_em')[:100]
+
+            # keep people list populated for the "Pessoas" tab
+            pessoas = Pessoa.objects.filter(user__is_active=True).select_related('user').order_by('user__first_name', 'user__username')[:200]
+
+            # Conversas recentes do usuário (Conversation ou conversas vinculadas a empresa)
+            from core.models import Conversation
+            conversas_qs = Conversation.objects.filter(participants__user=request.user).annotate(last_msg=Max('messages__criado_em')).order_by('-last_msg', '-criado_em')[:100]
+
+            # Construir lista simplificada de conversas para o template
+            for conv in conversas_qs:
+                if conv.empresa:
+                    titulo = conv.empresa.nome_fantasia
+                    tipo = 'empresa'
+                    avatar = None
+                else:
+                    # pega o primeiro participante que não seja o usuário atual
+                    other = conv.participants.exclude(user=request.user).first()
+                    titulo = other.user.get_full_name() or other.user.username if other else conv.title or f'Conversa {conv.id}'
+                    tipo = 'pessoa'
+                    avatar = None
+
+                ultimas_conversas.append({
+                    'id': f'conv-{conv.id}',
+                    'tipo': tipo,
+                    'titulo': titulo,
+                    'subtitulo': '',
+                    'data': conv.last_msg or conv.criado_em,
+                    'avatar': avatar,
+                })
+
+        return render(request, 'core/chat/index.html', {
+            'ultimos': atendimentos,
+            'atendimentos': atendimentos,
+            'pessoas': pessoas,
+            'ultimas_conversas': ultimas_conversas,
+        })
 
 class RelatorioGestorView(ModulePermissionRequiredMixin, View):
     module = 'painel'
@@ -268,6 +323,15 @@ class AtendimentoAnalistaView(ModulePermissionRequiredMixin, View):
     action = 'view'
     def get(self, request, atendimento_id):
         atendimento = get_object_or_404(Atendimento, id=atendimento_id)
+        # Authorization: allow if the current user is the assigned analista
+        # or if the user has the painel.view permission.
+        from django.core.exceptions import PermissionDenied
+        pessoa = getattr(request.user, 'pessoa', None)
+        user_analista = getattr(request.user, 'analista', None)
+        if not ((user_analista and atendimento.analista_id and atendimento.analista_id == user_analista.id)
+                or (pessoa and pessoa.has_perm_code(f"{self.module}.{self.action}"))):
+            raise PermissionDenied()
+
         # defensive: some environments may not have the painel anexos table migrated
         anexos = []
         try:
@@ -440,11 +504,18 @@ class MeuPainelView(LoginRequiredMixin, View):
                 departamento = analista.departamento
                 atendimentos_pendentes = Atendimento.objects.filter(departamento=departamento, status='pendente').order_by('criado_em')
                 meus_atendimentos = Atendimento.objects.filter(analista=analista).order_by('-iniciado_em')
+                
+                # 👇 ADICIONE ESTAS LINHAS PARA OS CONTADORES 👇
+                meus_atendimentos_em_andamento = meus_atendimentos.filter(status='em_andamento').count()
+                meus_atendimentos_resolvidos = meus_atendimentos.filter(status='resolvido').count()
+                
                 return render(request, 'core/painel/meu_painel.html', {
                     'analista': analista,
                     'departamento': departamento,
                     'atendimentos_pendentes': atendimentos_pendentes,
                     'meus_atendimentos': meus_atendimentos,
+                    'meus_atendimentos_em_andamento': meus_atendimentos_em_andamento,  # 👈 NOVO
+                    'meus_atendimentos_resolvidos': meus_atendimentos_resolvidos,      # 👈 NOVO
                 })
             except Exception:
                 # fall through to other handlers

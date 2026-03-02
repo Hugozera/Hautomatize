@@ -14,7 +14,7 @@ services:
 
   web:
     build: .
-    command: /app/entrypoint.sh gunicorn nfse_downloader.wsgi:application --bind 0.0.0.0:8000 --workers 3
+    command: /app/entrypoint.sh daphne -b 0.0.0.0 -p 8000 nfse_downloader.asgi:application
     env_file:
       - ./.env
     environment:
@@ -26,6 +26,9 @@ services:
       # - PROD_SUPERUSER_PASSWORD=YourPasswordHere
     depends_on:
       - db
+    volumes:
+      - staticfiles:/app/staticfiles
+      - media:/app/media
     ports:
       - "8000:8000"
     restart: always

@@ -2,16 +2,32 @@ from django.urls import path
 from django.contrib.auth import views as auth_views
 
 from .painel_views import RelatorioGestorView
+from .painel_views import ChatIndexView
+from core import views as core_views
 from . import upload_router
 from . import views
 from . import views_conversor
 from . import views as core_views
+from django.urls import path
+# legacy: chat_views import removed; use `ChatIndexView` and handlers from `views` / `core_views`
 
 urlpatterns = [
     # Home / inicial
     path('', views.home, name='home'),
     # Dashboard statistics
     path('dashboard/', views.dashboard, name='dashboard'),
+    # Chat module (standalone index)
+    path('chat/', ChatIndexView.as_view(), name='chat_index'),
+    path('chat/mark_read/', core_views.mark_conversation_read, name='chat_mark_read'),
+    path('chat/my_conversations/', core_views.user_conversations, name='chat_my_conversations'),
+    path('chat/create_user_conversation/', core_views.create_user_conversation, name='create_user_conversation'),
+    path('chat/create_empresa_conversation/', core_views.create_empresa_conversation, name='create_empresa_conversation'),
+    path('chat/create_group_conversation/', core_views.create_group_conversation, name='create_group_conversation'),
+    path('chat/push_test/<int:user_id>/', core_views.push_test_notification, name='chat_push_test'),
+    path('api/upload-attachments/', core_views.upload_attachments, name='upload_attachments'),
+    path('api/messages/<str:room_id>/', core_views.api_messages, name='api_messages'),
+    path('api/users/', core_views.api_users, name='api_users'),
+    path('api/pessoas/', core_views.api_pessoas, name='api_pessoas'),
     
     # Pessoas (Usuários)
     path('pessoas/', views.pessoa_list, name='pessoa_list'),
@@ -50,6 +66,7 @@ urlpatterns = [
     path('roles/<int:pk>/editar/', views.role_edit, name='role_edit'),
     path('roles/<int:pk>/excluir/', views.role_delete, name='role_delete'),
     
+    
     # Certificados
     path('certificados/', views.certificado_list, name='certificado_list'),
     path('certificados/testar/', views.certificado_test, name='certificado_test'),
@@ -72,8 +89,8 @@ urlpatterns = [
     path('download/api/progresso/<int:tarefa_id>/', views.api_progresso_download, name='api_progresso_download'),
     path('download/lista/', views.listar_downloads, name='lista_downloads'),
     
-    path('relatorio/', RelatorioGestorView.as_view(), name='relatorio'),
-    path('api/departamento/<int:departamento_id>/dados/', core_views.dados_departamento_api, name='departamento_dados_api'),
+ 
+    
 
     # Conversor de Arquivos
     path('conversor/', views_conversor.conversor_index, name='conversor_index'),

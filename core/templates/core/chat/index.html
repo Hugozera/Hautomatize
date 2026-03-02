@@ -1,0 +1,310 @@
+{% extends 'core/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'core/css/chat.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ig-container">
+    <!-- Sidebar de conversas Hautomatize -->
+    <div class="ig-sidebar">
+        <div class="ig-sidebar-header">
+            <div class="ig-header-top">
+                <h5 class="ig-title">Hautomatize Chat</h5>
+                <div class="ig-header-actions">
+                    <button class="ig-btn-icon" id="new-group-btn" title="Novo grupo">
+                        <i class="bi bi-people-fill"></i>
+                    </button>
+                    <button class="ig-btn-icon" id="new-chat-btn">
+                        <i class="bi bi-pencil-square"></i>
+                    </button>
+                    <button class="ig-btn-icon" id="quick-video-btn" title="Iniciar chamada">
+                        <i class="bi bi-camera-video"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="ig-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="search-input" class="ig-search-input" placeholder="Buscar...">
+            </div>
+        </div>
+        
+        <div class="ig-sidebar-content">
+            <!-- Stories removed: tabs shown directly -->
+            
+            <!-- Abas de conversas -->
+            <div class="ig-tabs">
+                <button class="ig-tab active" data-tab="todas">
+                    Todas
+                </button>
+                <button class="ig-tab" data-tab="empresas">
+                    <i class="bi bi-building"></i> Empresas
+                </button>
+                <button class="ig-tab" data-tab="pessoas">
+                    <i class="bi bi-people"></i> Pessoas
+                </button>
+            </div>
+            
+            <!-- Lista de conversas (recentes) -->
+            <div class="ig-conversations">
+                <!-- Todas as conversas (recentes) -->
+                <div class="ig-conversation-group active" id="conv-todas">
+                    {% for c in ultimas_conversas %}
+                    <div class="ig-conversation-item" data-id="{{ c.id }}" data-type="{{ c.tipo }}">
+                        <div class="ig-conversation-avatar">
+                            {% if c.tipo == 'empresa' %}
+                            <div class="ig-avatar empresa-avatar">
+                                <i class="bi bi-building"></i>
+                            </div>
+                            {% else %}
+                            <div class="ig-avatar-placeholder">
+                                {{ c.titulo|first|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="ig-conversation-info">
+                            <div class="ig-conversation-header">
+                                <span class="ig-conversation-name">{{ c.titulo }}</span>
+                                <span class="ig-conversation-time">{{ c.data|timesince }}</span>
+                            </div>
+                            <div class="ig-conversation-preview">
+                                <span class="ig-preview-text">{{ c.subtitulo }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="ig-empty-state">
+                        <i class="bi bi-chat-dots"></i>
+                        <p>Nenhuma conversa recente</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Apenas empresas -->
+                <div class="ig-conversation-group" id="conv-empresas">
+                    {% for a in atendimentos %}
+                    <div class="ig-conversation-item" data-id="at-{{ a.id }}" data-type="atendimento">
+                        <div class="ig-conversation-avatar">
+                            <div class="ig-avatar empresa-avatar">
+                                <i class="bi bi-building"></i>
+                            </div>
+                        </div>
+                        <div class="ig-conversation-info">
+                            <div class="ig-conversation-header">
+                                <span class="ig-conversation-name">{{ a.empresa|default:'Atendimento' }}</span>
+                                <span class="ig-conversation-time">{{ a.criado_em|timesince }}</span>
+                            </div>
+                            <div class="ig-conversation-preview">
+                                {% if a.status == 'pendente' %}
+                                <span class="ig-badge pending"></span>
+                                {% endif %}
+                                <span class="ig-preview-text">{{ a.motivo|truncatechars:40 }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="ig-empty-state">
+                        <i class="bi bi-building"></i>
+                        <p>Nenhum atendimento</p>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <!-- Apenas pessoas -->
+                <div class="ig-conversation-group" id="conv-pessoas">
+                    {% for pessoa in pessoas %}
+                    <div class="ig-conversation-item" data-id="pessoa-{{ pessoa.id }}" data-type="pessoa" data-user-id="{% if pessoa.user %}{{ pessoa.user.id }}{% endif %}">
+                        <div class="ig-conversation-avatar">
+                            {% if pessoa.foto %}
+                            <img src="{{ pessoa.foto.url }}" alt="{{ pessoa.nome }}">
+                            {% else %}
+                            <div class="ig-avatar-placeholder">
+                                {{ pessoa.nome|first|upper }}
+                            </div>
+                            {% endif %}
+                            <span class="ig-status {% if pessoa.usuario and pessoa.usuario.is_active %}online{% endif %}"></span>
+                        </div>
+                        <div class="ig-conversation-info">
+                            <div class="ig-conversation-header">
+                                <span class="ig-conversation-name">{{ pessoa.nome }}</span>
+                                <span class="ig-conversation-time">
+                                    {% if pessoa.departamento %}{{ pessoa.departamento.sigla }}{% endif %}
+                                </span>
+                            </div>
+                            <div class="ig-conversation-preview">
+                                <span class="ig-preview-text">{{ pessoa.cargo|default:'Funcionário' }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="ig-empty-state">
+                        <i class="bi bi-people"></i>
+                        <p>Nenhum funcionário</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Área principal de conversa -->
+    <div class="ig-chat-area">
+        <div class="ig-chat-header" id="chat-header">
+            <div class="ig-chat-header-left">
+                <button class="ig-back-btn" id="back-to-list">
+                    <i class="bi bi-arrow-left"></i>
+                </button>
+                <div class="ig-chat-avatar" id="chat-avatar">
+                    <div class="ig-avatar-placeholder small">
+                        <i class="bi bi-person"></i>
+                    </div>
+                </div>
+                <div class="ig-chat-info">
+                    <h5 id="conv-title">Hautomatize Chat</h5>
+                    <small class="ig-chat-subtitle" id="conv-subtitle">Selecione uma conversa</small>
+                </div>
+            </div>
+            <div class="ig-chat-header-right">
+                <button class="ig-icon-btn" id="toggle-info">
+                    <i class="bi bi-info-circle"></i>
+                </button>
+                <button class="ig-icon-btn" id="chat-video-btn" title="Chamada de vídeo">
+                    <i class="bi bi-camera-video"></i>
+                </button>
+                <button class="ig-icon-btn" id="chat-audio-btn" title="Chamada de áudio">
+                    <i class="bi bi-telephone"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="ig-messages" id="conv-area">
+            <div class="ig-empty-chat">
+                <div class="ig-empty-icon">
+                    <i class="bi bi-chat-dots"></i>
+                </div>
+                <h4>Central de Mensagens</h4>
+                <p>Selecione uma conversa para começar</p>
+                <button class="ig-btn-primary" id="start-new-chat">
+                    Enviar mensagem
+                </button>
+            </div>
+            <div id="typing-indicator" class="typing-indicator" style="display:none; padding:8px 12px; color:#666; font-size:0.9rem;"></div>
+        </div>
+
+        <div class="ig-input-area" id="input-area">
+            <form id="message-form" class="ig-message-form">
+                <button type="button" class="ig-attach-btn" id="attach-btn">
+                    <i class="bi bi-plus-circle"></i>
+                </button>
+                <input type="file" id="file-input" multiple style="display: none;">
+                
+                <div class="ig-input-wrapper">
+                    <input type="text" id="conv-input" class="ig-input" placeholder="Mensagem..." autocomplete="off">
+                    <div class="ig-input-actions">
+                        <button type="button" class="ig-emoji-btn" id="emoji-btn">
+                            <i class="bi bi-emoji-smile"></i>
+                        </button>
+                        <button type="button" class="ig-camera-btn">
+                            <i class="bi bi-camera"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <button type="submit" class="ig-send-btn" id="conv-send" disabled>
+                    <i class="bi bi-send"></i>
+                </button>
+            </form>
+            
+            <!-- Preview de anexos -->
+            <div class="ig-attachment-preview" id="attachment-preview"></div>
+        </div>
+    </div>
+
+    <!-- Painel de Informações -->
+    <div class="ig-info-panel" id="info-panel">
+        <div class="ig-info-header">
+            <h6>Informações</h6>
+            <button class="ig-close-btn" id="close-info">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <div class="ig-info-content" id="info-content">
+            <!-- Conteúdo dinâmico -->
+        </div>
+    </div>
+</div>
+
+<!-- Modal Nova Conversa -->
+<div class="ig-modal" id="new-chat-modal" style="display: none;">
+    <div class="ig-modal-overlay"></div>
+    <div class="ig-modal-content">
+        <div class="ig-modal-header">
+            <h5>Nova mensagem</h5>
+            <button class="ig-modal-close" id="close-modal">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <div class="ig-modal-body">
+            <div class="ig-modal-search">
+                <i class="bi bi-search"></i>
+                <input type="text" id="modal-search" placeholder="Buscar pessoas...">
+            </div>
+            <div class="ig-suggestions">
+                <h6>Sugestões</h6>
+                <div class="ig-suggestions-list" id="suggestions-list">
+                    {% for pessoa in pessoas|slice:":5" %}
+                    <div class="ig-suggestion-item" data-id="{{ pessoa.id }}" data-nome="{{ pessoa.nome }}">
+                        <div class="ig-suggestion-avatar">
+                            {% if pessoa.foto %}
+                            <img src="{{ pessoa.foto.url }}" alt="{{ pessoa.nome }}">
+                            {% else %}
+                            <div class="ig-avatar-placeholder small">
+                                {{ pessoa.nome|first|upper }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="ig-suggestion-info">
+                            <span class="ig-suggestion-name">{{ pessoa.nome }}</span>
+                            <span class="ig-suggestion-detail">{{ pessoa.cargo|default:'Funcionário' }}</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="ig-modal-footer">
+                <button type="button" class="ig-btn-primary" id="create-group-btn">Criar grupo com selecionados</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Call Modal -->
+<div class="ig-modal" id="call-modal" style="display:none;">
+    <div class="ig-modal-overlay"></div>
+    <div class="ig-modal-content call-modal-content">
+        <div class="ig-modal-header">
+            <h5 id="call-title">Chamada em andamento</h5>
+            <button class="ig-modal-close" id="close-call-modal"><i class="bi bi-x"></i></button>
+        </div>
+        <div class="call-videos">
+            <video id="remote-video" autoplay playsinline></video>
+            <video id="local-video" autoplay playsinline muted></video>
+        </div>
+        <div class="call-actions">
+            <button type="button" class="ig-btn-primary" id="mute-call-btn">Mutar</button>
+            <button type="button" class="ig-btn-primary" id="end-call-btn" style="background:#dc2626;">Encerrar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Emoji Picker -->
+<div class="ig-emoji-picker" id="emoji-picker" style="display: none;">
+    <!-- Emojis serão carregados via JavaScript -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'core/js/chat.js' %}"></script>
+{% endblock %}

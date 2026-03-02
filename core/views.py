@@ -1,6 +1,7 @@
 # views.py - Completo e Organizado
 # HDowloader - Sistema de Download Automático de NFSe
 from django.http import JsonResponse
+from django.http import RawPostDataException
 from django.views import View
 from core.models import Departamento, Analista, Atendimento, Empresa
 from core.painel_utils import notificar_painel_departamento
@@ -291,6 +292,24 @@ def upload_certificado_temporario(request):
         print('DEBUG has _post:', hasattr(request, '_post'))
         if hasattr(request, '_post'):
             print('DEBUG _post keys:', list(request._post.keys()))
+        # dump content type and beginning of stream for diagnostics
+        try:
+            print('DEBUG CONTENT_TYPE:', request.META.get('CONTENT_TYPE'))
+            stream = getattr(request, '_stream', None)
+            if stream:
+                try:
+                    pos = None
+                    if hasattr(stream, 'tell'):
+                        pos = stream.tell()
+                        stream.seek(0)
+                    sample = stream.read(200)
+                    print('DEBUG stream sample:', sample[:200])
+                    if pos is not None:
+                        stream.seek(pos)
+                except Exception as se:
+                    print('DEBUG stream read failed', repr(se))
+        except Exception:
+            pass
     except Exception as e:
         print('DEBUG request introspect failed:', repr(e))
 
@@ -300,25 +319,75 @@ def upload_certificado_temporario(request):
     certificado_file = request.FILES.get('certificado')
 
     # If Django didn't populate request.FILES (some test client cases), try
-    # parsing from `request.body` without consuming the request stream.
-    if not certificado_file and request.body:
+    # parsing from the raw request body safely (catch RawPostDataException).
+    try:
+        raw_body = request.body
+    except RawPostDataException:
+        raw_body = None
+    try:
+        print('DEBUG raw_body_len:', None if raw_body is None else len(raw_body))
+    except Exception:
+        pass
+
+    if not certificado_file:
         try:
-            import io
-            from django.http.multipartparser import MultiPartParser
-            parser = MultiPartParser(request.META, io.BytesIO(request.body), request.upload_handlers)
-            post_data, files_data = parser.parse()
-            empresa_id = empresa_id or post_data.get('empresa_id') or post_data.get('empresa')
-            senha = senha or post_data.get('senha', '')
-            if files_data and files_data.get('certificado'):
-                up = files_data.get('certificado')
+            # try to force Django to populate POST/FILES
+            if hasattr(request, '_load_post_and_files'):
                 try:
-                    certificado_file = up
+                    request._load_post_and_files()
                 except Exception:
-                    certificado_file = up[0]
+                    pass
+            certificado_file = request.FILES.get('certificado')
+            empresa_id = empresa_id or request.POST.get('empresa_id') or request.POST.get('empresa')
+            senha = senha or request.POST.get('senha', senha)
+            # fallback to manual parse if still missing
+            if not certificado_file:
+                import io
+                from django.http.multipartparser import MultiPartParser
+                stream = getattr(request, '_stream', None)
+                # prefer raw_body BytesIO when available (test client provides body)
+                if raw_body:
+                    parser = MultiPartParser(request.META, io.BytesIO(raw_body), request.upload_handlers)
+                elif stream:
+                    try:
+                        stream.seek(0)
+                    except Exception:
+                        pass
+                    parser = MultiPartParser(request.META, stream, request.upload_handlers)
+                else:
+                    parser = None
+                if parser:
+                    post_data, files_data = parser.parse()
+                    empresa_id = empresa_id or post_data.get('empresa_id') or post_data.get('empresa')
+                    senha = senha or post_data.get('senha', '')
+                    if files_data and files_data.get('certificado'):
+                        up = files_data.get('certificado')
+                        try:
+                            certificado_file = up
+                        except Exception:
+                            certificado_file = up[0]
+                # if parser didn't run and there's a non-seekable stream, try reading it fully and parsing
+                elif stream:
+                    try:
+                        body_bytes = stream.read()
+                        if body_bytes:
+                            parser = MultiPartParser(request.META, io.BytesIO(body_bytes), request.upload_handlers)
+                            post_data, files_data = parser.parse()
+                            empresa_id = empresa_id or post_data.get('empresa_id') or post_data.get('empresa')
+                            senha = senha or post_data.get('senha', '')
+                            if files_data and files_data.get('certificado'):
+                                up = files_data.get('certificado')
+                                try:
+                                    certificado_file = up
+                                except Exception:
+                                    certificado_file = up[0]
+                    except Exception:
+                        pass
         except Exception as e:
             print('DEBUG upload_certificado_temporario body parse failed:', repr(e))
 
     if not empresa_id or not certificado_file or not senha:
+        print('DEBUG upload_certificado_temporario missing:', {'empresa_id': empresa_id, 'certificado_file': type(certificado_file), 'senha': senha})
         return JsonResponse({'status': 'ERRO', 'msg': 'Dados incompletos'})
 
     try:
@@ -1883,10 +1952,354 @@ def api_monthly_counts(request):
 @login_required
 def api_users(request):
     """Return small JSON list of users for chat selector."""
-    from django.contrib.auth.models import User
-    users = User.objects.filter(is_active=True).order_by('first_name', 'username')[:500]
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+    # Support simple query filter used by the chat modal (param: q)
+    q = (request.GET.get('q') or '').strip()
+    from django.db.models import Q
+
+    if q:
+        # Try to match against user name/username/email or linked Pessoa (cpf)
+        users = User.objects.filter(is_active=True).filter(
+            Q(first_name__icontains=q) |
+            Q(last_name__icontains=q) |
+            Q(username__icontains=q) |
+            Q(email__icontains=q) |
+            Q(pessoa__cpf__icontains=q)
+        ).distinct().order_by('first_name', 'username')[:100]
+    else:
+        # Default: return active users linked to a Pessoa (historic behaviour)
+        users = User.objects.filter(is_active=True, pessoa__isnull=False).order_by('first_name', 'username')[:500]
+
     out = [{'id': u.pk, 'name': (u.get_full_name() or u.username)} for u in users]
-    return JsonResponse({'users': out})
+    # enrich with Pessoa info when available so frontend can show employee details
+    enriched = []
+    for u in users:
+        entry = {'id': u.pk, 'name': (u.get_full_name() or u.username)}
+        try:
+            p = getattr(u, 'pessoa', None)
+            if p:
+                entry['pessoa'] = {'id': p.pk, 'nome': p.nome}
+        except Exception:
+            pass
+        enriched.append(entry)
+    return JsonResponse({'users': enriched})
+
+
+@login_required
+def api_pessoas(request):
+    """Search `Pessoa` records for chat modal (returns employees)."""
+    q = (request.GET.get('q') or '').strip()
+    from .models import Pessoa
+    results = []
+    if q:
+        qs = Pessoa.objects.filter(
+            models.Q(user__first_name__icontains=q)
+            | models.Q(user__last_name__icontains=q)
+            | models.Q(user__username__icontains=q)
+            | models.Q(cpf__icontains=q)
+        ).select_related('user')[:50]
+    else:
+        qs = Pessoa.objects.select_related('user').all()[:50]
+    for p in qs:
+        results.append({
+            'id': p.pk,
+            'nome': p.nome,
+            'usuario_id': p.user.id if getattr(p, 'user', None) else None,
+        })
+    return JsonResponse({'results': results})
+
+
+@csrf_exempt
+def create_user_conversation(request):
+    """Create or return an existing conversation between current user and another user.
+
+    Expects JSON body: { user_id: <id> }
+    Returns: { conversation_id: <id> }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method'}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'auth'}, status=401)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        other_id = int(payload.get('user_id'))
+    except Exception:
+        return JsonResponse({'error': 'invalid'}, status=400)
+
+    from .models import Conversation, ConversationParticipant
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    # Validate target user exists
+    try:
+        other = User.objects.get(pk=other_id)
+    except User.DoesNotExist:
+        return JsonResponse({'error': 'user_not_found'}, status=404)
+
+    # Try to find existing direct conversation between the two users (no empresa)
+    qs = Conversation.objects.filter(empresa__isnull=True, participants__user=request.user).filter(participants__user__id=other_id)
+    if qs.exists():
+        conv = qs.first()
+    else:
+        conv = Conversation.objects.create(title='')
+        ConversationParticipant.objects.create(conversation=conv, user=request.user)
+        ConversationParticipant.objects.create(conversation=conv, user=other)
+
+    return JsonResponse({'conversation_id': conv.id})
+
+
+@csrf_exempt
+def create_empresa_conversation(request):
+    """Create a conversation linked to a company (empresa).
+
+    Expects JSON body: { empresa_id: <id> }
+    Returns: { conversation_id: <id> }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method'}, status=405)
+    if not request.user.is_authenticated:
+        return JsonResponse({'error': 'auth'}, status=401)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        empresa_id = int(payload.get('empresa_id'))
+    except Exception:
+        return JsonResponse({'error': 'invalid'}, status=400)
+
+    from .models import Conversation, ConversationParticipant, Empresa
+    emp = get_object_or_404(Empresa, pk=empresa_id)
+    # Try to find existing conversation for this empresa where the user participates
+    qs = Conversation.objects.filter(empresa=emp, participants__user=request.user).distinct()
+    if qs.exists():
+        conv = qs.first()
+    else:
+        conv = Conversation.objects.create(empresa=emp, title='')
+        ConversationParticipant.objects.create(conversation=conv, user=request.user)
+    return JsonResponse({'conversation_id': conv.id})
+
+
+@login_required
+def mark_conversation_read(request):
+    """Mark a conversation as read for current user. Expects JSON body { conversation_id: <id> }.
+    Returns { marked: <n> } number of messages marked as read.
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method'}, status=405)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+        conv_id = int(payload.get('conversation_id'))
+    except Exception:
+        return JsonResponse({'error': 'invalid'}, status=400)
+
+    from .models import ConversationParticipant, ConversationMessage, Conversation
+    try:
+        conv = Conversation.objects.get(pk=conv_id)
+    except Conversation.DoesNotExist:
+        return JsonResponse({'error': 'notfound'}, status=404)
+
+    try:
+        part = ConversationParticipant.objects.get(conversation=conv, user=request.user)
+    except ConversationParticipant.DoesNotExist:
+        return JsonResponse({'error': 'noparticipant'}, status=403)
+
+    from django.utils import timezone
+    old = part.last_read
+    now = timezone.now()
+    # count messages newer than previous last_read
+    if old:
+        marked = ConversationMessage.objects.filter(conversation=conv, criado_em__gt=old).count()
+    else:
+        marked = ConversationMessage.objects.filter(conversation=conv).count()
+    part.last_read = now
+    part.save(update_fields=['last_read'])
+    return JsonResponse({'marked': marked})
+
+
+@login_required
+def user_conversations(request):
+    """Return recent conversations for the current user."""
+    from .models import Conversation, ConversationMessage, ConversationParticipant
+    user = request.user
+    # Only show direct user-to-user conversations in the floating panel (no empresa-linked conversations)
+    # order by last activity if available
+    if hasattr(Conversation, 'atualizado_em'):
+        qs = Conversation.objects.filter(empresa__isnull=True, participants__user=user).distinct().order_by('-atualizado_em')
+    else:
+        qs = Conversation.objects.filter(empresa__isnull=True, participants__user=user).distinct().order_by('-id')
+    out = []
+    for c in qs[:50]:
+        last = ConversationMessage.objects.filter(conversation=c).order_by('-criado_em').first()
+        parts = [p.user.get_full_name() or p.user.username for p in c.participants.all()]
+        out.append({
+            'id': c.id,
+            'title': c.title or (c.empresa.nome_fantasia if getattr(c, 'empresa', None) else None) or ', '.join(parts[:3]),
+            'empresa_id': c.empresa.id if getattr(c, 'empresa', None) else None,
+            'last_message': last.message if last else None,
+            'last_time': last.criado_em.isoformat() if last else None,
+            'participants': parts,
+        })
+    return JsonResponse({'conversations': out})
+
+
+@login_required
+def api_messages(request, room_id):
+    """Return message history for a room.
+
+    - `room_id` can be `conv-<id>` (direct/company conversation) or `at-<id>` (atendimento).
+    """
+    from .models import Conversation, ConversationMessage, ConversationParticipant, ChatMessage, Atendimento
+
+    room = str(room_id or '').strip()
+    if not room:
+        return JsonResponse([], safe=False)
+
+    # Conversation history
+    if room.startswith('conv-'):
+        try:
+            conv_id = int(room.split('-')[1])
+        except Exception:
+            return JsonResponse({'error': 'invalid_room'}, status=400)
+
+        is_participant = ConversationParticipant.objects.filter(conversation_id=conv_id, user=request.user).exists()
+        if not is_participant:
+            return JsonResponse({'error': 'forbidden'}, status=403)
+
+        msgs = ConversationMessage.objects.filter(conversation_id=conv_id).select_related('user').order_by('criado_em')
+        data = [{
+            'user': ((m.user.get_full_name() or m.user.username) if m.user else 'Anônimo'),
+            'message': m.message,
+            'time': m.criado_em.strftime('%H:%M'),
+            'created': m.criado_em.isoformat(),
+            'own': bool(m.user_id == request.user.id),
+            'attachments': (m.attachments if hasattr(m, 'attachments') else []),
+        } for m in msgs]
+        return JsonResponse(data, safe=False)
+
+    # Atendimento history
+    if room.startswith('at-'):
+        at_id = room.split('-', 1)[1]
+    else:
+        at_id = room
+
+    atendimento = Atendimento.objects.filter(pk=at_id).first()
+    if not atendimento:
+        return JsonResponse({'error': 'not_found'}, status=404)
+
+    # basic access guard: owner company user, assigned analyst, or superuser
+    pessoa = getattr(request.user, 'pessoa', None)
+    analista = getattr(request.user, 'analista', None)
+    can_access = bool(request.user.is_superuser)
+    if not can_access and analista and atendimento.analista_id and analista.id == atendimento.analista_id:
+        can_access = True
+    if not can_access and pessoa and atendimento.empresa_obj_id:
+        can_access = atendimento.empresa_obj.usuarios.filter(pk=pessoa.pk).exists()
+    if not can_access:
+        return JsonResponse({'error': 'forbidden'}, status=403)
+
+    msgs = ChatMessage.objects.filter(atendimento_id=str(at_id)).select_related('user').order_by('criado_em')
+    data = [{
+        'user': ((m.user.get_full_name() or m.user.username) if m.user else 'Anônimo'),
+        'message': m.message,
+        'time': m.criado_em.strftime('%H:%M'),
+        'created': m.criado_em.isoformat(),
+        'own': bool(m.user_id == request.user.id),
+        'attachments': [],
+    } for m in msgs]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+@csrf_exempt
+def upload_attachments(request):
+    """Upload files for chat and return metadata for websocket payload."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method'}, status=405)
+
+    files = request.FILES.getlist('files')
+    if not files:
+        return JsonResponse({'files': []})
+
+    uploaded = []
+    for f in files[:15]:
+        try:
+            path = default_storage.save(f'chat_anexos/{timezone.now().strftime("%Y/%m/%d")}/{f.name}', f)
+            uploaded.append({
+                'name': f.name,
+                'size': f.size,
+                'type': (getattr(f, 'content_type', '') or 'application/octet-stream'),
+                'url': default_storage.url(path),
+            })
+        except Exception:
+            continue
+
+    return JsonResponse({'files': uploaded})
+
+
+@login_required
+@csrf_exempt
+def create_group_conversation(request):
+    """Create a group conversation.
+
+    Body: { title: str, user_ids: [int, ...] }
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'method'}, status=405)
+    try:
+        payload = json.loads(request.body.decode('utf-8') or '{}')
+    except Exception:
+        payload = {}
+
+    title = (payload.get('title') or '').strip()[:200]
+    user_ids = payload.get('user_ids') or []
+    if not isinstance(user_ids, list):
+        return JsonResponse({'error': 'invalid_user_ids'}, status=400)
+
+    from .models import Conversation, ConversationParticipant
+    from django.contrib.auth import get_user_model
+    User = get_user_model()
+
+    unique_ids = set()
+    for uid in user_ids:
+        try:
+            unique_ids.add(int(uid))
+        except Exception:
+            pass
+
+    conv = Conversation.objects.create(title=title or 'Grupo')
+    ConversationParticipant.objects.get_or_create(conversation=conv, user=request.user)
+    for uid in unique_ids:
+        if uid == request.user.id:
+            continue
+        u = User.objects.filter(pk=uid, is_active=True).first()
+        if u:
+            ConversationParticipant.objects.get_or_create(conversation=conv, user=u)
+
+    return JsonResponse({'conversation_id': conv.id})
+
+
+@login_required
+def push_test_notification(request, user_id):
+    """Debug endpoint: send a test push to a given user via the user-notifier group."""
+    from channels.layers import get_channel_layer
+    try:
+        uid = int(user_id)
+    except Exception:
+        return JsonResponse({'error': 'invalid_user'}, status=400)
+    channel_layer = get_channel_layer()
+    payload = {
+        'type': 'chat_message',
+        'message': 'Teste de notificação',
+        'user': request.user.get_username(),
+        'created': timezone.now().isoformat(),
+        'conversation_id': None
+    }
+    try:
+        from asgiref.sync import async_to_sync
+        async_to_sync(channel_layer.group_send)(f'chat_user-{uid}', payload)
+    except Exception:
+        # best-effort: ignore errors
+        pass
+    return JsonResponse({'sent': True})
 
 
 @login_required
@@ -2047,22 +2460,48 @@ def certificado_edit(request, pk):
         certificado_file = request.FILES.get('certificado')
 
         # If Django didn't populate request.FILES (test client edge cases),
-        # try parsing from request.body safely.
-        if not certificado_file and request.body:
+        # try parsing from the raw request body safely (catch RawPostDataException).
+        try:
+            raw_body = request.body
+        except RawPostDataException:
+            raw_body = None
+
+        if not certificado_file:
             try:
-                import io
-                from django.http.multipartparser import MultiPartParser
-                parser = MultiPartParser(request.META, io.BytesIO(request.body), request.upload_handlers)
-                post_data, files_data = parser.parse()
-                certificado_senha = certificado_senha or post_data.get('certificado_senha', '')
-                if files_data and files_data.get('certificado'):
-                    up = files_data.get('certificado')
+                # try to force Django to populate POST/FILES
+                if hasattr(request, '_load_post_and_files'):
                     try:
-                        certificado_file = up
-                        filename = up.name
+                        request._load_post_and_files()
                     except Exception:
-                        certificado_file = up[0]
-                        filename = up[0].name
+                        pass
+                certificado_file = request.FILES.get('certificado')
+                certificado_senha = certificado_senha or request.POST.get('certificado_senha', certificado_senha)
+                # fallback to manual parse if still not present
+                if not certificado_file:
+                    import io
+                    from django.http.multipartparser import MultiPartParser
+                    stream = getattr(request, '_stream', None)
+                    if stream:
+                        try:
+                            stream.seek(0)
+                        except Exception:
+                            pass
+                        parser = MultiPartParser(request.META, stream, request.upload_handlers)
+                    elif raw_body:
+                        parser = MultiPartParser(request.META, io.BytesIO(raw_body), request.upload_handlers)
+                    else:
+                        parser = None
+                    if parser:
+                        post_data, files_data = parser.parse()
+                        certificado_senha = certificado_senha or post_data.get('certificado_senha', '')
+                        if files_data and files_data.get('certificado'):
+                            up = files_data.get('certificado')
+                            try:
+                                certificado_file = up
+                                filename = up.name
+                            except Exception:
+                                certificado_file = up[0]
+                                filename = up[0].name
             except Exception as e:
                 print('DEBUG certificado_edit body parse failed:', repr(e))
 

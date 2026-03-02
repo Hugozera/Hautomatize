@@ -29,26 +29,9 @@
     </div>
   </div>
 
-  <!-- Cards de resumo (opcional) -->
+  <!-- Cards de resumo com contagem correta -->
   <div class="row g-3 mb-4">
-    <div class="col-sm-6 col-lg-3">
-      <div class="card border-0 bg-gradient bg-primary bg-opacity-10 shadow-sm">
-        <div class="card-body">
-          <div class="d-flex align-items-center">
-            <div class="flex-shrink-0">
-              <div class="bg-primary text-white rounded-circle p-3">
-                <i class="bi bi-clock-history fs-4"></i>
-              </div>
-            </div>
-            <div class="flex-grow-1 ms-3">
-              <h6 class="text-muted mb-1">Pendentes</h6>
-              <h3 class="mb-0 fw-bold">{{ atendimentos_pendentes|length }}</h3>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="col-sm-6 col-lg-3">
+    <div class="col-sm-6 col-lg-4">
       <div class="card border-0 bg-gradient bg-success bg-opacity-10 shadow-sm">
         <div class="card-body">
           <div class="d-flex align-items-center">
@@ -65,128 +48,141 @@
         </div>
       </div>
     </div>
-  </div>
-
-  <!-- Tabs estilizadas -->
-  <div class="card border-0 shadow-sm">
-    <div class="card-header bg-transparent border-0 pt-4 px-4">
-      <ul class="nav nav-pills" id="meuPainelTabs" role="tablist">
-        <li class="nav-item me-2" role="presentation">
-          <button class="nav-link active px-4" id="pendentes-tab" data-bs-toggle="tab" data-bs-target="#pendentes" type="button" role="tab">
-            <i class="bi bi-inbox me-2"></i>
-            Pendentes
-            {% if atendimentos_pendentes %}
-            <span class="badge bg-primary ms-2">{{ atendimentos_pendentes|length }}</span>
-            {% endif %}
-          </button>
-        </li>
-        <li class="nav-item" role="presentation">
-          <button class="nav-link px-4" id="meus-tab" data-bs-toggle="tab" data-bs-target="#meus" type="button" role="tab">
-            <i class="bi bi-person-check me-2"></i>
-            Meus Atendimentos
-            {% if meus_atendimentos %}
-            <span class="badge bg-success ms-2">{{ meus_atendimentos|length }}</span>
-            {% endif %}
-          </button>
-        </li>
-      </ul>
-    </div>
-
-    <div class="card-body p-4">
-      <div class="tab-content">
-        <!-- Aba Pendentes -->
-        <div class="tab-pane fade show active" id="pendentes" role="tabpanel">
-          {% if atendimentos_pendentes %}
-            <div class="row g-3">
-              {% for a in atendimentos_pendentes %}
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100 border-0 bg-light">
-                  <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <h6 class="fw-bold mb-0">
-                        {% if a.status != 'pendente' %}
-                          {{ a.empresa }}
-                        {% else %}
-                          <span class="text-muted fw-normal">Atendimento #{{ a.id }}</span>
-                        {% endif %}
-                      </h6>
-                      <span class="badge bg-warning text-dark">Pendente</span>
-                    </div>
-                    
-                    {% if a.motivo %}
-                    <p class="small text-muted mb-3">{{ a.motivo|truncatechars:80 }}</p>
-                    {% endif %}
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                      <small class="text-muted">
-                        <i class="bi bi-clock me-1"></i>
-                        {{ a.criado_em|timesince }}
-                      </small>
-                      <a href="{% url 'painel:atendimento_analista' a.id %}" class="btn btn-sm btn-outline-primary">
-                        <i class="bi bi-box-arrow-up-right me-1"></i>
-                        Acessar
-                      </a>
-                    </div>
-                  </div>
-                </div>
+    <div class="col-sm-6 col-lg-4">
+      <div class="card border-0 bg-gradient bg-info bg-opacity-10 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="bg-info text-white rounded-circle p-3">
+                <i class="bi bi-clock-history fs-4"></i>
               </div>
-              {% endfor %}
             </div>
-          {% else %}
-            <div class="text-center py-5">
-              <div class="mb-3">
-                <i class="bi bi-inbox display-1 text-muted opacity-50"></i>
-              </div>
-              <h5 class="text-muted">Nenhum atendimento pendente</h5>
-              <p class="text-muted small">Clique em "Puxar Próximo Atendimento" para começar</p>
+            <div class="flex-grow-1 ms-3">
+              <h6 class="text-muted mb-1">Em Andamento</h6>
+              <h3 class="mb-0 fw-bold">{{ meus_atendimentos_em_andamento }}</h3>
             </div>
-          {% endif %}
+          </div>
         </div>
-
-        <!-- Aba Meus Atendimentos -->
-        <div class="tab-pane fade" id="meus" role="tabpanel">
-          {% if meus_atendimentos %}
-            <div class="row g-3">
-              {% for a in meus_atendimentos %}
-              <div class="col-md-6 col-lg-4">
-                <div class="card h-100 border-0 bg-light">
-                  <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-2">
-                      <h6 class="fw-bold mb-0">{{ a.empresa }}</h6>
-                      <span class="badge bg-{% if a.status == 'em_andamento' %}primary{% elif a.status == 'resolvido' %}success{% else %}secondary{% endif %}">
-                        {{ a.get_status_display }}
-                      </span>
-                    </div>
-                    
-                    <p class="small text-muted mb-3">{{ a.motivo|truncatechars:80 }}</p>
-                    
-                    <div class="d-flex justify-content-between align-items-center">
-                      <small class="text-muted">
-                        <i class="bi bi-clock me-1"></i>
-                        {{ a.criado_em|timesince }}
-                      </small>
-                    </div>
-                  </div>
-                </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-lg-4">
+      <div class="card border-0 bg-gradient bg-warning bg-opacity-10 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex align-items-center">
+            <div class="flex-shrink-0">
+              <div class="bg-warning text-white rounded-circle p-3">
+                <i class="bi bi-check2-all fs-4"></i>
               </div>
-              {% endfor %}
             </div>
-          {% else %}
-            <div class="text-center py-5">
-              <div class="mb-3">
-                <i class="bi bi-person-x display-1 text-muted opacity-50"></i>
-              </div>
-              <h5 class="text-muted">Nenhum atendimento atribuído</h5>
-              <p class="text-muted small">Os atendimentos que você puxar aparecerão aqui</p>
+            <div class="flex-grow-1 ms-3">
+              <h6 class="text-muted mb-1">Resolvidos</h6>
+              <h3 class="mb-0 fw-bold">{{ meus_atendimentos_resolvidos }}</h3>
             </div>
-          {% endif %}
+          </div>
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Título da seção -->
+  <div class="d-flex align-items-center mb-4">
+    <h4 class="fw-bold mb-0">
+      <i class="bi bi-person-check me-2 text-primary"></i>
+      Meus Atendimentos
+    </h4>
+    {% if meus_atendimentos %}
+    <span class="badge bg-success ms-3 px-3 py-2">{{ meus_atendimentos|length }} atendimento{{ meus_atendimentos|length|pluralize }}</span>
+    {% endif %}
+  </div>
+
+  <!-- Lista de Meus Atendimentos -->
+  <div class="card border-0 shadow-sm">
+    <div class="card-body p-4">
+      {% if meus_atendimentos %}
+        <div class="row g-3">
+          {% for a in meus_atendimentos %}
+          <div class="col-md-6 col-lg-4">
+            <div class="card h-100 border-0 bg-light">
+              <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                  <h6 class="fw-bold mb-0">{{ a.empresa|default:"Atendimento" }}</h6>
+                  <span class="badge bg-{% if a.status == 'em_andamento' %}primary{% elif a.status == 'resolvido' %}success{% else %}secondary{% endif %}">
+                    {{ a.get_status_display }}
+                  </span>
+                </div>
+                
+                {% if a.motivo %}
+                <p class="small text-muted mb-3">{{ a.motivo|truncatechars:80 }}</p>
+                {% endif %}
+                
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                  <small class="text-muted">
+                    <i class="bi bi-clock me-1"></i>
+                    {{ a.criado_em|timesince }}
+                  </small>
+                  <a href="{% url 'painel:atendimento_analista' a.id %}" class="btn btn-sm btn-outline-primary">
+                    <i class="bi bi-box-arrow-up-right me-1"></i>
+                    Acessar
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="text-center py-5">
+          <div class="mb-3">
+            <i class="bi bi-inbox display-1 text-muted opacity-50"></i>
+          </div>
+          <h5 class="text-muted">Nenhum atendimento atribuído</h5>
+          <p class="text-muted small mb-4">Clique em "Puxar Próximo Atendimento" para começar</p>
+          <form method="post" action="{% url 'painel:puxar_proximo' %}">
+            {% csrf_token %}
+            <button class="btn btn-primary px-4 py-2">
+              <i class="bi bi-arrow-right-circle me-2"></i>
+              Puxar Primeiro Atendimento
+            </button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Seção de Atendimentos Finalizados -->
+  {% if meus_atendimentos_resolvidos %}
+  <div class="mt-5">
+    <div class="d-flex align-items-center mb-4">
+      <h5 class="fw-bold mb-0">
+        <i class="bi bi-check2-circle me-2 text-success"></i>
+        Finalizados Recentemente
+      </h5>
+    </div>
+    <div class="row g-3">
+      {% for a in meus_atendimentos %}
+        {% if a.status == 'resolvido' %}
+        <div class="col-md-4">
+          <div class="card border-0 bg-light opacity-75">
+            <div class="card-body">
+              <div class="d-flex justify-content-between align-items-start">
+                <h6 class="fw-bold mb-0">{{ a.empresa|default:"Atendimento" }}</h6>
+                <span class="badge bg-success">Resolvido</span>
+              </div>
+              <small class="text-muted d-block mt-2">
+                <i class="bi bi-check-circle me-1"></i>
+                Finalizado {{ a.atualizado_em|timesince }}
+              </small>
+            </div>
+          </div>
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
 </div>
 
-<!-- Adicionar CSS para animações e melhorias visuais -->
+<!-- CSS para animações e melhorias visuais -->
 <style>
   .nav-pills .nav-link {
     color: #6c757d;
@@ -260,7 +256,8 @@
   .bg-primary.bg-opacity-10 {
     backdrop-filter: blur(10px);
   }
-  /* Dark mode adjustments for Meu Painel: force muted surfaces similar to global style */
+  
+  /* Dark mode adjustments */
   body.dark-mode .card,
   body.dark-mode .card.border-0,
   body.dark-mode .card.h-100,
@@ -270,18 +267,28 @@
     color: var(--text-color) !important;
     border: 1px solid rgba(255,255,255,0.04) !important;
   }
-
+  
   body.dark-mode .nav-pills .nav-link:hover { background-color: rgba(255,255,255,0.02); }
   body.dark-mode .nav-pills .nav-link.active { box-shadow: 0 10px 20px rgba(0,0,0,0.4); }
-
+  
   body.dark-mode .badge.bg-primary.bg-opacity-10,
-  body.dark-mode .badge.bg-success.bg-opacity-10 {
+  body.dark-mode .badge.bg-success.bg-opacity-10,
+  body.dark-mode .badge.bg-info.bg-opacity-10,
+  body.dark-mode .badge.bg-warning.bg-opacity-10 {
     background: rgba(255,255,255,0.02) !important;
     color: var(--text-color) !important;
     border: 1px solid rgba(255,255,255,0.04) !important;
   }
+  
+  .opacity-75 {
+    opacity: 0.75;
+  }
+  
+  .opacity-75:hover {
+    opacity: 1;
+  }
 </style>
 
-<!-- Link para Bootstrap Icons (se ainda não estiver incluído no base.html) -->
+<!-- Bootstrap Icons -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 {% endblock %}
