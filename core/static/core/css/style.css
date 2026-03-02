@@ -161,6 +161,18 @@ input[type=date] {
     padding: 0.6rem;
 }
 
+/* dark mode global form overrides (applied beyond pessoa forms) */
+body.dark-mode .form-control,
+body.dark-mode .form-select,
+body.dark-mode textarea {
+    background: var(--surface-2) !important;
+    color: #ffffff !important;
+    border-color: rgba(255,255,255,0.2) !important;
+}
+body.dark-mode ::placeholder {
+    color: rgba(255,255,255,0.6) !important;
+}
+
 /* cards estatísticos do dashboard */
 .stat-card {
     border-radius: var(--radius-md);
