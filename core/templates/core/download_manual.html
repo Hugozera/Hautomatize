@@ -435,24 +435,20 @@ function uploadCertificado() {
             
             // Recria o formulário original e submete
             setTimeout(() => {
-                // if we already had type and dates, continue the download automatically
-                if (tipo && dataInicio && dataFim) {
-                    const form = document.createElement('form');
-                    form.method = 'POST';
-                    form.action = window.location.href;
-                    form.innerHTML = `
-                        {% csrf_token %}
-                        <input type="hidden" name="empresa" value="${empresaId}">
-                        <input type="hidden" name="tipo" value="${tipo}">
-                        <input type="hidden" name="data_inicio" value="${dataInicio}">
-                        <input type="hidden" name="data_fim" value="${dataFim}">
-                    `;
-                    document.body.appendChild(form);
-                    form.submit();
-                } else {
-                    // otherwise just reload page with empresa selected so user can fill the rest
-                    window.location.href = window.location.pathname + '?empresa=' + empresaId;
-                }
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = window.location.href;
+
+                form.innerHTML = `
+                    {% csrf_token %}
+                    <input type="hidden" name="empresa" value="${empresaId}">
+                    <input type="hidden" name="tipo" value="${tipo}">
+                    <input type="hidden" name="data_inicio" value="${dataInicio}">
+                    <input type="hidden" name="data_fim" value="${dataFim}">
+                `;
+
+                document.body.appendChild(form);
+                form.submit();
             }, 1500);
         } else {
             clearInterval(interval);

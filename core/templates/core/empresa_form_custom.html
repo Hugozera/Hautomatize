@@ -225,6 +225,8 @@ function buscarCNPJ() {
             document.getElementById('id_bairro').value = data.bairro || '';
             document.getElementById('id_municipio').value = data.municipio || '';
             document.getElementById('id_uf').value = data.uf || '';
+        } else {
+            alert(data.msg || 'Não foi possível localizar o CNPJ.');
         }
     })
     .finally(() => { if (btn) { btn.innerHTML = original; btn.disabled = false; } });

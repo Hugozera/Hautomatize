@@ -82,7 +82,7 @@
                 <table class="table table-hover table--compact mb-0">
                     <thead>
                         <tr>
-                            <th>Nome Fantasia</th>
+                            <th>Razão Social / Nome Fantasia</th>
                             <th>CNPJ</th>
                             <th>Tipo</th>
                             <th>Certificado</th>
@@ -94,7 +94,10 @@
                     <tbody>
                         {% for e in empresas %}
                         <tr>
-                            <td class="fw-semibold">{{ e.nome_fantasia|default:"-" }}</td>
+                            <td class="fw-semibold">
+                                <div>{{ e.razao_social|default:"-" }}</div>
+                                <div class="text-muted small">{{ e.nome_fantasia|default:"-" }}</div>
+                            </td>
                             <td>{{ e.cnpj }}</td>
                             <td>{{ e.get_tipo_display|title }}</td>
                             <td>

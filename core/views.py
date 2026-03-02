@@ -71,9 +71,6 @@ def download_manual(request):
     else:
         empresas = Empresa.objects.none()
     
-    # inicializa flag antes do uso para evitar UnboundLocalError
-    precisa_certificado = False
-
     # Tarefas recentes do usuário (não precisamos mostrar durante primeiro upload)
     if hasattr(request.user, 'pessoa') and not precisa_certificado:
         tarefas_recentes = TarefaDownload.objects.filter(
@@ -463,33 +460,119 @@ def extrair_cnpj_certificado(subject):
     
     return None
 
-@lru_cache(maxsize=256)
+# cache apenas resultados bem sucedidos para evitar memorizar falhas temporárias
+_cnpj_cache: dict[str, dict] = {}
+
 def consultar_cnpj_receita(cnpj):
-    """Consulta CNPJ na API da ReceitaWS (com cache em memória).
-    Retorna dicionário com os campos já normalizados.
+    """Consulta CNPJ usando várias APIs públicas como fallback.
+
+    A primeira resposta válida (status OK) é retornada já convertida para o
+    formato interno utilizado pelo resto da aplicação. Se nenhuma API conseguir
+    localizar a empresa, retorna um dicionário com status 'ERRO'.
+
+    Resultados com status 'OK' são guardados em um cache simples; erros nunca são
+    armazenados, garantindo que tentativas futuras voltem a consultar as APIs.
     """
-    try:
-        api_url = f'https://www.receitaws.com.br/v1/cnpj/{cnpj}'
-        resp = pyrequests.get(api_url, timeout=10)
-        if resp.status_code == 200:
-            dados = resp.json()
-            if dados.get('status') == 'OK':
-                return {
-                    'status': 'OK',
-                    'nome': dados.get('nome', ''),
-                    'fantasia': dados.get('fantasia', ''),
-                    'ie': dados.get('ie', ''),
-                    'im': dados.get('im', ''),
-                    'cep': dados.get('cep', ''),
-                    'logradouro': dados.get('logradouro', ''),
-                    'numero': dados.get('numero', ''),
-                    'bairro': dados.get('bairro', ''),
-                    'municipio': dados.get('municipio', ''),
-                    'uf': dados.get('uf', ''),
-                }
-        return {'status': 'ERRO', 'msg': 'CNPJ não encontrado'}
-    except Exception as e:
-        return {'status': 'ERRO', 'msg': str(e)}
+    # retorno cached
+    if cnpj in _cnpj_cache:
+        return _cnpj_cache[cnpj]
+
+    # definimos uma lista de tuplas (descrição, url_template, parser_fn)
+    apis = []
+
+    def _parse_receitaws(j):
+        if not isinstance(j, dict):
+            return None
+        if j.get('status') == 'OK':
+            return {
+                'status': 'OK',
+                'nome': j.get('nome', ''),
+                'fantasia': j.get('fantasia', ''),
+                'ie': j.get('ie', ''),
+                'im': j.get('im', ''),
+                'cep': j.get('cep', ''),
+                'logradouro': j.get('logradouro', ''),
+                'numero': j.get('numero', ''),
+                'bairro': j.get('bairro', ''),
+                'municipio': j.get('municipio', ''),
+                'uf': j.get('uf', ''),
+            }
+        return None
+
+    def _parse_brasilapi(j):
+        # BrasilAPI às vezes retorna uma string de erro em vez de JSON
+        if not isinstance(j, dict):
+            return None
+        if j.get('cnpj'):
+            return {
+                'status': 'OK',
+                'nome': j.get('razao_social', ''),
+                'fantasia': j.get('nome_fantasia', ''),
+                'ie': j.get('inscricao_estadual', ''),
+                'im': '',
+                'cep': j.get('logradouro', {}).get('cep', '') if isinstance(j.get('logradouro'), dict) else j.get('cep', ''),
+                'logradouro': j.get('logradouro', {}).get('logradouro', '') if isinstance(j.get('logradouro'), dict) else j.get('logradouro', ''),
+                'numero': j.get('logradouro', {}).get('numero', ''),
+                'bairro': j.get('logradouro', {}).get('bairro', ''),
+                'municipio': j.get('municipio', ''),
+                'uf': j.get('uf', ''),
+            }
+        return None
+
+    def _parse_publica(j):
+        if not isinstance(j, dict):
+            return None
+        if j.get('status') in (200, 'OK'):
+            return {
+                'status': 'OK',
+                'nome': j.get('razao_social', ''),
+                'fantasia': j.get('nome_fantasia', ''),
+                'ie': j.get('inscricao_estadual', ''),
+                'im': j.get('inscricao_municipal', ''),
+                'cep': j.get('cep', ''),
+                'logradouro': j.get('logradouro', ''),
+                'numero': j.get('numero', ''),
+                'bairro': j.get('bairro', ''),
+                'municipio': j.get('municipio', ''),
+                'uf': j.get('uf', ''),
+            }
+        return None
+
+    apis.append(('ReceitaWS', 'https://www.receitaws.com.br/v1/cnpj/{cnpj}', _parse_receitaws))
+    apis.append(('BrasilAPI', 'https://brasilapi.com.br/api/cnpj/v1/{cnpj}', _parse_brasilapi))
+    apis.append(('Publica', 'https://publica.cnpj.ws/cnpj/{cnpj}', _parse_publica))
+
+    last_error = None
+    for name, tmpl, parser in apis:
+        try:
+            url = tmpl.format(cnpj=cnpj)
+            resp = pyrequests.get(url, timeout=10)
+            if resp.status_code == 200:
+                try:
+                    dados = resp.json()
+                except Exception as e:
+                    # fallback if JSON decoding fails (sometimes returns plain text)
+                    last_error = f"{name} invalid json: {e}"
+                    continue
+                # coerce to dict so downstream code can't call .get on a string
+                if not isinstance(dados, dict):
+                    last_error = f"{name} returned non-dict JSON"
+                    dados = {}
+                try:
+                    parsed = parser(dados)
+                except Exception as e:
+                    last_error = f"{name} parser error: {e}"
+                    continue
+                if parsed:
+                    # cache only successful lookups
+                    _cnpj_cache[cnpj] = parsed
+                    return parsed
+        except Exception as e:
+            last_error = f"{name} error: {e}"
+            continue
+
+    msg = last_error or 'CNPJ não encontrado'
+    return {'status': 'ERRO', 'msg': msg}
 
 # ========== VIEWS DE PESSOAS (USUÁRIOS) ==========
 

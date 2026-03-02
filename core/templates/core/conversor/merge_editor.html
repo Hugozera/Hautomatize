@@ -2,182 +2,764 @@
 {% load static %}
 
 {% block content %}
-<h1>Editor de Junção de PDFs</h1>
+<div class="container-fluid px-4 py-4">
+  <!-- Cabeçalho da página -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-file-pdf me-2"></i>
+      Editor de Junção de PDFs
+    </h1>
+    {% if session_id %}
+    <div class="session-badge">
+      <i class="bi bi-fingerprint me-1"></i>
+      Sessão: <code class="ms-1">{{ session_id|truncatechars:12 }}</code>
+    </div>
+    {% endif %}
+  </div>
 
-{% if not session_id %}
-<form method="post" enctype="multipart/form-data">
-  {% csrf_token %}
-  <label>Selecione arquivos PDF (vários)</label><br>
-  <input type="file" name="pdfs" multiple accept="application/pdf" required><br><br>
-  <button type="submit">Enviar e Preparar</button>
-</form>
-{% else %}
-<p><strong>Session:</strong> {{ session_id }}</p>
-<div style="display:flex;gap:20px;align-items:flex-start;">
-  <div style="flex:2">
-    <h3>Fontes e Páginas</h3>
-    {% for s in sources_list %}
-      <div class="source-panel" data-key="{{ s.key }}">
-        <div style="display:flex;align-items:center;justify-content:space-between;">
-          <strong>{{ s.key }}</strong>
-          <span style="font-size:0.9em;color:#666;">{{ s.filename }}</span>
+  {% if not session_id %}
+  <!-- Upload Section -->
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-5 text-center">
+          <div class="mb-4">
+            <i class="bi bi-cloud-upload text-primary" style="font-size: 4rem;"></i>
+          </div>
+          <h2 class="h4 mb-3">Upload de PDFs</h2>
+          <p class="text-muted mb-4">Selecione os arquivos PDF que deseja combinar</p>
+          
+          <form method="post" enctype="multipart/form-data" class="upload-form">
+            {% csrf_token %}
+            <div class="mb-4">
+              <label for="pdfs" class="form-label">Arquivos PDF</label>
+              <input type="file" class="form-control" id="pdfs" name="pdfs" multiple accept="application/pdf" required>
+              <small class="text-muted">Você pode selecionar múltiplos arquivos</small>
+            </div>
+            <button type="submit" class="btn btn-primary btn-lg px-5">
+              <i class="bi bi-upload me-2"></i>
+              Enviar e Preparar
+            </button>
+          </form>
         </div>
-        <div class="pages-grid" id="grid_{{ s.key }}" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:8px;">
-          {% if s.pages %}
-            {% for p in s.pages %}
-              <div class="page-tile" data-src="{{ s.key }}" data-page="{{ p }}" style="border:1px solid #ddd;padding:6px;text-align:center;cursor:pointer;">
-                <img class="page-thumb" data-src-url="{% url 'merge_thumbnail' %}?session={{ session_id }}&src={{ s.key }}&page={{ p }}" alt="Página {{ p }}" style="width:100%;height:auto;background:#f5f5f5;" loading="lazy">
-                <div class="page-number" style="font-size:0.9em;margin-top:6px;">{{ p }}</div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  
+  <!-- Editor Layout -->
+  <div class="editor-layout">
+    <!-- Miniaturas (esquerda) -->
+    <div class="thumbnails-section">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 py-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-images me-2 text-primary"></i>
+            <h2 class="h6 mb-0">Páginas dos PDFs</h2>
+          </div>
+        </div>
+        
+        <div class="card-body p-3">
+          <div class="sources-container">
+            {% for s in sources_list %}
+            <div class="source-group mb-4" data-key="{{ s.key }}">
+              <div class="source-header d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center">
+                  <span class="source-badge me-2">{{ s.key }}</span>
+                  <span class="filename text-muted small">{{ s.filename|truncatechars:40 }}</span>
+                </div>
+                <span class="page-count badge bg-secondary bg-opacity-10">
+                  {{ s.pages|length }} página{{ s.pages|length|pluralize:"s" }}
+                </span>
               </div>
+              
+              <div class="pages-grid" id="grid_{{ s.key }}">
+                {% if s.pages %}
+                  {% for p in s.pages %}
+                  <div class="page-card" data-src="{{ s.key }}" data-page="{{ p }}">
+                    <div class="thumbnail-wrapper">
+                      <img class="thumbnail" 
+                           data-src-url="{% url 'merge_thumbnail' %}?session={{ session_id }}&src={{ s.key }}&page={{ p }}&dpi=100" 
+                           alt="Página {{ p }}"
+                           loading="lazy">
+                      <div class="page-number-badge">{{ p }}</div>
+                    </div>
+                    <div class="page-card-footer">
+                      <button class="btn-add" title="Adicionar à sequência">
+                        <i class="bi bi-plus-circle"></i>
+                      </button>
+                    </div>
+                  </div>
+                  {% endfor %}
+                {% else %}
+                  <div class="text-muted small p-3">Nenhuma página disponível</div>
+                {% endif %}
+              </div>
+            </div>
             {% endfor %}
-          {% else %}
-            <div style="color:#666">Sem informações de páginas</div>
-          {% endif %}
+          </div>
         </div>
       </div>
-    {% endfor %}
-  </div>
+    </div>
 
-  <div style="flex:1;min-width:280px;">
-    <h3>Sequência (clique nas miniaturas)</h3>
-    <ol id="sequence" style="min-height:160px;border:1px dashed #ccc;padding:8px;list-style:decimal;">
-    </ol>
-    <form id="mergeForm" method="post" action="{% url 'merge_create' %}">
-      {% csrf_token %}
-      <input type="hidden" name="session_id" value="{{ session_id }}">
-      <input type="hidden" name="sequence" id="sequence_input">
-      <div style="margin-top:8px;">
-        <input type="text" name="out_name" placeholder="nome_saida.pdf" style="width:100%;padding:6px;margin-bottom:8px;">
-        <button type="button" id="downloadBtn" style="width:100%;padding:8px;background:#2274A5;color:#fff;border:none;">Gerar PDF</button>
+    <!-- Montador (direita) -->
+    <div class="builder-section">
+      <div class="card border-0 shadow-sm sticky-card">
+        <div class="card-header bg-transparent border-0 py-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-layers me-2 text-primary"></i>
+              <h2 class="h6 mb-0">Montagem do PDF</h2>
+            </div>
+            <span class="sequence-count badge bg-primary" id="sequenceCount">0</span>
+          </div>
+        </div>
+        
+        <div class="card-body p-3">
+          <!-- Lista de sequência -->
+          <div class="sequence-container mb-4" id="sequenceContainer">
+            <div class="sequence-list" id="sequence">
+              <div class="empty-sequence">
+                <i class="bi bi-files"></i>
+                <p class="small text-muted mt-2">Clique em <i class="bi bi-plus-circle"></i> nas páginas</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulário -->
+          <form id="mergeForm" method="post" action="{% url 'merge_create' %}">
+            {% csrf_token %}
+            <input type="hidden" name="session_id" value="{{ session_id }}">
+            <input type="hidden" name="sequence" id="sequenceInput">
+            
+            <div class="mb-3">
+              <label class="form-label small">Nome do arquivo final</label>
+              <div class="input-group">
+                <input type="text" class="form-control" name="out_name" placeholder="documento_combinado" id="fileName">
+                <span class="input-group-text">.pdf</span>
+              </div>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-clear" id="clearSequence">
+                <i class="bi bi-trash me-2"></i>
+                Limpar tudo
+              </button>
+              <button type="button" class="btn btn-primary" id="downloadBtn">
+                <i class="bi bi-file-earmark-pdf me-2"></i>
+                Gerar PDF
+              </button>
+            </div>
+          </form>
+
+          <!-- Dicas -->
+          <div class="tips-section mt-3">
+            <small class="text-muted d-block">
+              <i class="bi bi-info-circle me-1"></i>
+              Clique no <i class="bi bi-plus-circle"></i> para adicionar
+            </small>
+            <small class="text-muted d-block">
+              <i class="bi bi-arrow-up-down me-1"></i>
+              Arraste para reordenar
+            </small>
+          </div>
+        </div>
       </div>
-    </form>
+    </div>
   </div>
+  {% endif %}
 </div>
 
 <style>
-  .page-tile img{display:block;border-radius:4px}
-  .page-tile.added{outline:3px solid #7bd389}
+/* Editor Layout */
+.editor-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  min-height: calc(100vh - 200px);
+}
+
+/* Miniaturas Section */
+.thumbnails-section {
+  position: relative;
+}
+
+.sources-container {
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.source-group {
+  background: rgba(var(--bs-body-bg-rgb), 0.5);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.source-badge {
+  background: var(--bs-primary);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.pages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.page-card {
+  background: var(--bs-body-bg);
+  border: 1px solid rgba(var(--bs-secondary-rgb), 0.1);
+  border-radius: 8px;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.page-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  border-color: var(--bs-primary);
+}
+
+.page-card.added {
+  border-color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.thumbnail-wrapper {
+  position: relative;
+  aspect-ratio: 3/4;
+  background: var(--bs-dark);
+  overflow: hidden;
+}
+
+.thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s;
+}
+
+.page-card:hover .thumbnail {
+  transform: scale(1.05);
+}
+
+.page-number-badge {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  border-radius: 10px;
+  backdrop-filter: blur(2px);
+}
+
+.page-card-footer {
+  padding: 6px;
+  display: flex;
+  justify-content: center;
+  border-top: 1px solid rgba(var(--bs-secondary-rgb), 0.1);
+}
+
+.btn-add {
+  background: none;
+  border: none;
+  color: var(--bs-primary);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s;
+}
+
+.btn-add:hover {
+  background: var(--bs-primary);
+  color: white;
+}
+
+/* Builder Section */
+.builder-section {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+}
+
+.sticky-card {
+  position: sticky;
+  top: 24px;
+}
+
+.sequence-container {
+  background: rgba(var(--bs-secondary-rgb), 0.05);
+  border-radius: 12px;
+  min-height: 300px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.sequence-list {
+  padding: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.empty-sequence {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 200px;
+  color: var(--bs-secondary);
+}
+
+.empty-sequence i {
+  font-size: 3rem;
+  opacity: 0.5;
+}
+
+.sequence-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bs-body-bg);
+  border: 1px solid rgba(var(--bs-secondary-rgb), 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  /* allow items to shrink in wrapped layout */
+  flex: 0 0 auto;
+  cursor: move;
+  transition: all 0.2s;
+  animation: slideIn 0.2s ease;
+}
+
+.sequence-item:hover {
+  border-color: var(--bs-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.sequence-item.dragging {
+  opacity: 0.5;
+  background: rgba(var(--bs-primary-rgb), 0.05);
+}
+
+.sequence-item .item-thumb {
+  width: 40px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
+}
+
+.sequence-item .item-info {
+  flex: 1;
+  font-size: 0.85rem;
+}
+
+.sequence-item .item-info strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.sequence-item .item-info small {
+  color: var(--bs-secondary);
+}
+
+.btn-remove-item {
+  background: none;
+  border: none;
+  color: var(--bs-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-remove-item:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+/* Botões */
+.btn-clear {
+  background: rgba(var(--bs-secondary-rgb), 0.1);
+  border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
+  color: var(--bs-secondary);
+}
+
+.btn-clear:hover {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+/* Animações */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Scroll customizado */
+.sources-container::-webkit-scrollbar,
+.sequence-container::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sources-container::-webkit-scrollbar-track,
+.sequence-container::-webkit-scrollbar-track {
+  background: rgba(var(--bs-secondary-rgb), 0.05);
+  border-radius: 3px;
+}
+
+.sources-container::-webkit-scrollbar-thumb,
+.sequence-container::-webkit-scrollbar-thumb {
+  background: rgba(var(--bs-secondary-rgb), 0.2);
+  border-radius: 3px;
+}
+
+.sources-container::-webkit-scrollbar-thumb:hover,
+.sequence-container::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--bs-secondary-rgb), 0.3);
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .builder-section {
+    position: static;
+  }
+  
+  .sticky-card {
+    position: static;
+  }
+}
 </style>
 
 <script>
-// Note: do not inline Python objects directly to JS (may not be valid JSON).
-// The UI reads data from DOM attributes instead.
+// Estado da aplicação
+let draggedItem = null;
 
-// Lazy-load visible thumbnails: set img.src from data-src-url when in viewport
-function lazyLoadThumbnails(){
-  const imgs = document.querySelectorAll('img[data-src-url]');
-  const io = (window.IntersectionObserver ? new IntersectionObserver((entries)=>{
-    entries.forEach(e=>{
-      if(e.isIntersecting){
-        const img = e.target; img.src = img.dataset.srcUrl; img.removeAttribute('data-src-url');
-        io.unobserve(img);
+// Lazy loading das miniaturas
+function initLazyLoading() {
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const img = entry.target;
+        if (img.dataset.srcUrl) {
+          img.src = img.dataset.srcUrl;
+          img.removeAttribute('data-src-url');
+          observer.unobserve(img);
+        }
       }
     });
-  }) : null);
-  imgs.forEach(img=>{ if(img.dataset.srcUrl){ if(io) io.observe(img); else { img.src = img.dataset.srcUrl } }});
+  }, {
+    rootMargin: '100px'
+  });
+
+  document.querySelectorAll('.thumbnail[data-src-url]').forEach(img => observer.observe(img));
 }
 
-// Build click handlers: clicking a tile adds to sequence
-// Use event delegation so newly added tiles or delayed images still work.
-document.addEventListener('click', function(e){
-  const tile = e.target.closest && e.target.closest('.page-tile');
-  if(!tile) return;
-  // prevent clicks on remove buttons inside sequence
-  if(tile.closest('#sequence')) return;
-  const src = tile.dataset.src; const page = parseInt(tile.dataset.page,10);
-  // If the clicked element is the image, show preview only
-  if(e.target.closest && e.target.closest('img.page-thumb')){
-    const imgEl = tile.querySelector('img.page-thumb');
-    // ensure high-quality preview requested (dpi param)
-    const baseUrl = imgEl.dataset && imgEl.dataset.srcUrl ? imgEl.dataset.srcUrl : imgEl.src;
-    const previewUrl = baseUrl + '&dpi=200';
-    showPreviewUrl(previewUrl);
+// Adicionar página à sequência
+function addToSequence(src, page, card) {
+  const sequenceList = document.getElementById('sequence');
+  const emptyMsg = sequenceList.querySelector('.empty-sequence');
+  if (emptyMsg) emptyMsg.remove();
+
+  // Verifica duplicata
+  const exists = [...document.querySelectorAll('.sequence-item')].some(item => 
+    item.dataset.src === src && item.dataset.page === page.toString()
+  );
+  
+  if (exists) {
+    showNotification('Página já adicionada', 'warning');
     return;
   }
 
-  // If clicked element is the page number (or its text), add to sequence without preview
-  if(e.target.closest && e.target.closest('.page-number')){
-    // ensure thumbnail image is loaded (set src if needed)
-    const imgEl = tile.querySelector('img.page-thumb');
-    if(imgEl && imgEl.dataset && imgEl.dataset.srcUrl && !imgEl.src){ imgEl.src = imgEl.dataset.srcUrl }
-    addToSequence(src, page, tile);
-    return;
-  }
+  const thumb = card.querySelector('.thumbnail');
+  const item = document.createElement('div');
+  item.className = 'sequence-item';
+  item.draggable = true;
+  item.dataset.src = src;
+  item.dataset.page = page;
 
-  // default: add to sequence
-  const imgEl = tile.querySelector('img.page-thumb');
-  if(imgEl && imgEl.dataset && imgEl.dataset.srcUrl && !imgEl.src){ imgEl.src = imgEl.dataset.srcUrl }
-  addToSequence(src, page, tile);
-});
+  item.innerHTML = `
+    <img class="item-thumb" src="${thumb.src || thumb.dataset.srcUrl}" alt="Página ${page}">
+    <div class="item-info">
+      <strong>${src}</strong>
+      <small>Página ${page}</small>
+    </div>
+    <button class="btn-remove-item" title="Remover">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  `;
 
-function showPreviewFromTile(tile){
-  const imgEl = tile.querySelector('img.page-thumb');
-  const baseUrl = (imgEl && (imgEl.dataset && imgEl.dataset.srcUrl)) || (imgEl && imgEl.src) || null;
-  if(!baseUrl) return;
-  const previewUrl = baseUrl + '&dpi=200';
-  showPreviewUrl(previewUrl);
+  sequenceList.appendChild(item);
+  card.classList.add('added');
+  updateSequenceCount();
+  initDragAndDrop();
 }
 
-function showPreviewUrl(previewUrl){
-  // Fetch image as blob (include credentials) then show via object URL to handle auth and errors.
+// Remover da sequência
+function removeFromSequence(item, card) {
+  if (card) card.classList.remove('added');
+  item.remove();
+  
+  const sequenceList = document.getElementById('sequence');
+  if (sequenceList.children.length === 0) {
+    sequenceList.innerHTML = `
+      <div class="empty-sequence">
+        <i class="bi bi-files"></i>
+        <p class="small text-muted mt-2">Clique em <i class="bi bi-plus-circle"></i> nas páginas</p>
+      </div>
+    `;
+  }
+  
+  updateSequenceCount();
+}
+
+// Atualizar contador
+function updateSequenceCount() {
+  const count = document.querySelectorAll('.sequence-item').length;
+  document.getElementById('sequenceCount').textContent = count;
+}
+
+// Drag and drop
+function initDragAndDrop() {
+  const items = document.querySelectorAll('.sequence-item');
+  
+  items.forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      draggedItem = null;
+    });
+  });
+
+  const sequenceList = document.getElementById('sequence');
+  
+  sequenceList.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(sequenceList, e.clientY);
+    const currentItem = e.target.closest('.sequence-item');
+    
+    if (currentItem && currentItem !== draggedItem) {
+      const rect = currentItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      
+      if (e.clientY < midpoint) {
+        currentItem.style.borderTop = '2px solid var(--bs-primary)';
+        currentItem.style.borderBottom = '';
+      } else {
+        currentItem.style.borderBottom = '2px solid var(--bs-primary)';
+        currentItem.style.borderTop = '';
+      }
+    }
+  });
+
+  sequenceList.addEventListener('dragleave', (e) => {
+    const item = e.target.closest('.sequence-item');
+    if (item) {
+      item.style.borderTop = '';
+      item.style.borderBottom = '';
+    }
+  });
+
+  sequenceList.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+
+    const afterElement = getDragAfterElement(sequenceList, e.clientY);
+    const currentItem = e.target.closest('.sequence-item');
+    
+    if (afterElement) {
+      sequenceList.insertBefore(draggedItem, afterElement);
+    } else if (currentItem) {
+      const rect = currentItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      
+      if (e.clientY < midpoint) {
+        sequenceList.insertBefore(draggedItem, currentItem);
+      } else {
+        sequenceList.insertBefore(draggedItem, currentItem.nextSibling);
+      }
+    }
+    
+    document.querySelectorAll('.sequence-item').forEach(el => {
+      el.style.borderTop = '';
+      el.style.borderBottom = '';
+    });
+  });
+}
+
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.sequence-item:not(.dragging)')];
+
+  return draggableElements.reduce((closest, child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      return { offset: offset, element: child };
+    } else {
+      return closest;
+    }
+  }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Preview da página
+function showPreview(img) {
+  const previewUrl = img.src.includes('?') ? img.src + '&dpi=200' : img.src + '?dpi=200';
+  
   fetch(previewUrl, { credentials: 'include' })
     .then(resp => {
-      if(!resp.ok) throw new Error('Falha ao obter preview: ' + resp.status);
+      if (!resp.ok) throw new Error('Erro ao carregar preview');
       return resp.blob();
     })
     .then(blob => {
-      let modal = document.getElementById('pdfPreviewModal');
-      if(!modal){
-        modal = document.createElement('div'); modal.id = 'pdfPreviewModal';
-        modal.style.position='fixed'; modal.style.left='0'; modal.style.top='0'; modal.style.right='0'; modal.style.bottom='0';
-        modal.style.background='rgba(0,0,0,0.6)'; modal.style.display='flex'; modal.style.alignItems='center'; modal.style.justifyContent='center'; modal.style.zIndex=9999;
-        const content = document.createElement('div'); content.style.maxWidth='95%'; content.style.maxHeight='95%'; content.style.background='#fff'; content.style.padding='12px'; content.style.borderRadius='6px';
-        const img = document.createElement('img'); img.id='pdfPreviewImg'; img.style.maxWidth='100%'; img.style.maxHeight='90vh'; img.style.display='block'; img.style.objectFit='contain';
-        const btn = document.createElement('button'); btn.textContent='Fechar'; btn.style.display='block'; btn.style.marginTop='8px'; btn.addEventListener('click', ()=> { URL.revokeObjectURL(img.src); modal.remove(); });
-        content.appendChild(img); content.appendChild(btn); modal.appendChild(content); document.body.appendChild(modal);
-      }
-      const previewImg = document.getElementById('pdfPreviewImg');
-      const objectUrl = URL.createObjectURL(blob);
-      // revoke previous if any
-      try{ if(previewImg.src && previewImg.src.startsWith('blob:')) URL.revokeObjectURL(previewImg.src); }catch(e){}
-      previewImg.src = objectUrl;
+      const modal = document.createElement('div');
+      modal.className = 'modal fade show';
+      modal.style.display = 'block';
+      modal.style.backgroundColor = 'rgba(0,0,0,0.8)';
+      modal.innerHTML = `
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+          <div class="modal-content bg-transparent border-0">
+            <div class="modal-body p-0 text-center">
+              <img src="${URL.createObjectURL(blob)}" class="img-fluid" style="max-height:90vh;">
+              <button class="btn btn-light mt-3" onclick="this.closest('.modal').remove()">
+                <i class="bi bi-x-lg me-2"></i>Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
     })
-    .catch(err => { alert('Não foi possível carregar pré-visualização: ' + err.message); });
+    .catch(err => showNotification(err.message, 'danger'));
 }
 
-function addToSequence(src, page, tileEl){
-  const ol = document.getElementById('sequence');
-  // visual li with small thumbnail and label
-  const li = document.createElement('li'); li.style.display='flex'; li.style.alignItems='center'; li.style.gap='8px';
-  li.dataset.src = src; li.dataset.page = page;
-  const img = document.createElement('img');
-  const thumb = tileEl ? tileEl.querySelector('img') : null;
-  if(thumb){ img.src = thumb.src || thumb.dataset.srcUrl; }
-  img.style.width='64px'; img.style.height='auto'; img.style.border='1px solid #ddd'; img.style.borderRadius='4px';
-  const lbl = document.createElement('div'); lbl.textContent = src + ':' + page; lbl.style.flex='1';
-  const rem = document.createElement('button'); rem.type='button'; rem.textContent='Rem';
-  rem.addEventListener('click', ()=> li.remove());
-  li.appendChild(img); li.appendChild(lbl); li.appendChild(rem);
-  ol.appendChild(li);
-  if(tileEl) tileEl.classList.add('added');
+// Notificações
+function showNotification(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3`;
+  toast.setAttribute('role', 'alert');
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  
+  const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+  bsToast.show();
+  
+  setTimeout(() => toast.remove(), 3500);
 }
 
-document.getElementById('downloadBtn').addEventListener('click', ()=>{
-  const ol = document.getElementById('sequence');
-  const items = [];
-  for(const li of ol.children){ items.push({source: li.dataset.src, page: parseInt(li.dataset.page,10)}); }
-  if(items.length===0){ alert('Sequência vazia'); return; }
-  document.getElementById('sequence_input').value = JSON.stringify(items);
-  document.getElementById('mergeForm').submit();
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  initLazyLoading();
+  updateSequenceCount();
+  
+  // Delegation para cliques
+  document.addEventListener('click', (e) => {
+    // Botão adicionar
+    if (e.target.closest('.btn-add')) {
+      const card = e.target.closest('.page-card');
+      if (card) {
+        addToSequence(card.dataset.src, card.dataset.page, card);
+      }
+    }
+    
+    // Botão remover
+    if (e.target.closest('.btn-remove-item')) {
+      const btn = e.target.closest('.btn-remove-item');
+      const item = btn.closest('.sequence-item');
+      if (item) {
+        const src = item.dataset.src;
+        const page = item.dataset.page;
+        const card = document.querySelector(`.page-card[data-src="${src}"][data-page="${page}"]`);
+        removeFromSequence(item, card);
+      }
+    }
+    
+    // Preview na imagem
+    if (e.target.closest('.thumbnail')) {
+      showPreview(e.target.closest('.thumbnail'));
+    }
+  });
 });
 
-// initialize after a short delay so DOM is ready and lazy loader can attach
-setTimeout(()=>{ lazyLoadThumbnails(); }, 150);
+// Botão limpar tudo
+document.getElementById('clearSequence')?.addEventListener('click', () => {
+  if (document.querySelectorAll('.sequence-item').length === 0) return;
+  
+  if (confirm('Limpar toda a sequência?')) {
+    document.querySelectorAll('.sequence-item').forEach(item => {
+      const src = item.dataset.src;
+      const page = item.dataset.page;
+      const card = document.querySelector(`.page-card[data-src="${src}"][data-page="${page}"]`);
+      if (card) card.classList.remove('added');
+      item.remove();
+    });
+    
+    const sequenceList = document.getElementById('sequence');
+    sequenceList.innerHTML = `
+      <div class="empty-sequence">
+        <i class="bi bi-files"></i>
+        <p class="small text-muted mt-2">Clique em <i class="bi bi-plus-circle"></i> nas páginas</p>
+      </div>
+    `;
+    
+    updateSequenceCount();
+  }
+});
 
-// also re-run lazy loader if needed
-setTimeout(lazyLoadThumbnails, 800);
+// Gerar PDF
+document.getElementById('downloadBtn')?.addEventListener('click', () => {
+  const items = [];
+  document.querySelectorAll('.sequence-item').forEach(item => {
+    items.push({
+      source: item.dataset.src,
+      page: parseInt(item.dataset.page, 10)
+    });
+  });
+  
+  if (items.length === 0) {
+    showNotification('Adicione páginas à sequência', 'warning');
+    return;
+  }
+  
+  const fileName = document.getElementById('fileName').value.trim();
+  if (!fileName) {
+    document.getElementById('fileName').value = 'documento_combinado';
+  }
+  
+  document.getElementById('sequenceInput').value = JSON.stringify(items);
+  document.getElementById('mergeForm').submit();
+});
 </script>
-
-{% endif %}
-
 {% endblock %}
