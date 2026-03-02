@@ -1,0 +1,430 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<!-- Atendimento do analista (migrado para core) -->
+<div class="container py-4">
+    <!-- Header com informações principais -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1 class="display-6 fw-bold mb-2">
+                <i class="bi bi-headset text-primary me-2"></i>
+                Atendimento #{{ atendimento.id }}
+            </h1>
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">
+                    <i class="bi bi-building me-1"></i> {{ atendimento.departamento.nome }}
+                </span>
+                <span class="badge bg-{% if atendimento.status == 'em_andamento' %}warning{% elif atendimento.status == 'finalizado' %}success{% else %}info{% endif %} bg-opacity-10 text-{% if atendimento.status == 'em_andamento' %}warning{% elif atendimento.status == 'finalizado' %}success{% else %}info{% endif %} px-3 py-2 rounded-pill">
+                    <i class="bi bi-{% if atendimento.status == 'em_andamento' %}play-circle{% elif atendimento.status == 'finalizado' %}check-circle{% else %}hourglass-split{% endif %} me-1"></i>
+                    {{ atendimento.get_status_display }}
+                </span>
+                <span class="text-muted">
+                    <i class="bi bi-clock-history me-1"></i>
+                    Iniciado: {{ atendimento.iniciado_em|date:'d/m/Y H:i' }}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <a href="{% url 'painel:index' %}" class="btn btn-outline-secondary btn-lg">
+                <i class="bi bi-arrow-left me-2"></i>
+                Voltar ao Painel
+            </a>
+        </div>
+    </div>
+
+    <!-- Cards de informação da empresa -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted mb-3">
+                        <i class="bi bi-building me-2"></i>
+                        Dados da Empresa
+                    </h5>
+                    <div class="row g-2">
+                        <div class="col-12">
+                            <strong>Nome:</strong> {{ atendimento.empresa }}
+                        </div>
+                        {% if atendimento.empresa_cnpj %}
+                        <div class="col-6">
+                            <strong>CNPJ:</strong> {{ atendimento.empresa_cnpj }}
+                        </div>
+                        {% endif %}
+                        {% if atendimento.empresa_inscricao_estadual %}
+                        <div class="col-6">
+                            <strong>IE:</strong> {{ atendimento.empresa_inscricao_estadual }}
+                        </div>
+                        {% endif %}
+                        {% if atendimento.empresa_inscricao_municipal %}
+                        <div class="col-6">
+                            <strong>IM:</strong> {{ atendimento.empresa_inscricao_municipal }}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <h5 class="card-title text-muted mb-3">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        Endereço
+                    </h5>
+                    <div class="row g-2">
+                        {% if atendimento.empresa_logradouro %}
+                        <div class="col-12">
+                            {{ atendimento.empresa_logradouro }}, {{ atendimento.empresa_numero }}
+                            {% if atendimento.empresa_complemento %} - {{ atendimento.empresa_complemento }}{% endif %}
+                        </div>
+                        <div class="col-6">
+                            <strong>Bairro:</strong> {{ atendimento.empresa_bairro }}
+                        </div>
+                        <div class="col-6">
+                            <strong>CEP:</strong> {{ atendimento.empresa_cep }}
+                        </div>
+                        <div class="col-12">
+                            <strong>Cidade/UF:</strong> {{ atendimento.empresa_municipio }}/{{ atendimento.empresa_uf }}
+                        </div>
+                        {% else %}
+                        <div class="col-12 text-muted">
+                            Nenhum endereço cadastrado
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulário principal -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-transparent border-0 pt-4 px-4">
+            <ul class="nav nav-tabs card-header-tabs" role="tablist">
+                <li class="nav-item">
+                    <a class="nav-link active" data-bs-toggle="tab" href="#detalhes">
+                        <i class="bi bi-pencil-square me-2"></i>
+                        Detalhes do Atendimento
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#anexos">
+                        <i class="bi bi-paperclip me-2"></i>
+                        Anexos
+                        {% if anexos %}<span class="badge bg-primary ms-2">{{ anexos|length }}</span>{% endif %}
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" data-bs-toggle="tab" href="#historico">
+                        <i class="bi bi-clock-history me-2"></i>
+                        Histórico
+                    </a>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="card-body p-4">
+            <form method="post" enctype="multipart/form-data" onsubmit="syncRichText()">
+                {% csrf_token %}
+                
+                <div class="tab-content">
+                    <!-- Aba Detalhes -->
+                    <div class="tab-pane fade show active" id="detalhes">
+                        <div class="row g-4">
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Motivo do Atendimento</label>
+                                <textarea class="form-control" id="motivo" name="motivo" rows="2">{{ atendimento.motivo }}</textarea>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Resolução</label>
+                                <textarea class="form-control" id="resolucao" name="resolucao" rows="3">{{ atendimento.resolucao }}</textarea>
+                            </div>
+                            
+                            <div class="col-12">
+                                <label class="form-label fw-bold">Observações (Rich Text)</label>
+                                <div class="border rounded mb-2">
+                                    <div class="bg-light p-2 border-bottom">
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.execCommand('bold',false,null)" title="Negrito">
+                                                <i class="bi bi-type-bold"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.execCommand('italic',false,null)" title="Itálico">
+                                                <i class="bi bi-type-italic"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.execCommand('underline',false,null)" title="Sublinhado">
+                                                <i class="bi bi-type-underline"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="document.execCommand('insertUnorderedList',false,null)" title="Lista">
+                                                <i class="bi bi-list-ul"></i>
+                                            </button>
+                                            <input type="color" id="txtColor" class="form-control form-control-color d-inline-block" style="width: 40px;" title="Cor do texto" onchange="document.execCommand('foreColor',false,this.value)">
+                                        </div>
+                                    </div>
+                                    <div id="historico_rich" class="p-3" contenteditable="true" style="min-height: 150px;">
+                                        {{ atendimento.historico|safe }}
+                                    </div>
+                                </div>
+                                <textarea class="form-control d-none" id="historico" name="historico" rows="3">{{ atendimento.historico }}</textarea>
+                                <small class="text-muted">Use as ferramentas acima para formatar o texto.</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aba Anexos -->
+                    <div class="tab-pane fade" id="anexos">
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Novos Anexos</label>
+                            <div class="d-flex gap-2 align-items-start">
+                                <input type="file" id="anexos_input" multiple class="form-control" />
+                                <button id="uploadAnexosBtn" type="button" class="btn btn-primary">
+                                    <i class="bi bi-cloud-upload me-2"></i>
+                                    Upload
+                                </button>
+                            </div>
+                            <div id="anexos_preview" class="mt-3 d-flex flex-wrap gap-3"></div>
+                        </div>
+                        
+                        <div class="mt-4">
+                            <h6 class="fw-bold mb-3">
+                                <i class="bi bi-paperclip me-2"></i>
+                                Anexos Existentes
+                            </h6>
+                            <div class="row g-3" id="anexos_list">
+                                {% if anexos %}
+                                    {% for anexo in anexos %}
+                                    <div class="col-md-4 col-lg-3">
+                                        <div class="card border-0 bg-light h-100">
+                                            <div class="card-body text-center p-3">
+                                                {% if anexo.is_image %}
+                                                    <i class="bi bi-file-image text-primary" style="font-size: 2rem;"></i>
+                                                {% else %}
+                                                    <i class="bi bi-file-text text-secondary" style="font-size: 2rem;"></i>
+                                                {% endif %}
+                                                <div class="mt-2 text-truncate">
+                                                    <a href="{{ anexo.arquivo.url }}" target="_blank" class="text-decoration-none">
+                                                        {{ anexo.arquivo.name|slice:"30" }}...
+                                                    </a>
+                                                </div>
+                                                <small class="text-muted d-block mt-1">
+                                                    <i class="bi bi-calendar3 me-1"></i>
+                                                    {{ anexo.criado_em|date:'d/m/Y H:i' }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="col-12">
+                                        <p class="text-muted text-center py-4">
+                                            <i class="bi bi-paperclip display-4 d-block mb-3"></i>
+                                            Nenhum anexo ainda.
+                                        </p>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aba Histórico -->
+                    <div class="tab-pane fade" id="historico">
+                        <div class="list-group">
+                            {% for evento in historico %}
+                            <div class="list-group-item border-0 bg-light mb-2 rounded">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>{{ evento.usuario }}</strong>
+                                        <span class="badge bg-secondary ms-2">{{ evento.get_tipo_display }}</span>
+                                        <p class="mt-2 mb-0">{{ evento.descricao }}</p>
+                                    </div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock me-1"></i>
+                                        {{ evento.criado_em|date:'d/m/Y H:i' }}
+                                    </small>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-4">
+                                <i class="bi bi-clock-history display-4 text-muted d-block mb-3"></i>
+                                <p class="text-muted">Nenhum evento registrado no histórico.</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botões de ação -->
+                <hr class="my-4">
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <button type="submit" class="btn btn-primary btn-lg px-4">
+                            <i class="bi bi-check-lg me-2"></i>
+                            Salvar Alterações
+                        </button>
+                    </div>
+                    
+                    {% if atendimento.status != 'finalizado' %}
+                    <div>
+                        <button type="submit" name="finalizar" class="btn btn-success btn-lg px-4" onclick="return confirm('Tem certeza que deseja finalizar este atendimento?')">
+                            <i class="bi bi-check2-circle me-2"></i>
+                            Finalizar Atendimento
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Timeline de progresso (opcional) -->
+<div class="container">
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="card-title mb-4">
+                <i class="bi bi-bar-chart-steps me-2"></i>
+                Linha do Tempo
+            </h5>
+            <div class="progress mb-3" style="height: 10px;">
+                <div class="progress-bar bg-success" role="progressbar" style="width: {% if atendimento.status == 'finalizado' %}100{% else %}50{% endif %}%;"></div>
+            </div>
+            <div class="d-flex justify-content-between">
+                <span class="text-success">
+                    <i class="bi bi-check-circle-fill me-1"></i>
+                    Iniciado
+                </span>
+                <span class="text-{% if atendimento.status == 'finalizado' %}success{% else %}secondary{% endif %}">
+                    <i class="bi bi-{% if atendimento.status == 'finalizado' %}check-circle-fill{% else %}circle{% endif %} me-1"></i>
+                    Em Andamento
+                </span>
+                <span class="text-{% if atendimento.status == 'finalizado' %}success{% else %}secondary{% endif %}">
+                    <i class="bi bi-{% if atendimento.status == 'finalizado' %}check-circle-fill{% else %}circle{% endif %} me-1"></i>
+                    Finalizado
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function syncRichText(){
+    var rich = document.getElementById('historico_rich');
+    var hidden = document.getElementById('historico');
+    if(rich && hidden){ hidden.value = rich.innerHTML.trim(); }
+}
+
+document.addEventListener('DOMContentLoaded', function(){
+    const input = document.getElementById('anexos_input');
+    const preview = document.getElementById('anexos_preview');
+    const uploadBtn = document.getElementById('uploadAnexosBtn');
+    const list = document.getElementById('anexos_list');
+    const atendimentoId = '{{ atendimento.id }}';
+    const csrftoken = (document.querySelector('[name=csrfmiddlewaretoken]')||{}).value || '';
+
+    function makePreview(file){
+        const wrap = document.createElement('div');
+        wrap.style.width = '100px';
+        wrap.style.textAlign = 'center';
+        wrap.className = 'card border-0 bg-light p-2';
+        
+        if(file.type.startsWith('image/')){
+            const img = document.createElement('img');
+            img.style.maxWidth = '100%';
+            img.style.maxHeight = '60px';
+            img.style.objectFit = 'cover';
+            img.src = URL.createObjectURL(file);
+            wrap.appendChild(img);
+        } else {
+            const ico = document.createElement('div');
+            ico.innerHTML = '<i class="bi bi-file-text" style="font-size: 2rem;"></i>';
+            wrap.appendChild(ico);
+        }
+        
+        const name = document.createElement('small');
+        name.className = 'text-truncate d-block mt-1';
+        name.textContent = file.name;
+        wrap.appendChild(name);
+        
+        return wrap;
+    }
+
+    input.addEventListener('change', function(){
+        preview.innerHTML = '';
+        Array.from(input.files || []).forEach(f => preview.appendChild(makePreview(f)));
+    });
+
+    uploadBtn.addEventListener('click', function(){
+        if(!(input.files && input.files.length)) { 
+            alert('Selecione arquivos para upload'); 
+            return; 
+        }
+        
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Enviando...';
+        
+        const uploadPromises = Array.from(input.files).map(function(file){
+            const fd = new FormData();
+            fd.append('atendimento_id', atendimentoId);
+            fd.append('anexo', file);
+            
+            return fetch('{% url "painel:atendimento_anexo_upload" %}', { 
+                method: 'POST', 
+                headers: {'X-CSRFToken': csrftoken}, 
+                body: fd 
+            })
+            .then(r=>r.json())
+            .then(json=>{
+                if(json.status==='ok'){
+                    return json;
+                } else {
+                    throw new Error(json.msg || 'Erro no upload');
+                }
+            });
+        });
+        
+        Promise.all(uploadPromises)
+            .then(results => {
+                results.forEach(json => {
+                    const col = document.createElement('div');
+                    col.className = 'col-md-4 col-lg-3';
+                    col.innerHTML = `
+                        <div class="card border-0 bg-light h-100">
+                            <div class="card-body text-center p-3">
+                                <i class="bi bi-file-text text-primary" style="font-size: 2rem;"></i>
+                                <div class="mt-2 text-truncate">
+                                    <a href="${json.url}" target="_blank" class="text-decoration-none">
+                                        ${json.name.slice(0,30)}...
+                                    </a>
+                                </div>
+                                <small class="text-muted d-block mt-1">
+                                    <i class="bi bi-calendar3 me-1"></i>
+                                    Agora
+                                </small>
+                            </div>
+                        </div>
+                    `;
+                    list.appendChild(col);
+                });
+                
+                // Limpar preview e input
+                input.value = '';
+                preview.innerHTML = '';
+                
+                // Mostrar mensagem de sucesso
+                alert('Arquivos enviados com sucesso!');
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro ao enviar arquivos: ' + error.message);
+            })
+            .finally(() => {
+                uploadBtn.disabled = false;
+                uploadBtn.innerHTML = '<i class="bi bi-cloud-upload me-2"></i>Upload';
+            });
+    });
+});
+</script>
+
+{% endblock %}

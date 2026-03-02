@@ -6,23 +6,48 @@ from .models import Pessoa, Empresa, Agendamento, Role
 # helper to keep permissions choices in sync with the matrix
 
 def _permission_choices():
-    """Retorna tuplas (valor, rótulo) para cada código de permissão.
+    """Retorna tuplas agrupadas por módulo com códigos e rótulos.
 
-    Usa a lista completa retornada por `all_permission_codes` para garantir que
-    códigos adicionais (como `download.manage` ou `role.manage`) apareçam nos
-    checkboxes mesmo quando não faziam parte da matriz original.
+    Retorna estrutura para optgroups, cada item é (module_label, [(code,label),...]).
     """
     from .permissions import all_permission_codes
-    choices = []
+    # mapeamentos para rotulagem mais amigável
+    friendly = {
+        'departamento': 'Departamento',
+        'analista': 'Analista',
+        'atendimento': 'Atendimento',
+        'empresa': 'Empresa',
+        'pessoa': 'Usuário',
+        'certificado': 'Certificado',
+        'conversor': 'Conversor',
+        'sieg': 'SIEG',
+        'agendamento': 'Agendamento',
+        'download': 'Download',
+        'historico': 'Histórico',
+        'role': 'Papel',
+    }
+    action_map = {
+        'add': 'Cadastrar',
+        'edit': 'Editar',
+        'change': 'Editar',
+        'delete': 'Excluir',
+        'view': 'Visualizar',
+        'manage': 'Gerenciar',
+        'use': 'Utilizar',
+    }
+    modules = {}
     for code in all_permission_codes():
-        # exibe 'empresa.edit' como 'Empresa – edit' para humanizar
         if '.' in code:
-            model, action = code.split('.', 1)
-            label = f"{model.capitalize()} – {action}"
+            mod, action = code.split('.', 1)
         else:
-            label = code
-        choices.append((code, label))
-    return choices
+            mod, action = code, ''
+        label = f"{friendly.get(mod, mod.capitalize())} – {action_map.get(action, action)}"
+        modules.setdefault(mod, []).append((code, label))
+    # convert to list of tuples for choicegroups
+    grouped = []
+    for mod in sorted(modules.keys()):
+        grouped.append((friendly.get(mod, mod.capitalize()), modules[mod]))
+    return grouped
 
 
 class PessoaForm(forms.ModelForm):
@@ -176,6 +201,10 @@ class EmpresaForm(forms.ModelForm):
         # Ajustar campo ativo
         self.fields['ativo'].widget.attrs['class'] = 'form-check-input'
 
+
+
+
+
 class AgendamentoForm(forms.ModelForm):
     class Meta:
         model = Agendamento
@@ -192,12 +221,9 @@ class AgendamentoForm(forms.ModelForm):
             if not isinstance(self.fields[field].widget, (forms.CheckboxInput, forms.RadioSelect)):
                 if 'class' not in self.fields[field].widget.attrs:
                     self.fields[field].widget.attrs['class'] = 'form-control'
-        
         self.fields['ativo'].widget.attrs['class'] = 'form-check-input'
         self.fields['notificar_email'].widget.attrs['class'] = 'form-check-input'
         self.fields['compactar_auto'].widget.attrs['class'] = 'form-check-input'
-
-
 
 
 class RoleForm(forms.ModelForm):

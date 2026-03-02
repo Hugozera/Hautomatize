@@ -1,15 +1,25 @@
 /* ===== IMPORTAÇÃO DE TODOS OS ARQUIVOS CSS ESPECÍFICOS ===== */
+@import url('base.css');
+@import url('custom.css');
+@import url('dashboard.css');
 @import url('agendamento.css');
 @import url('certificado.css');
 @import url('configuracoes.css');
-@import url('dashboard.css');
-@import url('download.css');
+@import url('conversor.css');
+@import url('dowload.css');
 @import url('empresa.css');
 @import url('historico.css');
 @import url('home.css');
 @import url('login.css');
+@import url('nfse.css');
 @import url('pessoa.css');
+@import url('perfil.css');
 @import url('role.css');
+@import url('painel_tv.css');
+@import url('painel_departamento.css');
+@import url('secretaria_painel.css');
+@import url('atendimento_analista.css');
+@import url('usuario_form.css');
 
 /* ===== VARIÁVEIS ===== */
 :root {
@@ -70,6 +80,7 @@ body {
     background: var(--gradiente-principal);
     min-height: 100vh;
     overflow-x: hidden;
+    overflow-y: auto; /* allow page vertical scrolling by default */
     color: var(--text-color);
     /* increase overall font sizes per request (~30% larger) */
     font-size: 1.35rem;
@@ -410,11 +421,200 @@ body.dark-mode .badge {
 }
 body.dark-mode .btn-outline-secondary {
     color: #eee;
+}
+
+/* ===== TV MODE ===== */
+.tv-mode body, .tv-mode .container-fluid {
+    background: #000 !important;
+}
+.tv-mode .sidebar { display: none !important; }
+.tv-mode .container-fluid { padding: 12px !important; }
+.tv-mode .panel-controls { position: fixed; right: 12px; top: 12px; z-index: 4000; background: rgba(0,0,0,0.6); color: #fff; padding: 8px; border-radius: 8px; }
+.tv-mode .panel-controls .btn { margin-left: 6px; }
+.tv-mode .list-group-item { font-size: 2.4rem !important; padding: 1.1rem 1.4rem; }
+.tv-mode h2, .tv-mode h4 { font-size: 3.2rem !important; color: #fff; }
+.tv-mode .badge { font-size: 1.8rem; padding: 10px 16px; }
+.tv-mode .tempo-espera, .tv-mode .tempo-atendimento { font-weight: 700; font-size: 2.6rem; }
+.tv-mode .col-md-3, .tv-mode .col-md-4, .tv-mode .col-md-5 { padding: 12px !important; }
+.tv-mode .panel-rotate-hidden { display: none !important; }
+
+/* ===== TV MODE + DARK MODE ADJUSTMENTS =====
+   When the user enables dark mode, make painel/TV cards and fields
+   follow the same dark-surface pattern used across the app so that
+   inputs and cards appear on a muted gray surface instead of pure black.
+*/
+body.tv-mode.dark-mode,
+body.dark-mode.tv-mode,
+.tv-mode body.dark-mode,
+body.dark-mode .tv-mode,
+.tv-mode.dark-mode {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+}
+
+.tv-mode.dark-mode .container-fluid,
+.tv-mode.dark-mode .column,
+.tv-mode.dark-mode .card,
+body.dark-mode .tv-mode .card {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border-color: rgba(255,255,255,0.04) !important;
+    box-shadow: none !important;
+}
+
+.tv-mode.dark-mode .card.green { background: rgba(16,185,129,0.06) !important; }
+.tv-mode.dark-mode .card.red { background: rgba(220,53,69,0.06) !important; }
+
+.tv-mode.dark-mode .label,
+.tv-mode.dark-mode .time,
+.tv-mode.dark-mode .analyst-item .label,
+.tv-mode.dark-mode .analyst-item .time {
+    color: var(--text-color) !important;
+}
+
+.tv-mode.dark-mode .stats-footer {
+    color: var(--muted) !important;
+}
+
+/* Ensure timers and small text contrast in dark mode */
+.tv-mode.dark-mode .time { color: var(--muted) !important; }
+
+/* Make list items and placeholders match other dark-mode styles */
+.tv-mode.dark-mode .list-group-item,
+.tv-mode.dark-mode .pending-item,
+.tv-mode.dark-mode .attending-item,
+.tv-mode.dark-mode .analyst-item {
+    background: var(--surface-2) !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+}
+
+/* Inputs shown in TV/admin views should use muted surfaces */
+.tv-mode.dark-mode input,
+.tv-mode.dark-mode select,
+.tv-mode.dark-mode textarea {
+    background: var(--surface-2) !important;
+    color: var(--text-color) !important;
+    border: 1px solid rgba(255,255,255,0.04) !important;
+}
+
+/* compact controls for non-tv mode too */
+.panel-controls { position: relative; display: inline-flex; gap: 8px; align-items: center; }
+.panel-controls .control-label { color: var(--muted); font-size: 0.95rem; margin-right: 6px; }
+
+/* small responsive adjustments for very large screens used by TVs */
+@media (min-width: 1600px) {
+    .tv-mode .list-group-item { font-size: 3.2rem !important; }
+    .tv-mode h2, .tv-mode h4 { font-size: 4rem !important; }
+}
     border-color: #555;
 }
 body.dark-mode .btn-outline-secondary:hover {
     background: #555;
 }
+/* Improve form controls, selects and checkboxes in dark mode for consistent contrast */
+body.dark-mode .form-control,
+body.dark-mode .form-select,
+body.dark-mode textarea,
+body.dark-mode .form-control:focus,
+body.dark-mode .form-select:focus {
+    background: #0f1214;
+    color: var(--text-color);
+    border: 1px solid rgba(255,255,255,0.06);
+    box-shadow: none;
+}
+body.dark-mode .form-control::placeholder,
+body.dark-mode .form-select::placeholder {
+    color: rgba(230,238,242,0.45);
+}
+/* Checkboxes / radios */
+body.dark-mode .form-check-input {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.08);
+    width: 1.15rem;
+    height: 1.15rem;
+}
+body.dark-mode .form-check-input:checked {
+    background: var(--primary-500);
+    border-color: var(--primary-500);
+    box-shadow: 0 0 0 0.15rem rgba(22,163,74,0.12);
+}
+body.dark-mode .form-check-input:checked::after {
+    background-color: #fff;
+    color: #0f1720;
+    opacity: 1;
+}
+/* Select2 compatibility: dark background for dropdowns if select2 is present */
+body.dark-mode .select2-container .select2-selection--multiple,
+body.dark-mode .select2-container .select2-selection--single {
+    background: #0f1214;
+    color: var(--text-color);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+body.dark-mode .select2-container--default .select2-results__option[aria-selected=true] {
+    background: rgba(22,163,74,0.12);
+}
+/* Dropdowns and menus */
+body.dark-mode .dropdown-menu {
+    background: var(--surface-2);
+    color: var(--text-color);
+    border: 1px solid rgba(255,255,255,0.04);
+}
+body.dark-mode .dropdown-item {
+    color: var(--text-color);
+}
+body.dark-mode .modal-content {
+    background: var(--surface-1);
+    color: var(--text-color);
+}
+/* Modal-specific dark-mode tweaks for certificate upload modal */
+body.dark-mode .modal.show {
+    background-color: rgba(0,0,0,0.75) !important;
+}
+body.dark-mode .modal-content {
+    border: 1px solid rgba(255,255,255,0.04);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.6);
+}
+body.dark-mode .modal-header {
+    background: linear-gradient(135deg, rgba(22,163,74,0.08), rgba(255,193,7,0.06));
+    color: var(--text-color);
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+}
+body.dark-mode .modal-title { color: var(--text-color); }
+body.dark-mode .modal-body { color: var(--text-color); }
+body.dark-mode .modal-footer {
+    background: transparent;
+    border-top: 1px solid rgba(255,255,255,0.04);
+}
+body.dark-mode .modal .btn {
+    color: var(--text-color);
+}
+body.dark-mode .modal .btn.btn-success {
+    background: linear-gradient(90deg,#16a34a,#15803d);
+    color: #fff;
+}
+body.dark-mode .modal .btn.btn-secondary {
+    background: transparent;
+    border-color: rgba(255,255,255,0.06);
+    color: var(--text-color);
+}
+body.dark-mode #uploadProgress { background: rgba(255,255,255,0.03); }
+body.dark-mode #uploadProgress .progress-bar.bg-success {
+    background: linear-gradient(90deg,#16a34a,#15803d) !important;
+    color: #fff;
+}
+body.dark-mode #uploadStatus.alert { background: var(--surface-2); color: var(--text-color); border: 1px solid rgba(255,255,255,0.04); }
+/* file input appearance */
+body.dark-mode input[type=file], body.dark-mode .form-control[type=file] {
+    background: var(--surface-2);
+    color: var(--text-color);
+    border: 1px solid rgba(255,255,255,0.06);
+}
+
+/* Make icons and small text readable */
+body.dark-mode .bi { color: #9fdba8 !important; }
+/* Ensure tables maintain sufficient contrast */
+body.dark-mode .table tbody tr td { background: var(--surface-2) !important; }
+
 body.dark-mode .nav-link,
 body.dark-mode .nav-text {
     color: #e0e0e0 !important;
@@ -631,6 +831,13 @@ body.dark-mode .sidebar .nav-link .nav-text {
     margin-right: 0;
     position: relative;
     z-index: 1;
+}
+
+/* Ensure main content can scroll independently when content overflows */
+.main-content {
+    /* do not constrain height here; allow body to scroll naturally */
+    max-height: none;
+    overflow: visible;
 }
 
 /* Ajuste quando sidebar está colapsada */
@@ -1064,3 +1271,20 @@ html { font-size: clamp(14px, 1.2vw, 16px); }
 
 /* Provide a helper class to wrap tables when editing templates gradually */
 .table-scrollable { width: 100%; }
+
+/* ===== GLOBAL SCROLL FIX =====
+   Ensure pages can scroll vertically by default while preserving
+   the TV/painel mode which intentionally hides scrolling. This
+   overrides accidental `overflow:hidden` on large containers. */
+html, body, .app-wrapper, .main-content {
+    height: auto !important;
+    min-height: 100vh !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+}
+
+/* Keep TV mode (full-screen panels) non-scrollable as originally intended */
+.tv-mode body, .tv-mode .container-fluid, .tv-mode .app-wrapper {
+    height: 100vh !important;
+    overflow: hidden !important;
+}

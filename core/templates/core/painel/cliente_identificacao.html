@@ -1,0 +1,93 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container">
+	<h2>Identificação do Cliente</h2>
+	<form method="get" id="identificacaoForm">
+		<div class="mb-3" style="position: relative;">
+			<label for="empresa" class="form-label">Buscar Empresa (nome ou CNPJ)</label>
+			<input type="text" class="form-control" id="empresa" name="empresa" autocomplete="off" required>
+			<div id="empresa_status" style="position:absolute; right:8px; top:8px; font-size:12px; color:#666; display:none;">Buscando…</div>
+			<input type="hidden" id="empresa_id" name="empresa_id" value="">
+			<input type="hidden" id="empresa_cnpj" name="empresa_cnpj" value="">
+			<input type="hidden" id="empresa_razao" name="empresa_razao" value="">
+			<input type="hidden" id="empresa_inscricao_municipal" name="empresa_inscricao_municipal" value="">
+			<input type="hidden" id="empresa_inscricao_estadual" name="empresa_inscricao_estadual" value="">
+			<input type="hidden" id="empresa_cep" name="empresa_cep" value="">
+			<input type="hidden" id="empresa_logradouro" name="empresa_logradouro" value="">
+			<input type="hidden" id="empresa_numero" name="empresa_numero" value="">
+			<input type="hidden" id="empresa_complemento" name="empresa_complemento" value="">
+			<input type="hidden" id="empresa_bairro" name="empresa_bairro" value="">
+			<input type="hidden" id="empresa_municipio" name="empresa_municipio" value="">
+			<input type="hidden" id="empresa_uf" name="empresa_uf" value="">
+			<div id="empresa_suggestions" class="list-group mt-1"></div>
+		</div>
+		<button type="submit" class="btn btn-primary">Entrar</button>
+	</form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+	const inp = document.getElementById('empresa');
+	const suggestions = document.getElementById('empresa_suggestions');
+	let timer = null;
+	inp.addEventListener('input', function(){
+		clearTimeout(timer);
+		timer = setTimeout(()=>{
+			const q = inp.value.trim();
+			if(!q) { suggestions.innerHTML=''; return; }
+			console.log('empresa search q=', q);
+			document.getElementById('empresa_status').style.display = 'inline';
+			suggestions.innerHTML = '<a class="list-group-item">Buscando…</a>';
+			fetch(`/empresas/api/search/?q=${encodeURIComponent(q)}`, { credentials: 'same-origin' })
+				.then(r=>{
+					if(!r.ok) return { results: [] };
+					document.getElementById('empresa_status').style.display = 'none';
+					const ct = r.headers.get('Content-Type') || '';
+					if(ct.indexOf('application/json') === -1) return { results: [] };
+					return r.json();
+				}).then(data=>{
+					suggestions.innerHTML='';
+					(data.results||[]).forEach(function(item){
+						const a = document.createElement('a');
+						a.href='#'; a.className='list-group-item list-group-item-action';
+						a.textContent = item.nome + (item.cnpj ? ' (' + item.cnpj + ')' : '');
+						// full fields
+						a.dataset.id = item.id || '';
+						a.dataset.nome = item.nome || '';
+						a.dataset.razao = item.razao || '';
+						a.dataset.cnpj = item.cnpj || '';
+						a.dataset.inscricao_municipal = item.inscricao_municipal || '';
+						a.dataset.inscricao_estadual = item.inscricao_estadual || '';
+						a.dataset.cep = item.cep || '';
+						a.dataset.logradouro = item.logradouro || '';
+						a.dataset.numero = item.numero || '';
+						a.dataset.complemento = item.complemento || '';
+						a.dataset.bairro = item.bairro || '';
+						a.dataset.municipio = item.municipio || '';
+						a.dataset.uf = item.uf || '';
+						a.addEventListener('click', function(ev){
+							ev.preventDefault();
+							document.getElementById('empresa').value = this.dataset.nome || this.dataset.razao || '';
+							document.getElementById('empresa_id').value = this.dataset.id || '';
+							document.getElementById('empresa_cnpj').value = this.dataset.cnpj || '';
+							document.getElementById('empresa_razao').value = this.dataset.razao || '';
+							document.getElementById('empresa_inscricao_municipal').value = this.dataset.inscricao_municipal || '';
+							document.getElementById('empresa_inscricao_estadual').value = this.dataset.inscricao_estadual || '';
+							document.getElementById('empresa_cep').value = this.dataset.cep || '';
+							document.getElementById('empresa_logradouro').value = this.dataset.logradouro || '';
+							document.getElementById('empresa_numero').value = this.dataset.numero || '';
+							document.getElementById('empresa_complemento').value = this.dataset.complemento || '';
+							document.getElementById('empresa_bairro').value = this.dataset.bairro || '';
+							document.getElementById('empresa_municipio').value = this.dataset.municipio || '';
+							document.getElementById('empresa_uf').value = this.dataset.uf || '';
+							suggestions.innerHTML='';
+						});
+						suggestions.appendChild(a);
+					});
+				}).catch(()=>{});
+		}, 250);
+	});
+});
+</script>
+{% endblock %}

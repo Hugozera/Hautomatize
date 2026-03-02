@@ -1,0 +1,9 @@
+arquivo,ofx_exists,txt_exists,txt_count,ofx_count,matches,mismatches
+436-7 7.pdf,True,True,1700,1487,0,1700
+962 mes 12 juntos.pdf,True,True,54,54,54,0
+BB.pdf,True,True,62,54,45,17
+CAIXA AGOSTO COMPLETO.pdf,True,True,281,281,280,1
+ITAU AGOSTO TODO.pdf,True,True,0,123,0,0
+jamel.pdf,True,True,184,160,0,184
+Santander Agosto Completo.pdf,True,True,20,20,20,0
+STONE AGOSTO TODO.pdf,True,True,1158,1158,1122,36

@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<div class="container">
+  <h2>Departamentos</h2>
+  <a class="btn btn-primary mb-3" href="{% url 'painel:departamento_create' %}">Criar Departamento</a>
+  <table class="table table-striped">
+    <thead><tr><th>ID</th><th>Nome</th><th>Ações</th></tr></thead>
+    <tbody>
+      {% for d in departamentos %}
+      <tr>
+        <td>{{ d.id }}</td>
+        <td>{{ d.nome }}</td>
+        <td>
+          <a class="btn btn-sm btn-outline-secondary" href="{% url 'painel:departamento_edit' d.id %}">Editar</a>
+          <a class="btn btn-sm btn-outline-primary ms-2" href="{% url 'painel:painel_departamento' d.id %}" target="_blank">Abrir TV</a>
+        </td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="3">Nenhum departamento cadastrado.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

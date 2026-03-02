@@ -1,0 +1,257 @@
+{% extends 'core/base_tv.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="container">
+
+    <!-- ================= ANALISTAS DISPONÍVEIS ================= -->
+    <div class="column">
+        <h2>👥 ANALISTAS DISPONÍVEIS</h2>
+
+        {% for analista in analistas_disponiveis %}
+        <div class="card {% if analista.disponivel %}green{% else %}red{% endif %} analyst-item" 
+             data-analista-id="{{ analista.id }}">
+
+            <span class="label">{{ analista }}</span>
+
+            <span class="time avail-timer"
+                  data-disponivel-em="{% if analista.disponivel_em %}{{ analista.disponivel_em|date:'c' }}{% endif %}">
+                {% if not analista.disponivel %}--:--:--{% endif %}
+            </span>
+        </div>
+        {% empty %}
+        <div class="card green">
+            <span class="label">Nenhum analista disponível</span>
+            <span class="time">--:--:--</span>
+        </div>
+        {% endfor %}
+
+        <div class="stats-footer">
+            <span>🟢 {{ analistas_disponiveis|length }} disponíveis</span>
+            <span>⚡ Aguardando</span>
+        </div>
+    </div>
+
+    <!-- ================= PENDENTES ================= -->
+    <div class="column">
+        <h2>⏳ PENDENTES</h2>
+
+        {% for a in atendimentos_pendentes %}
+        <div class="card pending-item green" 
+             data-id="{{ a.id }}"
+             data-criado="{{ a.criado_em|date:'c' }}">
+
+            <span class="label">📞 {{ a.empresa|default:"ATENDIMENTO" }}</span>
+
+            <span class="time tempo-espera"
+                  data-criado="{{ a.criado_em|date:'c' }}">
+            </span>
+        </div>
+        {% empty %}
+        <div class="card green">
+            <span class="label">Nenhum pendente</span>
+            <span class="time">00:00:00</span>
+        </div>
+        {% endfor %}
+
+        <div class="spacer"></div>
+
+        <div class="stats-footer">
+            <span>📊 Total: {{ atendimentos_pendentes|length }}</span>
+            <span>⏰ Aguardando</span>
+        </div>
+    </div>
+
+    <!-- ================= EM ATENDIMENTO ================= -->
+    <div class="column">
+        <h2>🎧 EM ATENDIMENTO</h2>
+
+        {% for atendimento in atendimentos_andamento %}
+        <div class="card attending-item green" 
+             data-id="{{ atendimento.id }}"
+             data-iniciado="{{ atendimento.iniciado_em|date:'c' }}">
+
+            <span class="label">{{ atendimento.analista }} • {{ atendimento.empresa }}</span>
+
+            <span class="time tempo-atendimento"
+                  data-iniciado="{{ atendimento.iniciado_em|date:'c' }}">
+            </span>
+        </div>
+        {% empty %}
+        <div class="card green">
+            <span class="label">Nenhum atendimento</span>
+            <span class="time">00:00:00</span>
+        </div>
+        {% endfor %}
+
+        <div class="spacer"></div>
+
+        <div class="stats-footer">
+            <span>📞 {{ atendimentos_andamento|length }} ativos</span>
+            <span>⚡ Meta: 20min</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+function formatTime(diff){
+    if(diff < 0) return "--:--:--";
+    const h = Math.floor(diff / 3600);
+    const m = Math.floor((diff % 3600) / 60);
+    const s = diff % 60;
+    return String(h).padStart(2,'0') + ':' + 
+           String(m).padStart(2,'0') + ':' + 
+           String(s).padStart(2,'0');
+}
+
+function updateTimers(){
+    const now = new Date();
+
+    document.querySelectorAll('.tempo-espera').forEach(function(el){
+        const criado = new Date(el.dataset.criado);
+        if(isNaN(criado)) return;
+
+        const diff = Math.floor((now - criado) / 1000);
+        el.textContent = formatTime(diff);
+
+        const card = el.closest('.card');
+        if(diff >= 1200){ // 20 minutos
+            card.classList.remove('green');
+            card.classList.add('red', 'alert');
+        } else {
+            card.classList.remove('red', 'alert');
+            card.classList.add('green');
+        }
+    });
+
+    document.querySelectorAll('.tempo-atendimento').forEach(function(el){
+        const iniciado = new Date(el.dataset.iniciado);
+        if(isNaN(iniciado)) return;
+
+        const diff = Math.floor((now - iniciado) / 1000);
+        el.textContent = formatTime(diff);
+
+        const card = el.closest('.card');
+        if(diff >= 1200){ // 20 minutos
+            card.classList.remove('green');
+            card.classList.add('red', 'alert');
+        } else {
+            card.classList.remove('red', 'alert');
+            card.classList.add('green');
+        }
+    });
+
+    document.querySelectorAll('.avail-timer').forEach(function(el){
+        const dispo = el.dataset.disponivelEm;
+        if(!dispo) return;
+
+        const diff = Math.floor((now - new Date(dispo)) / 1000);
+        el.textContent = formatTime(diff);
+    });
+}
+
+setInterval(updateTimers, 1000);
+updateTimers();
+
+const departamentoId = '{{ departamento.id }}';
+const painelSocket = new WebSocket(
+    (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
+    window.location.host +
+    '/ws/painel/' + departamentoId + '/'
+);
+
+painelSocket.onmessage = function(e) {
+    const data = JSON.parse(e.data);
+    
+    // Atualiza todas as colunas com os novos dados
+    if (data.analistas_disponiveis) renderAnalistasDisponiveis(data.analistas_disponiveis);
+    if (data.atendimentos_pendentes) renderPendentes(data.atendimentos_pendentes);
+    if (data.atendimentos_andamento) renderAndamento(data.atendimentos_andamento);
+    
+    updateTimers();
+};
+
+painelSocket.onclose = function() {
+    console.warn('WebSocket fechado.');
+};
+
+function renderAnalistasDisponiveis(analistas){
+    const colunaAnalistas = document.querySelector('.column:first-child');
+    if(!colunaAnalistas) return;
+
+    const footer = colunaAnalistas.querySelector('.stats-footer');
+    
+    colunaAnalistas.innerHTML = '<h2>👥 ANALISTAS DISPONÍVEIS</h2>';
+    
+    if(!analistas || analistas.length === 0){
+        colunaAnalistas.innerHTML += '<div class="card green"><span class="label">Nenhum analista disponível</span><span class="time">--:--:--</span></div>';
+    } else {
+        analistas.forEach(function(analista){
+            const cardHtml = 
+                '<div class="card green analyst-item" data-analista-id="'+analista.id+'">' +
+                    '<span class="label">'+analista.nome+'</span>' +
+                    '<span class="time avail-timer" data-disponivel-em="'+analista.disponivel_em+'">00:00:00</span>' +
+                '</div>';
+            colunaAnalistas.innerHTML += cardHtml;
+        });
+    }
+    
+    if(footer) colunaAnalistas.appendChild(footer);
+}
+
+function renderPendentes(pendentes){
+    const colunaPendentes = document.querySelector('.column:nth-child(2)');
+    if(!colunaPendentes) return;
+
+    const footer = colunaPendentes.querySelector('.stats-footer');
+    const spacer = colunaPendentes.querySelector('.spacer');
+    
+    colunaPendentes.innerHTML = '<h2>⏳ PENDENTES</h2>';
+    
+    if(!pendentes || pendentes.length === 0){
+        colunaPendentes.innerHTML += '<div class="card green"><span class="label">Nenhum pendente</span><span class="time">00:00:00</span></div>';
+    } else {
+        pendentes.forEach(function(at){
+            const cardHtml = 
+                '<div class="card pending-item green" data-id="'+at.id+'" data-criado="'+at.criado_em+'">' +
+                    '<span class="label">📞 '+(at.empresa || 'ATENDIMENTO')+'</span>' +
+                    '<span class="time tempo-espera" data-criado="'+at.criado_em+'"></span>' +
+                '</div>';
+            colunaPendentes.innerHTML += cardHtml;
+        });
+    }
+    
+    if(spacer) colunaPendentes.appendChild(spacer);
+    if(footer) colunaPendentes.appendChild(footer);
+}
+
+function renderAndamento(andamento){
+    const colunaAtendimento = document.querySelector('.column:nth-child(3)');
+    if(!colunaAtendimento) return;
+
+    const footer = colunaAtendimento.querySelector('.stats-footer');
+    const spacer = colunaAtendimento.querySelector('.spacer');
+    
+    colunaAtendimento.innerHTML = '<h2>🎧 EM ATENDIMENTO</h2>';
+    
+    if(!andamento || andamento.length === 0){
+        colunaAtendimento.innerHTML += '<div class="card green"><span class="label">Nenhum atendimento</span><span class="time">00:00:00</span></div>';
+    } else {
+        andamento.forEach(function(at){
+            const cardHtml = 
+                '<div class="card attending-item green" data-id="'+at.id+'" data-iniciado="'+at.iniciado_em+'">' +
+                    '<span class="label">'+at.analista+' • '+at.empresa+'</span>' +
+                    '<span class="time tempo-atendimento" data-iniciado="'+at.iniciado_em+'"></span>' +
+                '</div>';
+            colunaAtendimento.innerHTML += cardHtml;
+        });
+    }
+    
+    if(spacer) colunaAtendimento.appendChild(spacer);
+    if(footer) colunaAtendimento.appendChild(footer);
+}
+</script>
+
+{% endblock %}

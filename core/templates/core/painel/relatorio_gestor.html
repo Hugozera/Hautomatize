@@ -1,0 +1,780 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container py-4">
+  <!-- Header com título -->
+  <div class="row mb-4">
+    <div class="col-12">
+      <h1 class="display-6 fw-bold mb-2">
+        <i class="bi bi-bar-chart-line text-primary me-2"></i>
+        Relatório do Gestor
+      </h1>
+      <p class="text-muted">Visão completa das métricas e desempenho do departamento</p>
+    </div>
+  </div>
+
+  <!-- Filtros melhorados -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-body">
+      <form method="get" class="row g-3 align-items-end">
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Departamento</label>
+          <select name="departamento" class="form-select">
+            <option value="">Todos os departamentos</option>
+            {% for d in departamentos %}
+              <option value="{{ d.id }}" {% if departamento_id and departamento_id == d.id|stringformat:'s' %}selected{% endif %}>{{ d.nome }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label fw-bold">Status</label>
+          <select name="status" class="form-select">
+            <option value="">Todos os status</option>
+            <option value="pendente" {% if status == 'pendente' %}selected{% endif %}>Pendentes</option>
+            <option value="atendendo" {% if status == 'atendendo' %}selected{% endif %}>Em atendimento</option>
+            <option value="finalizado" {% if status == 'finalizado' %}selected{% endif %}>Finalizados</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Período</label>
+          <select name="periodo" class="form-select">
+            <option value="7" {% if periodo == '7' %}selected{% endif %}>Últimos 7 dias</option>
+            <option value="15" {% if periodo == '15' %}selected{% endif %}>Últimos 15 dias</option>
+            <option value="30" {% if periodo == '30' %}selected{% endif %}>Últimos 30 dias</option>
+            <option value="90" {% if periodo == '90' %}selected{% endif %}>Últimos 90 dias</option>
+          </select>
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Data Início</label>
+          <input type="date" name="start_date" class="form-control" value="{{ start_date }}">
+        </div>
+        <div class="col-md-2">
+          <label class="form-label fw-bold">Data Fim</label>
+          <input type="date" name="end_date" class="form-control" value="{{ end_date }}">
+        </div>
+        <div class="col-12 text-end">
+          <button class="btn btn-primary px-4">
+            <i class="bi bi-funnel me-2"></i>
+            Aplicar Filtros
+          </button>
+          <a href="{% url 'painel:relatorio_gestor' %}" class="btn btn-outline-secondary px-4">
+            <i class="bi bi-arrow-counterclockwise me-2"></i>
+            Limpar
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Cards de métricas principais -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100 bg-primary bg-gradient text-white">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-white-50 mb-2">Total de Atendimentos</h6>
+              <div class="display-4 fw-bold">{{ metrics.total }}</div>
+            </div>
+            <div class="bg-white bg-opacity-25 rounded-circle p-3">
+              <i class="bi bi-headset fs-1"></i>
+            </div>
+          </div>
+          <div class="mt-3 small text-white-50">
+            <i class="bi bi-arrow-up me-1"></i>
+            {{ metrics.variacao_total }}% em relação ao período anterior
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-2">Tempo Médio de Atendimento</h6>
+              <div class="display-6 fw-bold">{{ metrics.tempo_medio_atendimento }}</div>
+            </div>
+            <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-clock-history fs-2 text-warning"></i>
+            </div>
+          </div>
+          <div class="mt-3 small text-muted">
+            Meta: 20min • {{ metrics.tempo_medio_formatado }}
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-2">SLA de Atendimento</h6>
+              <div class="display-6 fw-bold">{{ metrics.sla }}%</div>
+            </div>
+            <div class="bg-success bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-check2-circle fs-2 text-success"></i>
+            </div>
+          </div>
+          <div class="progress mt-3" style="height: 5px;">
+            <div class="progress-bar bg-success" style="width: {{ metrics.sla }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h6 class="text-muted mb-2">Satisfação Média</h6>
+              <div class="display-6 fw-bold">{{ metrics.satisfacao_media }}</div>
+            </div>
+            <div class="bg-info bg-opacity-10 rounded-circle p-3">
+              <i class="bi bi-star fs-2 text-info"></i>
+            </div>
+          </div>
+          <div class="mt-3">
+            {% for i in metrics.stars_range %}
+              <i class="bi bi-star-fill text-warning"></i>
+            {% endfor %}
+            {% if metrics.stars_has_half %}
+              <i class="bi bi-star-half text-warning"></i>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Segunda linha de cards - Distribuição -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="text-muted mb-3">
+            <i class="bi bi-hourglass-split me-2"></i>
+            Pendentes
+          </h6>
+          <div class="d-flex align-items-end justify-content-between">
+            <div class="h2 fw-bold text-warning mb-0">{{ metrics.pendentes }}</div>
+            <div class="small text-muted">{{ metrics.pendentes_percentual }}% do total</div>
+          </div>
+          <div class="progress mt-2" style="height: 5px;">
+            <div class="progress-bar bg-warning" style="width: {{ metrics.pendentes_percentual }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="text-muted mb-3">
+            <i class="bi bi-play-circle me-2"></i>
+            Em Atendimento
+          </h6>
+          <div class="d-flex align-items-end justify-content-between">
+            <div class="h2 fw-bold text-primary mb-0">{{ metrics.atendendo }}</div>
+            <div class="small text-muted">{{ metrics.atendendo_percentual }}% do total</div>
+          </div>
+          <div class="progress mt-2" style="height: 5px;">
+            <div class="progress-bar bg-primary" style="width: {{ metrics.atendendo_percentual }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="text-muted mb-3">
+            <i class="bi bi-check2-circle me-2"></i>
+            Finalizados
+          </h6>
+          <div class="d-flex align-items-end justify-content-between">
+            <div class="h2 fw-bold text-success mb-0">{{ metrics.finalizado }}</div>
+            <div class="small text-muted">{{ metrics.finalizado_percentual }}% do total</div>
+          </div>
+          <div class="progress mt-2" style="height: 5px;">
+            <div class="progress-bar bg-success" style="width: {{ metrics.finalizado_percentual }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-3">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body">
+          <h6 class="text-muted mb-3">
+            <i class="bi bi-x-circle me-2"></i>
+            Cancelados
+          </h6>
+          <div class="d-flex align-items-end justify-content-between">
+            <div class="h2 fw-bold text-danger mb-0">{{ metrics.cancelados }}</div>
+            <div class="small text-muted">{{ metrics.cancelados_percentual }}% do total</div>
+          </div>
+          <div class="progress mt-2" style="height: 5px;">
+            <div class="progress-bar bg-danger" style="width: {{ metrics.cancelados_percentual }}%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Gráficos e rankings -->
+  <div class="row g-3 mb-4">
+    <!-- Gráfico de tendência -->
+    <div class="col-md-8">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 pt-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-graph-up me-2"></i>
+            Tendência de Atendimentos
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-fixed">
+            <canvas id="trendChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Ranking de analistas -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 pt-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-trophy me-2 text-warning"></i>
+            Ranking de Analistas
+          </h5>
+        </div>
+        <div class="card-body p-0">
+          <div class="list-group list-group-flush">
+            {% for analista in ranking_analistas %}
+            <div class="list-group-item d-flex align-items-center border-0">
+              <div class="flex-shrink-0 me-3">
+                {% if forloop.counter == 1 %}
+                  <span class="badge bg-warning rounded-circle p-2">🥇</span>
+                {% elif forloop.counter == 2 %}
+                  <span class="badge bg-secondary rounded-circle p-2">🥈</span>
+                {% elif forloop.counter == 3 %}
+                  <span class="badge bg-bronze rounded-circle p-2">🥉</span>
+                {% else %}
+                  <span class="badge bg-light text-dark rounded-circle p-2">{{ forloop.counter }}º</span>
+                {% endif %}
+              </div>
+              <div class="flex-grow-1">
+                <h6 class="mb-0">{{ analista.nome }}</h6>
+                <small class="text-muted">{{ analista.departamento.nome }}</small>
+              </div>
+              <div class="text-end">
+                <span class="fw-bold">{{ analista.total_atendimentos }}</span>
+                <small class="text-muted d-block">atendimentos</small>
+              </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-4">
+              <i class="bi bi-people display-4 text-muted"></i>
+              <p class="text-muted mt-2">Nenhum dado disponível</p>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Monthly trend and states -->
+  <div class="row g-3 mb-4">
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 pt-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-calendar3 me-2"></i>
+            Atendimentos Mensais
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-fixed">
+            <canvas id="monthlyChart" height="140"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 pt-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-geo-alt me-2"></i>
+            Atendimentos por Estado
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-fixed">
+            <canvas id="stateChart" height="140"></canvas>
+          </div>
+            <div class="small text-muted mt-2">Mapa interativo abaixo (carrega dados por estado).</div>
+            <div id="map-br" class="mt-3" style="height:320px; width:100%; border-radius:10px; overflow:hidden; border:1px solid rgba(0,0,0,0.04);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mais métricas -->
+  <div class="row g-3 mb-4">
+    <!-- Tempo médio por analista -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-stopwatch me-2"></i>
+            Tempo Médio por Analista (minutos)
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="table-responsive">
+            <table class="table table-sm">
+              <thead>
+                <tr>
+                  <th>Analista</th>
+                  <th>Média</th>
+                  <th>Mínimo</th>
+                  <th>Máximo</th>
+                  <th>vs Meta</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for analista in tempo_medio_analistas %}
+                <tr>
+                  <td>{{ analista.nome }}</td>
+                  <td>{{ analista.tempo_medio }} min</td>
+                  <td>{{ analista.tempo_min }} min</td>
+                  <td>{{ analista.tempo_max }} min</td>
+                  <td>
+                    {% if analista.tempo_medio <= 20 %}
+                      <span class="badge bg-success">✓ Dentro da meta</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark">⚠ Acima da meta</span>
+                    {% endif %}
+                  </td>
+                </tr>
+                {% empty %}
+                <tr><td colspan="5" class="text-center text-muted">Nenhum dado disponível</td></tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Departamentos mais ativos -->
+    <div class="col-md-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent border-0 pt-3">
+          <h5 class="card-title mb-0">
+            <i class="bi bi-building me-2"></i>
+            Atendimentos por Departamento
+          </h5>
+        </div>
+        <div class="card-body">
+          <div class="chart-fixed">
+            <canvas id="deptChart" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tabela de atendimentos -->
+  <div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-transparent border-0 pt-3 d-flex justify-content-between align-items-center">
+      <h5 class="card-title mb-0">
+        <i class="bi bi-table me-2"></i>
+        Atendimentos Recentes
+      </h5>
+      <div class="btn-group">
+        <button class="btn btn-sm btn-outline-secondary" onclick="exportToCSV()">
+          <i class="bi bi-download me-1"></i>
+          Exportar CSV
+        </button>
+      </div>
+    </div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>ID</th>
+              <th>Empresa</th>
+              <th>Departamento</th>
+              <th>Analista</th>
+              <th>Status</th>
+              <th>Criado</th>
+              <th>Tempo</th>
+              <th>Ações</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in atendimentos %}
+            <tr>
+              <td>#{{ a.id }}</td>
+              <td>{{ a.empresa|truncatechars:30 }}</td>
+              <td>{% if a.departamento %}{{ a.departamento.nome }}{% else %}&mdash;{% endif %}</td>
+              <td>{% if a.analista %}{{ a.analista }}{% else %}<span class="text-muted">Não atribuído</span>{% endif %}</td>
+              <td>
+                {% if a.status == 'pendente' %}
+                  <span class="badge bg-warning text-dark">Pendente</span>
+                {% elif a.status == 'atendendo' %}
+                  <span class="badge bg-primary">Em atendimento</span>
+                {% elif a.status == 'finalizado' %}
+                  <span class="badge bg-success">Finalizado</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ a.status }}</span>
+                {% endif %}
+              </td>
+              <td>{{ a.criado_em|date:'d/m/Y H:i' }}</td>
+              <td>
+                {% if a.tempo_atendimento %}
+                  {{ a.tempo_atendimento }} min
+                {% else %}
+                  &mdash;
+                {% endif %}
+              </td>
+              <td>
+                <a class="btn btn-sm btn-outline-primary" href="{% url 'painel:atendimento_analista' a.id %}">
+                  <i class="bi bi-eye"></i>
+                </a>
+              </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center py-4 text-muted">Nenhum atendimento encontrado.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% if atendimentos.has_other_pages %}
+    <div class="card-footer bg-transparent">
+      <nav>
+        <ul class="pagination justify-content-center mb-0">
+          {% if atendimentos.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ atendimentos.previous_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Anterior</a>
+          </li>
+          {% endif %}
+          
+          {% for i in atendimentos.paginator.page_range %}
+            {% if atendimentos.number == i %}
+            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+            {% else %}
+            <li class="page-item"><a class="page-link" href="?page={{ i }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ i }}</a></li>
+            {% endif %}
+          {% endfor %}
+          
+          {% if atendimentos.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?page={{ atendimentos.next_page_number }}{% for key,value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">Próxima</a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Scripts para gráficos -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  // Gráfico de tendência
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: {{ trend_labels|safe }},
+      datasets: [{
+        label: 'Atendimentos',
+        data: {{ trend_data|safe }},
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1,
+        fill: true
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: false
+        }
+      }
+    }
+  });
+
+  // Gráfico de departamentos
+  const deptCtx = document.getElementById('deptChart').getContext('2d');
+  new Chart(deptCtx, {
+    type: 'doughnut',
+    data: {
+      labels: {{ dept_labels|safe }},
+      datasets: [{
+        data: {{ dept_data|safe }},
+        backgroundColor: [
+          'rgba(255, 99, 132, 0.8)',
+          'rgba(54, 162, 235, 0.8)',
+          'rgba(255, 206, 86, 0.8)',
+          'rgba(75, 192, 192, 0.8)',
+          'rgba(153, 102, 255, 0.8)',
+        ],
+        borderWidth: 0
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom'
+        }
+      }
+    }
+  });
+
+  // Monthly chart
+  const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+  new Chart(monthlyCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ monthly_labels|safe }},
+      datasets: [{
+        label: 'Mensal',
+        data: {{ monthly_data|safe }},
+        backgroundColor: 'rgba(54, 162, 235, 0.8)'
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}} }
+  });
+
+  // States chart
+  const stateCtx = document.getElementById('stateChart').getContext('2d');
+  new Chart(stateCtx, {
+    type: 'bar',
+    data: {
+      labels: {{ state_labels|safe }},
+      datasets: [{
+        label: 'Estados',
+        data: {{ state_data|safe }},
+        backgroundColor: 'rgba(153, 102, 255, 0.8)'
+      }]
+    },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, indexAxis: 'y' }
+  });
+
+  // Auto-refresh a cada 30 segundos
+  setInterval(function(){
+    const deptSelect = document.querySelector('select[name=departamento]');
+    if(deptSelect && deptSelect.value) {
+      fetch('/painel/api/department/'+deptSelect.value+'/')
+        .then(r=>r.json())
+        .then(data=>{
+          // Atualizar métricas via websocket ou ajax
+          console.log('Dados atualizados:', data);
+        })
+        .catch(()=>{});
+    }
+  }, 30000);
+});
+
+function exportToCSV() {
+  const rows = [];
+  document.querySelectorAll('table tbody tr').forEach(row => {
+    const cols = [];
+    row.querySelectorAll('td').forEach((td, index) => {
+      if(index < 7) { // Pula a coluna de ações
+        cols.push(td.innerText);
+      }
+    });
+    rows.push(cols.join(','));
+  });
+  
+  const csv = 'ID,Empresa,Departamento,Analista,Status,Criado,Tempo\n' + rows.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'atendimentos.csv';
+  a.click();
+}
+</script>
+
+<style>
+  .bg-bronze {
+    background-color: #cd7f32;
+  }
+  /* Fixed chart container to avoid resize feedback loops */
+  .chart-fixed {
+    width: 100%;
+    height: 260px;
+    max-height: 420px;
+    position: relative;
+  }
+  .chart-fixed canvas {
+    width: 100% !important;
+    height: 100% !important;
+    display: block;
+  }
+  .card {
+    transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.1) !important;
+  }
+  .display-4 {
+    font-size: 2.5rem;
+  }
+  .table th {
+    font-weight: 600;
+    color: #495057;
+  }
+  .badge {
+    padding: 0.5rem 0.75rem;
+  }
+</style>
+
+/* Leaflet CSS (map) */
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+e2H6k5H7gQm1b4o2y8b4b1Q6+J5Qb4m/6j0zj8nY=" crossorigin="" />
+
+<!-- Adicionar Bootstrap Icons se não existir -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<!-- Leaflet & chroma for choropleth -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j8gq7r3gY6k2b6Yb1K6v0Q6p3b6b5F2b6p3b6hA=" crossorigin=""></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.4.2/chroma.min.js"></script>
+
+<script>
+// Map and choropleth: fetch GeoJSON and poll /painel/api/state_counts/
+document.addEventListener('DOMContentLoaded', function(){
+  const geoUrl = 'https://raw.githubusercontent.com/codeforamerica/click_that_hood/master/public/data/brazil-states.geojson';
+  const mapEl = document.getElementById('map-br');
+  if(!mapEl) return;
+
+  const map = L.map('map-br', { zoomControl: true, attributionControl: false }).setView([-14.2350, -51.9253], 4);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { maxZoom: 12 }).addTo(map);
+
+  let geoLayer = null;
+  let currentCounts = {}; // UF -> count
+
+  const ufToName = {
+    'AC':'Acre','AL':'Alagoas','AM':'Amazonas','AP':'Amapá','BA':'Bahia','CE':'Ceará','DF':'Distrito Federal','ES':'Espírito Santo','GO':'Goiás','MA':'Maranhão','MG':'Minas Gerais','MS':'Mato Grosso do Sul','MT':'Mato Grosso','PA':'Pará','PB':'Paraíba','PE':'Pernambuco','PI':'Piauí','PR':'Paraná','RJ':'Rio de Janeiro','RN':'Rio Grande do Norte','RO':'Rondônia','RR':'Roraima','RS':'Rio Grande do Sul','SC':'Santa Catarina','SE':'Sergipe','SP':'São Paulo','TO':'Tocantins'
+  };
+
+  function getCountForFeature(f){
+    // GeoJSON 'name' is full state name; try to match by uf map
+    const name = (f.properties && (f.properties.name || f.properties.NAME || f.properties.NOME)) || '';
+    // search uf by name
+    for(const [uf, full] of Object.entries(ufToName)){
+      if(full.toLowerCase() === name.toLowerCase()) return currentCounts[uf] || 0;
+    }
+    return 0;
+  }
+
+  function styleFeature(feature){
+    const c = getCountForFeature(feature);
+    const max = Math.max(1, ...Object.values(currentCounts));
+    const scale = chroma.scale(['#f2f0f7','#9e9ac8','#6a51a3']).domain([0, max]);
+    const fill = scale(c).hex();
+    return { color: '#ffffff', weight: 1, fillColor: fill, fillOpacity: 0.85 };
+  }
+
+  function onEachFeature(feature, layer){
+    const name = feature.properties && (feature.properties.name || feature.properties.NAME || feature.properties.NOME) || '—';
+    const count = getCountForFeature(feature) || 0;
+    layer.bindTooltip(`<strong>${name}</strong><br/>Atendimentos: ${count}`, {sticky:true});
+    layer.on({ mouseover(e){ e.target.setStyle({ weight:2, color:'#222' }); }, mouseout(e){ geoLayer.resetStyle(e.target); } });
+  }
+
+  function renderGeo(json){
+    if(geoLayer) { geoLayer.clearLayers(); map.removeLayer(geoLayer); }
+    geoLayer = L.geoJSON(json, { style: styleFeature, onEachFeature: onEachFeature }).addTo(map);
+    map.fitBounds(geoLayer.getBounds(), { padding: [20,20] });
+    addLegend();
+  }
+
+  let legendControl = null;
+  function addLegend(){
+    if(legendControl) map.removeControl(legendControl);
+    legendControl = L.control({ position: 'bottomright' });
+    legendControl.onAdd = function(){
+      const div = L.DomUtil.create('div', 'info legend p-2 bg-white bg-opacity-90 rounded');
+      const max = Math.max(1, ...Object.values(currentCounts));
+      const grades = [0, Math.ceil(max*0.1), Math.ceil(max*0.25), Math.ceil(max*0.5), Math.ceil(max*0.75), max];
+      const scale = chroma.scale(['#f2f0f7','#9e9ac8','#6a51a3']).domain([0, max]);
+      let html = '<div class="fw-bold">Atendimentos</div>';
+      for(let i=0;i<grades.length-1;i++){
+        const v = Math.max(0, grades[i]);
+        const color = scale(v).hex();
+        html += `<div style="display:flex;align-items:center;gap:8px"><span style="display:inline-block;width:20px;height:12px;background:${color};border:1px solid rgba(0,0,0,0.06);"></span><small>${grades[i]} – ${grades[i+1]}</small></div>`;
+      }
+      div.innerHTML = html; return div;
+    };
+    legendControl.addTo(map);
+  }
+
+  // fetch geojson once, then poll counts
+  fetch(geoUrl).then(r=>r.json()).then(gjson=>{
+    renderGeo(gjson);
+    // initial fetch counts
+    updateCounts();
+    setInterval(updateCounts, 30000);
+  }).catch(err=>{ console.warn('Erro carregando GeoJSON:', err); });
+
+  function updateCounts(){
+    // include current filters (departamento/status/date) by reading query inputs
+    const params = new URLSearchParams();
+    const dept = document.querySelector('select[name=departamento]');
+    const status = document.querySelector('select[name=status]');
+    const sd = document.querySelector('input[name=start_date]');
+    const ed = document.querySelector('input[name=end_date]');
+    if(dept && dept.value) params.set('departamento', dept.value);
+    if(status && status.value) params.set('status', status.value);
+    if(sd && sd.value) params.set('start_date', sd.value);
+    if(ed && ed.value) params.set('end_date', ed.value);
+
+    fetch('/painel/api/state_counts/?'+params.toString())
+      .then(r=>r.json())
+      .then(json=>{
+        // expected { labels: [...], data: [...] } where labels are UF codes
+        const labels = json.labels || [];
+        const data = json.data || [];
+        const mapCounts = {};
+        for(let i=0;i<labels.length;i++){ mapCounts[labels[i]] = data[i] || 0; }
+        currentCounts = mapCounts;
+        // update geoLayer styles and tooltips
+        if(geoLayer){
+          geoLayer.eachLayer(function(layer){
+            layer.setStyle(styleFeature(layer.feature));
+            const name = layer.feature.properties && (layer.feature.properties.name || layer.feature.properties.NAME || layer.feature.properties.NOME) || '—';
+            // find uf for this name
+            let ufFound = null;
+            for(const [uf, full] of Object.entries(ufToName)) if(full.toLowerCase() === name.toLowerCase()) { ufFound = uf; break; }
+            const cnt = ufFound ? (currentCounts[ufFound] || 0) : 0;
+            layer.bindTooltip(`<strong>${name}</strong><br/>Atendimentos: ${cnt}`, {sticky:true});
+          });
+        }
+        addLegend();
+      }).catch(err=>{ console.warn('Erro carregando contagens por estado:', err); });
+  }
+});
+</script>
+{% endblock %}

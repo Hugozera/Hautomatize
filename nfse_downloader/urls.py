@@ -23,8 +23,10 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('core.urls')),
+    path('api/users/', include('core.urls_api_users')),
     # URLs de autenticação padrão (password change, reset, etc.)
     path('accounts/', include('django.contrib.auth.urls')),
+    path('painel/', include('painel.urls', namespace='painel')),
 ]
 
 if settings.DEBUG:

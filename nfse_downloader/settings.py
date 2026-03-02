@@ -18,10 +18,13 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'daphne',
     'django.contrib.staticfiles',
     'crispy_forms',
     'crispy_bootstrap5',
+    'channels',
     'core',
+    'painel',  # App de painel de atendimento
 ]
 
 MIDDLEWARE = [
@@ -54,6 +57,7 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'nfse_downloader.wsgi.application'
+ASGI_APPLICATION = 'nfse_downloader.asgi.application'
 
 DATABASES = {
     'default': {
@@ -80,6 +84,14 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Channels configuration - use the in-memory layer for development.
+# For production, replace with Redis channel layer.
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',
+    }
+}
 
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'

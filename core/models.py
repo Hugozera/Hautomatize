@@ -8,6 +8,57 @@ def validar_cpf(value):
     # Implementar validação de CPF
     return value
 
+
+class Conversa(models.Model):
+    """
+    Conversa entre duas ou mais pessoas
+    """
+    participantes = models.ManyToManyField('Pessoa', related_name='conversas')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-atualizado_em']
+
+
+class AnexoMensagem(models.Model):
+    """
+    Arquivo anexado a uma mensagem
+    """
+    arquivo = models.FileField(upload_to='chat_anexos/%Y/%m/%d/')
+    nome_original = models.CharField(max_length=255)
+    tamanho = models.IntegerField(help_text='Tamanho em bytes')
+    tipo = models.CharField(max_length=100, help_text='MIME type')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    
+    def __str__(self):
+        return self.nome_original
+
+
+class Mensagem(models.Model):
+    """
+    Mensagem em uma conversa ou atendimento
+    """
+    conversa = models.ForeignKey('Conversa', on_delete=models.CASCADE, null=True, blank=True, related_name='mensagens')
+    # Use a distinct related_name to avoid clashing with painel.ChatMessage.mensagens
+    atendimento = models.ForeignKey('painel.Atendimento', on_delete=models.CASCADE, null=True, blank=True, related_name='mensagens_core', related_query_name='mensagens_core')
+    remetente = models.ForeignKey('Pessoa', on_delete=models.SET_NULL, null=True, related_name='mensagens_enviadas')
+    conteudo = models.TextField(blank=True)
+    anexos = models.ManyToManyField(AnexoMensagem, blank=True, related_name='mensagens')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    lida = models.BooleanField(default=False)
+    lida_em = models.DateTimeField(null=True, blank=True)
+    
+    class Meta:
+        ordering = ['criado_em']
+        indexes = [
+            models.Index(fields=['conversa', 'criado_em']),
+            models.Index(fields=['atendimento', 'criado_em']),
+        ]
+    
+    def __str__(self):
+        return f'Mensagem {self.id} - {self.criado_em}'
+    
 class Pessoa(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='pessoa')
     cpf = models.CharField(max_length=14, unique=True, validators=[validar_cpf])
@@ -31,6 +82,30 @@ class Pessoa(models.Model):
                 if p not in own:
                     own.append(p)
         return own
+
+    @property
+    def usuario(self):
+        """Compatibilidade: alias para o campo `user` usado nos templates e views antigos."""
+        return self.user
+
+    @property
+    def nome(self):
+        """Compatibilidade: nome completo do usuário."""
+        return self.user.get_full_name() or self.user.username
+
+    @property
+    def cargo(self):
+        """Compatibilidade: cargo/exibição rápida (não persistido)."""
+        return ''
+
+    @property
+    def departamento(self):
+        """Compatibilidade: retorna None quando não há departamento modelado aqui."""
+        return None
+
+    def has_perm_code(self, code):
+        """Retorna True se o usuário tem a permissão, seja direta ou via papel (role)."""
+        return code in self.perm_list()
 
     class Meta:
         verbose_name = 'Pessoa'
@@ -283,6 +358,169 @@ class NotaFiscal(models.Model):
         verbose_name = 'Nota Fiscal'
         verbose_name_plural = 'Notas Fiscais'
         ordering = ['-data_emissao']
+ 
+
+# --- Models migrated from painel app ---
+class Departamento(models.Model):
+    nome = models.CharField(max_length=50)
+
+    def __str__(self):
+        return self.nome
+
+    class Meta:
+        app_label = 'painel'
+        permissions = []
+
+
+class Analista(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
+    disponivel = models.BooleanField(default=True)
+    disponivel_em = models.DateTimeField(null=True, blank=True)
+
+    def __str__(self):
+        return self.user.get_full_name() or self.user.username
+
+    class Meta:
+        app_label = 'painel'
+        permissions = []
+
+
+class Atendimento(models.Model):
+    STATUS_CHOICES = [
+        ('pendente', 'Pendente'),
+        ('atendendo', 'Atendendo'),
+        ('finalizado', 'Finalizado'),
+    ]
+    departamento = models.ForeignKey(Departamento, on_delete=models.CASCADE)
+    analista = models.ForeignKey(Analista, on_delete=models.SET_NULL, null=True, blank=True)
+    empresa_obj = models.ForeignKey(Empresa, on_delete=models.SET_NULL, null=True, blank=True, related_name='atendimentos')
+    empresa = models.CharField(max_length=100)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pendente')
+    criado_em = models.DateTimeField(auto_now_add=True)
+    iniciado_em = models.DateTimeField(null=True, blank=True)
+    finalizado_em = models.DateTimeField(null=True, blank=True)
+    motivo = models.TextField(blank=True)
+    resolucao = models.TextField(blank=True)
+    historico = models.TextField(blank=True)
+
+    class Meta:
+        app_label = 'painel'
+        permissions = []
+
+    def __str__(self):
+        return f"{self.departamento} - {self.empresa} ({self.status})"
+
+
+class AtendimentoAnexo(models.Model):
+    """Arquivos enviados durante um atendimento (prints, logs, etc.)."""
+    atendimento = models.ForeignKey(Atendimento, on_delete=models.CASCADE, related_name='anexos')
+    arquivo = models.FileField(upload_to='painel/anexos/')
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Anexo {self.id} - {self.atendimento}"
+
+    class Meta:
+        app_label = 'painel'
+        verbose_name = 'Anexo de Atendimento'
+        verbose_name_plural = 'Anexos de Atendimento'
+
+
+class ChatMessage(models.Model):
+    """Mensagens do chat vinculadas a um Atendimento.
+
+    Armazenadas para histórico e recuperação quando um usuário abrir o chat.
+    """
+    atendimento = models.ForeignKey(Atendimento, on_delete=models.CASCADE, related_name='mensagens')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    message = models.TextField()
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.criado_em}] {self.user or 'Anon'}: {self.message[:40]}"
+
+    class Meta:
+        app_label = 'painel'
+        verbose_name = 'Mensagem de Chat'
+        verbose_name_plural = 'Mensagens de Chat'
+        ordering = ['criado_em']
+
+
+class ChatPresence(models.Model):
+    """Registro simples de presença/estado online por Atendimento."""
+    atendimento = models.ForeignKey(Atendimento, on_delete=models.CASCADE, related_name='presences')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    active = models.BooleanField(default=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.get_username()} @ {self.atendimento_id} - {'online' if self.active else 'offline'}"
+
+    class Meta:
+        app_label = 'painel'
+        verbose_name = 'Presença de Chat'
+        verbose_name_plural = 'Presenças de Chat'
+        unique_together = (('atendimento', 'user'),)
+
+
+class Conversation(models.Model):
+    """Conversa entre usuários e/ou vinculada a uma Empresa.
+
+    Pode ser usada para conversas gerais (tipo Teams) entre usuários, ou
+    conversas relacionadas a uma `Empresa` (suporte ao cliente).
+    """
+    title = models.CharField(max_length=200, blank=True)
+    empresa = models.ForeignKey('core.Empresa', null=True, blank=True, on_delete=models.SET_NULL)
+    criado_em = models.DateTimeField(auto_now_add=True)
+    atualizado_em = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        if self.title:
+            return self.title
+        if self.empresa:
+            return f"Conversa: {self.empresa.nome_fantasia}"
+        return f"Conversa #{self.id}"
+
+
+class ConversationParticipant(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='participants')
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    last_read = models.DateTimeField(null=True, blank=True)
+    joined_em = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = (('conversation', 'user'),)
+
+
+class ConversationMessage(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    message = models.TextField()
+    attachments = models.JSONField(default=list, blank=True)
+    criado_em = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"[{self.criado_em}] {self.user or 'Anon'}: {self.message[:40]}"
+
+    class Meta:
+        ordering = ['criado_em']
+
+
+class Notification(models.Model):
+    """Simple server-side notification for chat push delivery.
+
+    - `user`: recipient user
+    - `payload`: JSON payload to send via notifier WS
+    - `delivered`: whether it has been forwarded to an active notifier socket
+    """
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    payload = models.JSONField()
+    created = models.DateTimeField(auto_now_add=True)
+    delivered = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['-created']
 
 
 # `SiegCredential` removed: SIEG integration now uses a global key configured

@@ -47,8 +47,19 @@ def can_edit_empresa(user, empresa: Empresa) -> bool:
 
 # ===== Certificado (ligado à empresa) =====
 def can_manage_certificado(user, empresa: Empresa) -> bool:
-    """Simplified: editing empresas implies credential management."""
-    return can_edit_empresa(user, empresa)
+    """Manage certificado only if user is superuser or linked to the empresa.
+
+    Tests expect that only the company owner (Pessoa linked via `empresa.usuarios`)
+    or a superuser may download/remove certificates. Restore that behavior.
+    """
+    if not user or user.is_anonymous:
+        return False
+    if user.is_superuser:
+        return True
+    pessoa = _get_pessoa_from_user(user)
+    if pessoa and pessoa in empresa.usuarios.all():
+        return True
+    return False
 
 
 # ===== Pessoa =====
@@ -80,21 +91,33 @@ def can_use_conversor(user, conversao: ArquivoConversao) -> bool:
 
 # Matriz de permissões (para documentação/consulta rápida)
 PERMISSIONS_MATRIX = {
-    'Pessoa': {
-        'view': 'self or superuser',
-        'edit': 'self or superuser'
+    # módulos principais
+    'nfse_downloader': {
+        'view': 'pode ver tela do módulo',
+        'edit': 'pode editar configurações/itens',
+        'delete': 'pode remover registros',
+        'use': 'pode executar ações',
     },
-    'Empresa': {
-        'view': 'superuser or linked user or public if ativo',
-        'edit': 'superuser or linked user'
+    'conversor': {
+        'view': 'pode ver tela do módulo',
+        'edit': 'pode editar conversões',
+        'delete': 'pode excluir conversões',
+        'use': 'pode usar conversor',
     },
-    'Certificado': {
-        'manage': 'same as Empresa.edit (superuser or linked user)'
+    'painel': {
+        'view': 'pode ver painel/OS',
+        'edit': 'pode atualizar atendimentos',
+        'delete': 'pode excluir atendimentos',
+        'use': 'pode utilizar funcionalidades de painel',
     },
-    'Conversor': {
-        'use': 'owner (u.pessoa) or superuser'
-    }
+    'rh': {
+        'view': 'pode visualizar pessoas',
+        'add': 'pode cadastrar pessoas',
+        'edit': 'pode editar pessoas',
+        'delete': 'pode excluir pessoas',
+    },
 }
+
 
 # permissões adicionais usadas em outros lugares (management commands, etc.)
 EXTRA_PERMISSIONS = [

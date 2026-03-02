@@ -1,0 +1,391 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title|default:"Painel TV" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <style>
+        /* EXATAMENTE O MESMO CSS DO SEU MODELO */
+        *{
+            margin:0;
+            padding:0;
+            box-sizing:border-box;
+            font-family:"Segoe UI",system-ui,-apple-system,sans-serif;
+        }
+
+        html,body{
+            height:100%;
+            width:100%;
+            background:linear-gradient(135deg,#1a2639,#2c3e50,#34495e);
+            color:white;
+            overflow:hidden;
+        }
+
+        /* HEADER COM FRAGMENTO CENTRALIZADO */
+        header{
+            height:12%;
+            display:flex;
+            justify-content:center; /* CENTRALIZA O CONTEÚDO */
+            align-items:center;
+            padding:0 4%;
+            backdrop-filter: blur(6px);
+            background:rgba(0,0,0,0.3);
+            border-bottom:2px solid rgba(255,255,255,0.15);
+        }
+
+        /* CONTAINER DO HEADER PARA CENTRALIZAR */
+        .header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 1400px; /* Limita a largura máxima */
+        }
+
+        /* TÍTULO CENTRALIZADO */
+        .header-title {
+            text-align: center;
+            flex: 1;
+        }
+
+        .header-title h2 {
+            font-size: 2.6rem;
+            font-weight: 500;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+            margin: 0;
+            color: white;
+        }
+
+        .header-title .small {
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.7);
+            margin-top: 5px;
+            letter-spacing: 1px;
+        }
+
+        /* RELÓGIO NA DIREITA */
+        #clock{
+            font-size:2rem;
+            color:#E8FFF6;
+            font-weight:500;
+            text-shadow:0 0 10px rgba(232,255,246,0.5);
+            white-space: nowrap;
+        }
+
+        /* ESPAÇO VAZIO NA ESQUERDA PARA EQUILIBRAR */
+        .header-left {
+            width: 150px; /* Mesma largura aproximada do relógio */
+        }
+
+        /* GRID PRINCIPAL */
+        .container{
+            height:88%;
+            display:grid;
+            grid-template-columns:1fr 1fr 1fr;
+            padding:1.5%;
+            gap:1.5%;
+        }
+
+        /* COLUNAS */
+        .column{
+            padding:2%;
+            border-radius:24px;
+            backdrop-filter: blur(12px);
+            background:rgba(255,255,255,0.06);
+            border:1px solid rgba(255,255,255,0.15);
+            display:flex;
+            flex-direction:column;
+            box-shadow:0 15px 35px rgba(0,0,0,0.3);
+        }
+
+        .column h2{
+            font-size:1.8rem;
+            font-weight:400;
+            margin-bottom:1.8rem;
+            text-align:center;
+            letter-spacing:1.5px;
+            color:rgba(255,255,255,0.9);
+            text-transform:uppercase;
+            border-bottom:1px solid rgba(255,255,255,0.2);
+            padding-bottom:10px;
+        }
+
+        /* CARDS */
+        .card{
+            padding:1.3rem 1.8rem;
+            border-radius:16px;
+            margin-bottom:1rem;
+            font-size:1.3rem;
+            display:flex;
+            justify-content:space-between;
+            align-items:center;
+            transition:all 0.3s ease;
+            box-shadow:0 8px 20px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.2);
+        }
+
+        .card:hover{
+            transform:translateY(-2px);
+            box-shadow:0 12px 25px rgba(0,0,0,0.4);
+        }
+
+        .green{
+            background:linear-gradient(145deg,#2ecc71,#27ae60);
+            color:#1e3a2a;
+            border-left:5px solid #f1c40f;
+        }
+
+        .red{
+            background:linear-gradient(145deg,#e74c3c,#c0392b);
+            color:white;
+            border-left:5px solid #f39c12;
+        }
+
+        .alert{
+            animation:pulse 1.2s infinite;
+            border-left:5px solid #e67e22 !important;
+        }
+
+        @keyframes pulse{
+            0%{transform:scale(1); box-shadow:0 0 0 0 rgba(231,76,60,0.7);}
+            50%{transform:scale(1.02); box-shadow:0 0 20px rgba(231,76,60,0.5);}
+            100%{transform:scale(1); box-shadow:0 0 0 0 rgba(231,76,60,0);}
+        }
+
+        .time{
+            font-weight:600;
+            background:rgba(0,0,0,0.2);
+            padding:5px 12px;
+            border-radius:30px;
+            font-size:1.2rem;
+            letter-spacing:1px;
+            border:1px solid rgba(255,255,255,0.15);
+        }
+
+        .label{
+            font-weight:500;
+            display:flex;
+            align-items:center;
+            gap:8px;
+        }
+
+        .label::before{
+            content:"●";
+            font-size:1.5rem;
+            color:rgba(255,255,255,0.9);
+        }
+
+        .green .label::before{
+            color:#f1c40f;
+        }
+
+        .red .label::before{
+            color:#ffffff;
+        }
+
+        .stats-footer{
+            margin-top:auto;
+            padding-top:15px;
+            border-top:1px solid rgba(255,255,255,0.15);
+            font-size:1.1rem;
+            display:flex;
+            justify-content:space-between;
+            color:rgba(255,255,255,0.8);
+        }
+
+        .spacer{
+            flex:1;
+        }
+
+        /* BOTÃO FULLSCREEN DISCRETO */
+        .fullscreen-toggle {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 30px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255,255,255,0.2);
+            color: rgba(255,255,255,0.6);
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            z-index: 9999;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .fullscreen-toggle:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: scale(1.1);
+            border-color: rgba(255,255,255,0.4);
+        }
+
+        .fullscreen-toggle.fullscreen-active {
+            background: rgba(231, 76, 60, 0.3);
+            color: #e74c3c;
+            border-color: #e74c3c;
+        }
+
+        .fullscreen-toggle.fullscreen-active:hover {
+            background: rgba(231, 76, 60, 0.5);
+            color: white;
+        }
+
+        /* AUTO-HIDE PARA TV */
+        body.tv-mode {
+            cursor: none;
+        }
+
+        body.tv-mode:hover {
+            cursor: default;
+        }
+
+        body.tv-mode .fullscreen-toggle {
+            opacity: 0.2;
+        }
+
+        body.tv-mode:hover .fullscreen-toggle {
+            opacity: 1;
+        }
+
+        @media (max-width:1200px){
+            .header-title h2{font-size:2rem;}
+            #clock{font-size:1.5rem;}
+            .header-left{width:100px;}
+            .card{font-size:1.1rem; padding:1rem;}
+        }
+    </style>
+</head>
+<body>
+    <header>
+    <div class="header-content">
+        <!-- Espaço vazio à esquerda para equilibrar com o relógio -->
+        <div class="header-left"></div>
+        
+        <!-- Título centralizado com as variáveis do contexto -->
+        <div class="header-title">
+            {% if title %}
+                <h2>{{ title }}</h2>
+            {% endif %}
+            {% if subtitle %}
+                <div class="small">{{ subtitle }}</div>
+            {% endif %}
+        </div>
+        
+        <!-- Relógio à direita -->
+        <div id="clock"></div>
+    </div>
+</header>
+    
+    {% block content %}{% endblock %}
+
+    <!-- BOTÃO FULLSCREEN DISCRETO -->
+    <button id="fullscreen-btn" class="fullscreen-toggle" title="Tela cheia">⛶</button>
+
+    <script>
+        // RELÓGIO
+        function updateClock(){
+            const now = new Date();
+            document.getElementById("clock").innerText = now.toLocaleTimeString('pt-BR');
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        // BOTÃO FULLSCREEN
+        (function() {
+            const fsBtn = document.getElementById('fullscreen-btn');
+            if (!fsBtn) return;
+
+            function toggleFullScreen() {
+                if (!document.fullscreenElement) {
+                    document.documentElement.requestFullscreen().catch(err => {
+                        console.log('Erro ao entrar em fullscreen:', err);
+                    });
+                    fsBtn.classList.add('fullscreen-active');
+                    fsBtn.setAttribute('title', 'Sair da tela cheia');
+                } else {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                        fsBtn.classList.remove('fullscreen-active');
+                        fsBtn.setAttribute('title', 'Tela cheia');
+                    }
+                }
+            }
+
+            fsBtn.addEventListener('click', toggleFullScreen);
+
+            document.addEventListener('fullscreenchange', function() {
+                if (!document.fullscreenElement) {
+                    fsBtn.classList.remove('fullscreen-active');
+                    fsBtn.setAttribute('title', 'Tela cheia');
+                }
+            });
+
+            // Auto-hide do mouse para TV
+            let timeout;
+            document.addEventListener('mousemove', function() {
+                document.body.classList.remove('tv-mode');
+                clearTimeout(timeout);
+                timeout = setTimeout(() => {
+                    document.body.classList.add('tv-mode');
+                }, 3000);
+            });
+        })();
+
+        // Seu script de abas (opcional, mantido do fragmento)
+        document.addEventListener('click', function(e){
+            const t = e.target.closest('[data-target-tab]');
+            if(!t) return;
+            e.preventDefault();
+            const id = t.getAttribute('data-target-tab');
+            try{
+                const tabEl = document.querySelector('#'+id+'-tab');
+                if(tabEl){ new bootstrap.Tab(tabEl); tabEl.click(); }
+                const pane = document.getElementById(id);
+                if(pane) pane.scrollIntoView({behavior:'smooth', block:'start'});
+            }catch(e){}
+        });
+    </script>
+
+    <!-- Floating chat bubble + inline panel for painel pages (uses shared static chat assets) -->
+    <link rel="stylesheet" href="{% static 'core/css/chat.css' %}">
+    <div id="chatBubble" class="chat-bubble" title="Chat/Painel" style="right:20px;bottom:20px;">
+        <i class="bi bi-chat-dots-fill" style="font-size:20px"></i>
+    </div>
+    <div id="globalChatPanel" class="global-chat-panel" style="display:none; position:fixed; right:20px; bottom:80px; width:360px; max-width:90vw; z-index:5000; box-shadow:0 8px 30px rgba(0,0,0,.25); border-radius:8px; overflow:hidden;">
+        <div class="panel-header">
+            <strong>Chat</strong>
+            <div>
+                <button id="chat-minimize" class="btn btn-sm btn-light" type="button">_</button>
+                <button id="chat-close" class="btn btn-sm btn-light" type="button">×</button>
+            </div>
+        </div>
+        <div id="chat-body" class="chat-body">
+            <div style="margin-bottom:.5rem;font-size:.9rem;color:#666;">Carregando...</div>
+            <div id="chat-content"></div>
+        </div>
+        <div style="padding:.5rem; border-top:1px solid #eee; background:#fafafa; display:flex;gap:.5rem;">
+            <input id="chat-input" type="text" class="form-control form-control-sm" placeholder="Digite uma mensagem...">
+            <button id="chat-send" class="btn btn-sm btn-primary" type="button">Enviar</button>
+        </div>
+    </div>
+    <script src="{% static 'core/js/chat_panel.js' %}"></script>
+    <style>
+    /* Dark mode support for chat in painel TV layout */
+    body.dark-mode .chat-bubble{background:#0b1220;color:#fff}
+    body.dark-mode #globalChatPanel{background:#0b1220;color:#e6eef6;border:1px solid #172031}
+    body.dark-mode #globalChatPanel .btn{background:transparent;color:#fff}
+    body.dark-mode #chat-body{background:#071025;color:#d1d5db}
+    body.dark-mode #chat-content a{color:#8bd5ff}
+    body.dark-mode #chat-input{background:#0b1220;color:#e6eef6;border:1px solid #223042}
+    body.dark-mode #chat-send{background:#06b6d4;border-color:#06b6d4}
+    </style>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{% extends 'core/base.html' %}
+{% load static %}
+{% block content %}
+<div class="container">
+	<h2>Atendimentos da Empresa: {{ empresa }}</h2>
+	<form method="post" class="mb-4">
+		{% csrf_token %}
+		<div class="row g-2">
+			<div class="col-md-4">
+				<label for="departamento" class="form-label">Departamento</label>
+				<select name="departamento" id="departamento" class="form-select" required>
+					{% for dep in departamentos %}
+					<option value="{{ dep.id }}">{{ dep.nome }}</option>
+					{% endfor %}
+				</select>
+			</div>
+			<div class="col-md-6">
+				<label for="motivo" class="form-label">Motivo do Atendimento</label>
+				<input type="text" class="form-control" id="motivo" name="motivo" required>
+			</div>
+			<div class="col-md-2 align-self-end">
+				<button type="submit" class="btn btn-success">Abrir Atendimento</button>
+			</div>
+		</div>
+		<input type="hidden" name="empresa" value="{{ empresa }}">
+	</form>
+
+<script>
+// small helper: if hidden empresa_id present we could show a badge
+document.addEventListener('DOMContentLoaded', function(){
+  // nothing extra here for now
+});
+</script>
+	<h4>Seus Atendimentos</h4>
+	<table class="table table-bordered">
+		<thead>
+			<tr>
+				<th>ID</th>
+				<th>Departamento</th>
+				<th>Status</th>
+				<th>Motivo</th>
+				<th>Chat</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for atendimento in atendimentos %}
+			<tr>
+				<td>{{ atendimento.id }}</td>
+				<td>{{ atendimento.departamento.nome }}</td>
+				<td>{{ atendimento.get_status_display }}</td>
+				<td>{{ atendimento.motivo }}</td>
+				<td><a href="{% url 'painel:chat_atendimento' atendimento.id %}" class="btn btn-primary btn-sm">Chat</a></td>
+			</tr>
+			{% empty %}
+			<tr><td colspan="5">Nenhum atendimento encontrado.</td></tr>
+			{% endfor %}
+		</tbody>
+	</table>
+</div>
+{% endblock %}

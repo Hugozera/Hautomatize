@@ -1,0 +1,10 @@
+/* Rich text and small control styles for atendimento_analista */
+#txtColor { width: 40px; height: 32px; padding: 2px; }
+#historico_rich { min-height: 180px; max-height: 400px; overflow: auto; background: var(--surface-1); }
+#anexos_preview { display:flex; flex-wrap:wrap; gap:8px; }
+#anexos_preview > div { width: 120px; text-align: center; }
+#anexos_preview img { max-width: 100%; max-height: 80px; border-radius:6px; }
+
+#anexos_list li { margin-bottom:6px; }
+#uploadAnexosBtn { white-space:nowrap; }
+

@@ -20,11 +20,13 @@
     <!-- Nosso CSS personalizado -->
     {% load static %}
     <link rel="stylesheet" href="{% static 'core/css/style.css' %}">
-    <link rel="stylesheet" href="{% static 'css/conversor.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/conversor.css' %}">
+    <link rel="stylesheet" href="{% static 'core/css/chat.css' %}">
+    {% block extra_css %}{% endblock %}
 </head>
 <body>
     <a href="#mainContent" class="skip-to-content">Ir para o conteúdo</a>
-    <div class="d-flex position-relative">
+    <div class="app-wrapper d-flex position-relative">
         <!-- Menu Lateral -->
         {% if request.user.is_authenticated %}
         <div id="sidebar" class="sidebar sidebar-expanded">
@@ -84,6 +86,12 @@
                             <span class="nav-text">Certificados</span>
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if '/chat' in request.path %}active{% endif %}" href="{% url 'chat_index' %}">
+                            <i class="bi bi-chat-left-text"></i>
+                            <span class="nav-text">Chat</span>
+                        </a>
+                    </li>
                     <li class="nav-item mt-auto">
                         <a class="nav-link {% if '/configuracao' in request.path %}active{% endif %}" href="{% url 'configuracao' %}">
                             <i class="bi bi-gear"></i>
@@ -92,6 +100,24 @@
                     </li>
                     {% load permissions_tags %}
                     {% if request.user.is_authenticated %}
+                    <li class="nav-item">
+                        <a class="nav-link" data-bs-toggle="collapse" href="#submenuPainel" role="button" aria-expanded="false" aria-controls="submenuPainel">
+                            <i class="bi bi-kanban"></i>
+                            <span class="nav-text">OS / Painel</span>
+                            <i class="bi bi-caret-down-fill float-end"></i>
+                        </a>
+                        <div class="collapse" id="submenuPainel">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:index' %}">Meu Painel</a></li>
+                                {% if request.user.is_superuser %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:relatorio_gestor' %}">Dashboard / Relatórios</a></li>
+                                {% endif %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:secretaria_painel' %}">Secretaria</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:departamento_list' %}">Departamentos</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'painel:tv_index' %}">Painel TV</a></li>
+                            </ul>
+                        </div>
+                    </li>
                     <li class="nav-item">
                         <a class="nav-link {% if '/pessoas' in request.path %}active{% endif %}" href="{% url 'pessoa_list' %}">
                             <i class="bi bi-people"></i>
@@ -144,6 +170,13 @@
     
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    {% if request.user.is_authenticated %}
+    <script>
+        window.userId = {{ request.user.id }};
+        window.username = "{{ request.user.get_full_name|default:request.user.username }}";
+        window.userName = window.username;
+    </script>
+    {% endif %}
     
     <script>
         // Função para toggle do menu
@@ -188,9 +221,15 @@
                 var modal = new bootstrap.Modal(modalEl);
                 modal.show();
             }
-            // initialize any select2 elements (forms load script earlier may run before jQuery)
+            // initialize any select2 elements only if plugin is loaded
             if (window.jQuery) {
-                $('.select2').select2({width: '100%', theme: 'bootstrap-5'});
+                try {
+                    if ($.fn && $.fn.select2) {
+                        $('.select2').select2({width: '100%', theme: 'bootstrap-5'});
+                    }
+                } catch (e) {
+                    console.warn('select2 init skipped:', e);
+                }
             }
         });
 
@@ -263,34 +302,61 @@
             }
         });
     </script>
-    
-    <!-- allow pages to inject modals at body-end so stacking contexts work -->
-    {% block extra_modals %}{% endblock %}
-</body>
-</html>
+    <!-- Floating chat bubble (Hautomatize) -->
+    {% if request.user.is_authenticated %}
+    <div id="chatBubble" class="chat-bubble" title="Chat Hautomatize">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span class="chat-badge" style="display:none;">0</span>
+    </div>
 
-    </script>
+    <div id="globalChatPanel" class="global-chat-panel" style="display:none;">
+        <div class="panel-header">
+            <div class="panel-title-wrap">
+                <strong>Hautomatize Chat</strong>
+                <small>Mensagens internas</small>
+            </div>
+            <div class="panel-actions">
+                <button id="chat-minimize" class="panel-btn" type="button" aria-label="Minimizar"><i class="bi bi-dash-lg"></i></button>
+                <button id="chat-close" class="panel-btn" type="button" aria-label="Fechar"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </div>
+        <div id="chat-body" class="chat-body">
+            <div id="chat-content"></div>
+        </div>
+        <div class="chat-input-row">
+            <input id="chat-input" type="text" class="form-control form-control-sm" placeholder="Digite uma mensagem...">
+            <button id="chat-send" class="btn btn-sm btn-primary" type="button">Enviar</button>
+        </div>
+    </div>
+    {% endif %}
     
-    {% block extra_js %}{% endblock %}
-    <!-- fixed dark mode button -->
-    <button id="dark-toggle-fixed" class="btn btn-primary" style="position:fixed;bottom:20px;right:20px;z-index:2000;width:50px;height:50px;border-radius:50%;font-size:1.5rem;">🌞</button>
-    <script>
-      (function(){
-        const btn = document.getElementById('dark-toggle-fixed');
-        if (!btn) return;
-        const apply = enabled=>{
-          document.body.classList.toggle('dark-mode', enabled);
-          btn.classList.toggle('dark', enabled);
-          btn.textContent = enabled ? '☀️' : '🌙';
-        };
-        let enabled = localStorage.getItem('darkMode') === '1';
-        apply(enabled);
-        btn.addEventListener('click', ()=>{
-          enabled = !enabled;
-          apply(enabled);
-          localStorage.setItem('darkMode', enabled ? '1' : '0');
-        });
-      })();
-    </script>
+        <!-- allow pages to inject modals at body-end so stacking contexts work -->
+        {% block extra_modals %}{% endblock %}
+
+        {% block extra_js %}{% endblock %}
+        <!-- fixed dark mode button -->
+        <button type="button" id="dark-toggle-fixed" class="btn btn-primary" style="position:fixed;bottom:20px;right:20px;z-index:4000;width:50px;height:50px;border-radius:50%;font-size:1.5rem;pointer-events:auto;">🌞</button>
+        {% if request.user.is_authenticated %}
+        <script src="{% static 'core/js/chat_panel.js' %}"></script>
+        <script src="{% static 'core/js/chat_notifier.js' %}"></script>
+        {% endif %}
+        <script>
+            (function(){
+                const btn = document.getElementById('dark-toggle-fixed');
+                if (!btn) return;
+                const apply = enabled=>{
+                    document.body.classList.toggle('dark-mode', enabled);
+                    btn.classList.toggle('dark', enabled);
+                    btn.textContent = enabled ? '☀️' : '🌙';
+                };
+                let enabled = localStorage.getItem('darkMode') === '1';
+                apply(enabled);
+                btn.addEventListener('click', ()=>{
+                    enabled = !enabled;
+                    apply(enabled);
+                    localStorage.setItem('darkMode', enabled ? '1' : '0');
+                });
+            })();
+        </script>
 </body>
 </html>
