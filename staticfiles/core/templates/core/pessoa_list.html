@@ -78,7 +78,7 @@
                         <tr>
                             <td class="fw-semibold">
                                 {% if p.foto %}
-                                    <img src="{{ p.foto.url }}" class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;">
+                                    <img src="{{ p.foto.url }}" class="avatar-icon me-2" alt="{{ p.user.get_full_name }}">
                                 {% else %}
                                     <i class="bi bi-person-circle me-2" style="font-size: 1.5rem; color: var(--verde-deep);"></i>
                                 {% endif %}

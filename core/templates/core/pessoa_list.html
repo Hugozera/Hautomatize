@@ -1,5 +1,6 @@
 {% extends 'core/base.html' %}
 {% load static %}
+{% load permissions_tags %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -16,9 +17,11 @@
                 </ol>
             </nav>
         </div>
+        {% if user|has_permission:"pessoa.create" %}
         <a href="{% url 'pessoa_create' %}" class="btn btn-success">
             <i class="bi bi-plus-circle me-1"></i>Novo Usuário
         </a>
+        {% endif %}
     </div>
 
     <!-- Filtros -->
@@ -79,7 +82,7 @@
                         <tr>
                             <td class="fw-semibold">
                                     {% if p.foto %}
-                                        <img src="{{ p.foto.url }}" class="avatar-sm me-2" alt="{{ p.user.get_full_name }}">
+                                        <img src="{{ p.foto.url }}" class="avatar-icon me-2" alt="{{ p.user.get_full_name }}">
                                     {% else %}
                                         <i class="bi bi-person-circle me-2" style="color: var(--verde-deep); font-size:1.4rem"></i>
                                     {% endif %}
@@ -97,9 +100,15 @@
                             </td>
                             <td>{{ p.data_cadastro|date:'d/m/Y' }}</td>
                             <td>
-                                <a href="{% url 'pessoa_edit' p.pk %}" class="btn btn-sm btn-outline-primary">
-                                    <i class="bi bi-pencil"></i>
-                                </a>
+                                {% if user|has_permission:"pessoa.edit" %}
+                                    <a href="{% url 'pessoa_edit' p.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                {% else %}
+                                    <span class=\"text-muted\" title=\"Sem permissão para editar\">
+                                        <i class=\"bi bi-lock\"></i>
+                                    </span>
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}

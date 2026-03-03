@@ -63,14 +63,12 @@ def download_manual(request):
     from .models import Empresa
     from .tasks import iniciar_download_tarefa
     
-    # Filtra empresas disponíveis
-    if request.user.is_superuser:
-        empresas = Empresa.objects.filter(ativo=True)
-    elif hasattr(request.user, 'pessoa'):
-        empresas = request.user.pessoa.empresas.filter(ativo=True)
-    else:
-        empresas = Empresa.objects.none()
+    # Qualquer usuário autenticado vê todas as empresas ativas
+    empresas = Empresa.objects.filter(ativo=True)
     
+    # inicializa flag antes de usá-la
+    precisa_certificado = False
+
     # Tarefas recentes do usuário (não precisamos mostrar durante primeiro upload)
     if hasattr(request.user, 'pessoa') and not precisa_certificado:
         tarefas_recentes = TarefaDownload.objects.filter(
@@ -260,7 +258,7 @@ def listar_downloads(request):
     """Lista todos os downloads do usuário"""
     if request.user.is_superuser:
         tarefas = TarefaDownload.objects.all().select_related('empresa', 'usuario')
-    elif hasattr(request.user, 'pessoa'):
+    elif hasattr(request.user, 'pessoa') and request.user.pessoa.empresas.exists():
         tarefas = TarefaDownload.objects.filter(usuario=request.user.pessoa).select_related('empresa')
     else:
         tarefas = TarefaDownload.objects.none()
@@ -504,16 +502,20 @@ def consultar_cnpj_receita(cnpj):
         if not isinstance(j, dict):
             return None
         if j.get('cnpj'):
+            # ensure logradouro is a dict before calling .get on it
+            log = j.get('logradouro')
+            if not isinstance(log, dict):
+                log = {}
             return {
                 'status': 'OK',
                 'nome': j.get('razao_social', ''),
                 'fantasia': j.get('nome_fantasia', ''),
                 'ie': j.get('inscricao_estadual', ''),
                 'im': '',
-                'cep': j.get('logradouro', {}).get('cep', '') if isinstance(j.get('logradouro'), dict) else j.get('cep', ''),
-                'logradouro': j.get('logradouro', {}).get('logradouro', '') if isinstance(j.get('logradouro'), dict) else j.get('logradouro', ''),
-                'numero': j.get('logradouro', {}).get('numero', ''),
-                'bairro': j.get('logradouro', {}).get('bairro', ''),
+                'cep': log.get('cep', '') or j.get('cep', ''),
+                'logradouro': log.get('logradouro', '') or j.get('logradouro', ''),
+                'numero': log.get('numero', ''),
+                'bairro': log.get('bairro', ''),
                 'municipio': j.get('municipio', ''),
                 'uf': j.get('uf', ''),
             }
@@ -580,6 +582,14 @@ def consultar_cnpj_receita(cnpj):
 @user_passes_test(lambda u: bool(u and not u.is_anonymous))
 def pessoa_list(request):
     """Lista todas as pessoas (apenas admin)"""
+    from core.permissions import check_perm
+    
+    # Verificar permissão
+    if not check_perm(request.user, 'pessoa.edit'):
+        from django.contrib.auth.decorators import login_required
+        from django.shortcuts import redirect
+        return redirect('home')
+    
     q = request.GET.get('q', '').strip()
     status = request.GET.get('status', '')
     
@@ -613,6 +623,13 @@ def _can_manage_people(u):
 @user_passes_test(lambda u: bool(u and not u.is_anonymous))
 def pessoa_create(request):
     """Cria uma nova pessoa (admin)"""
+    from core.permissions import check_perm
+    
+    # Verificar permissão
+    if not check_perm(request.user, 'pessoa.create'):
+        from django.shortcuts import redirect
+        return redirect('home')
+    
     if request.method == 'POST':
         form = PessoaForm(request.POST, request.FILES)
         if form.is_valid():
@@ -633,6 +650,13 @@ def pessoa_create(request):
 @user_passes_test(lambda u: bool(u and not u.is_anonymous))
 def pessoa_edit(request, pk):
     """Edita uma pessoa existente (admin)"""
+    from core.permissions import check_perm
+    from django.shortcuts import redirect
+    
+    # Verificar permissão
+    if not check_perm(request.user, 'pessoa.edit'):
+        return redirect('home')
+    
     pessoa = get_object_or_404(Pessoa, pk=pk)
     
     if request.method == 'POST':
@@ -927,13 +951,8 @@ def empresa_list(request):
     tipo = request.GET.get('tipo', '')
     status = request.GET.get('status', '')
     
-    # Filtra por permissão
-    if request.user.is_superuser:
-        empresas = Empresa.objects.all()
-    elif hasattr(request.user, 'pessoa'):
-        empresas = request.user.pessoa.empresas.all()
-    else:
-        empresas = Empresa.objects.none()
+    # Qualquer usuário autenticado vê todas as empresas
+    empresas = Empresa.objects.all()
     
     # Aplica filtros
     if q:
@@ -1284,13 +1303,8 @@ def empresa_certificado(request):
     msg = None
     certificados = listar_certificados_windows()
 
-    # Empresas do usuário (para permitir salvar .pfx em uma empresa existente)
-    if request.user.is_superuser:
-        empresas = Empresa.objects.filter(ativo=True)
-    elif hasattr(request.user, 'pessoa'):
-        empresas = request.user.pessoa.empresas.filter(ativo=True)
-    else:
-        empresas = Empresa.objects.none()
+    # Qualquer usuário autenticado vê todas as empresas ativas
+    empresas = Empresa.objects.filter(ativo=True)
     
     if request.method == 'POST':
         thumbprint = request.POST.get('thumbprint')
@@ -1385,7 +1399,7 @@ def agendamento_list(request):
     """Lista agendamentos do usuário"""
     if request.user.is_superuser:
         agendamentos = Agendamento.objects.select_related('empresa').all()
-    elif hasattr(request.user, 'pessoa'):
+    elif hasattr(request.user, 'pessoa') and request.user.pessoa.empresas.exists():
         empresas = request.user.pessoa.empresas.all()
         agendamentos = Agendamento.objects.filter(empresa__in=empresas).select_related('empresa')
     else:
@@ -1406,11 +1420,8 @@ def agendamento_create(request):
     else:
         form = AgendamentoForm()
     
-    # Filtra empresas para o usuário
-    if request.user.is_superuser:
-        form.fields['empresa'].queryset = Empresa.objects.filter(ativo=True)
-    elif hasattr(request.user, 'pessoa'):
-        form.fields['empresa'].queryset = request.user.pessoa.empresas.filter(ativo=True)
+    # Qualquer usuário autenticado vê todas as empresas ativas
+    form.fields['empresa'].queryset = Empresa.objects.filter(ativo=True)
     
     return render(request, 'core/agendamento_form.html', {'form': form})
 
@@ -1418,11 +1429,6 @@ def agendamento_create(request):
 def agendamento_edit(request, pk):
     """Edita agendamento existente"""
     agendamento = get_object_or_404(Agendamento, pk=pk)
-    
-    # Verifica permissão
-    if not request.user.is_superuser:
-        if not hasattr(request.user, 'pessoa') or agendamento.empresa not in request.user.pessoa.empresas.all():
-            return redirect('dashboard')
     
     AgendamentoForm = modelform_factory(Agendamento, exclude=[])
     
@@ -1530,10 +1536,6 @@ def api_agent_upload(request):
             empresa = Empresa.objects.get(pk=int(empresa_id))
         except Exception:
             return JsonResponse({'status': 'ERRO', 'msg': 'Empresa inválida.'}, status=400)
-
-        # verifica vínculo
-        if pessoa not in empresa.usuarios.all() and not pessoa.user.is_superuser:
-            return JsonResponse({'status': 'ERRO', 'msg': 'Usuário sem permissão para essa empresa.'}, status=403)
 
     # Salva arquivos recebidos
     files = request.FILES.getlist('files') or []
@@ -1646,11 +1648,11 @@ def dashboard(request):
     historico = HistoricoDownload.objects.select_related('empresa').order_by('-data_inicio')[:10]
     # Empresas do usuário
     if request.user.is_superuser:
-        empresas = Empresa.objects.filter(ativo=True)[:6]
-    elif hasattr(request.user, 'pessoa'):
+        empresas = Empresa.objects.filter(ativo=True)
+    elif hasattr(request.user, 'pessoa') and request.user.pessoa.empresas.exists():
         empresas = request.user.pessoa.empresas.filter(ativo=True)
     else:
-        empresas = Empresa.objects.none()
+        empresas = Empresa.objects.filter(ativo=True)
     return render(request, 'core/dashboard.html', {
         'total_mes': total_mes,
         'historico': historico,
@@ -1663,7 +1665,7 @@ def historico(request):
     """Histórico completo de downloads"""
     if request.user.is_superuser:
         historico = HistoricoDownload.objects.select_related('empresa').order_by('-data_inicio')
-    elif hasattr(request.user, 'pessoa'):
+    elif hasattr(request.user, 'pessoa') and request.user.pessoa.empresas.exists():
         empresas = request.user.pessoa.empresas.all()
         historico = HistoricoDownload.objects.filter(empresa__in=empresas).order_by('-data_inicio')
     else:
@@ -1700,10 +1702,10 @@ def role_list(request):
     return render(request, 'core/role_list.html', {'roles': roles})
 
 
-from .permissions import _person_has_perm
+from .permissions import check_perm
 def _can_manage_roles(u):
-    # every logged-in user can manage roles as well
-    return bool(u and not u.is_anonymous)
+    # Verificar se pode gerenciar papéis
+    return check_perm(u, 'role.manage') if u else bool(u and not u.is_anonymous)
 
 @login_required
 def role_create(request):
@@ -1801,13 +1803,8 @@ def logout_view(request):
 def certificado_list(request):
     """Lista certificados instalados no Windows"""
     certificados = listar_certificados_windows()
-    # Empresas disponíveis para o usuário (usadas ao salvar o .pfx)
-    if request.user.is_superuser:
-        empresas = Empresa.objects.filter(ativo=True)
-    elif hasattr(request.user, 'pessoa'):
-        empresas = request.user.pessoa.empresas.filter(ativo=True)
-    else:
-        empresas = Empresa.objects.none()
+    # Qualquer usuário autenticado vê todas as empresas ativas
+    empresas = Empresa.objects.filter(ativo=True)
 
     return render(request, 'core/certificado_list.html', {'certificados': certificados, 'empresas': empresas})
 
@@ -1820,7 +1817,7 @@ def empresa_search(request):
     if q:
         qs = Empresa.objects.filter(
             models.Q(nome_fantasia__icontains=q) | models.Q(razao_social__icontains=q) | models.Q(cnpj__icontains=q)
-        )[:20]
+        )[:200]
         for e in qs:
             results.append({
                 'id': e.pk,
@@ -2526,12 +2523,6 @@ def salvar_certificado(request):
 def certificado_edit(request, pk):
     """Editar / substituir o .pfx associado a uma Empresa."""
     empresa = get_object_or_404(Empresa, pk=pk)
-    # Permissão: superuser ou usuário vinculado à empresa
-    if not request.user.is_superuser:
-        if not hasattr(request.user, 'pessoa') or request.user.pessoa not in empresa.usuarios.all():
-            from django.contrib import messages
-            messages.error(request, 'Permissão negada.')
-            return redirect('empresa_list')
 
     msg = None
     if request.method == 'POST':

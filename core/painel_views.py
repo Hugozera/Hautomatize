@@ -598,7 +598,7 @@ class SecretariaPainelView(LoginRequiredMixin, View):
             pass
         ultimas = ultimas_qs[:20]
         # provide company list for auto-complete or selection
-        empresas = Empresa.objects.filter(ativo=True).order_by('nome_fantasia')[:100]
+        empresas = Empresa.objects.filter(ativo=True).order_by('nome_fantasia')
         analistas = Analista.objects.select_related('departamento').order_by('departamento__nome')[:200]
         pessoa = getattr(request.user, 'pessoa', None)
         user_can_manage = False
@@ -688,7 +688,7 @@ class SecretariaPainelView(LoginRequiredMixin, View):
                 ultimas.append({'id': at.pk, 'empresa': at.empresa, 'departamento': at.departamento.nome if at.departamento else None, 'status': at.status, 'criado_em': at.criado_em.isoformat() if at.criado_em else None})
             return JsonResponse({'status': 'ok', 'ultimas': ultimas})
         ultimas = ultimas_qs
-        empresas = Empresa.objects.filter(ativo=True).order_by('nome_fantasia')[:100]
+        empresas = Empresa.objects.filter(ativo=True).order_by('nome_fantasia')
         analistas = Analista.objects.select_related('departamento').order_by('departamento__nome')[:200]
         return render(request, 'core/painel/secretaria_painel.html', {'departamentos': departamentos, 'ultimas': ultimas, 'empresas': empresas, 'analistas': analistas})
 

@@ -190,6 +190,32 @@ class CertificadoCRUDTests(TestCase):
         finally:
             views_module.pyrequests.get = original_get
 
+    def test_brasilapi_handles_string_logradouro(self):
+        """Ensure BrasilAPI parser copes when 'logradouro' is a plain string (avoids AttributeError)."""
+        self.client.force_login(self.user_owner)
+        # craft fake BrasilAPI response with logradouro as string
+        def fake_get(url, timeout=None):
+            class R:
+                status_code = 200
+                def json(self):
+                    return {
+                        'cnpj': '12345678000195',
+                        'razao_social': 'Empresa X',
+                        'logradouro': 'N/A',
+                    }
+            return R()
+        original_get = views_module.pyrequests.get
+        views_module.pyrequests.get = fake_get
+        try:
+            resp = self.client.post(reverse('buscar_cnpj'), data=json.dumps({'cnpj':'12345678000195'}), content_type='application/json')
+            self.assertEqual(resp.status_code, 200)
+            data = resp.json()
+            self.assertEqual(data['status'], 'OK')
+            # the parser should not crash and should return at least name
+            self.assertEqual(data['nome'], 'Empresa X')
+        finally:
+            views_module.pyrequests.get = original_get
+
     def test_download_manual_asks_for_certificado(self):
         """The download page should prompt for a certificate if none is configured."""
         self.client.force_login(self.user_owner)

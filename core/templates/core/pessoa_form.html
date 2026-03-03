@@ -3,6 +3,10 @@
 {% load crispy_forms_tags %}
 {% load static %}
 
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/pessoa_form.css' %}">
+{% endblock %}
+
 {% block content %}
 <div class="container pessoa-form-container py-4">
     <div class="pessoa-form-card card animate__animated animate__fadeInUp">
@@ -49,52 +53,154 @@
                     <div class="col-md-6">{{ form.password_confirm|as_crispy_field }}</div>
                 </div>
                 <hr class="my-4">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Papéis (roles)</label>
-                        <select name="roles" id="id_roles" class="form-select select2" multiple>
-                            {% for role in form.fields.roles.queryset %}
-                                <option value="{{ role.pk }}" {% if role.pk in form.roles.value %}selected{% endif %}>{{ role.name }}{% if role.descricao %} - {{ role.descricao }}{% endif %}</option>
-                            {% endfor %}
-                        </select>
+                <!-- PAPÉIS (ROLES) -->
+                <div class="permissions-section mb-4">
+                    <h5 class="mb-3">
+                        <i class="bi bi-shield-check text-primary me-2"></i>Papéis (Roles)
+                        <small class="text-muted font-weight-normal">- Pré-definidos com permissões agrupadas</small>
+                    </h5>
+                    
+                    <div class="roles-grid" id="rolesGrid">
+                        {% for role in form.fields.roles.queryset %}
+                            <div class="role-card card mb-3" data-role-id="{{ role.pk }}" data-role-perms="{{ role.perm_list|join:',' }}">
+                                <div class="card-body p-3">
+                                    <div class="form-check d-flex align-items-start">
+                                        <input 
+                                            class="form-check-input role-checkbox mt-1" 
+                                            type="checkbox" 
+                                            name="roles" 
+                                            value="{{ role.pk }}" 
+                                            id="role_{{ role.pk }}"
+                                            {% if role.pk in form.roles.value %}checked{% endif %}
+                                            data-role-name="{{ role.name }}"
+                                            data-role-index="{{ forloop.counter0 }}"
+                                        >
+                                        <label class="form-check-label ms-2 flex-grow-1" for="role_{{ role.pk }}" style="cursor:pointer;">
+                                            <strong class="d-block">{{ role.name }}</strong>
+                                            <small class="text-muted d-block">{{ role.descricao }}</small>
+                                            <span class="badge bg-info mt-1">{{ role.perm_list|length }} permissões</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        {% endfor %}
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label fw-semibold">Permissões diretas</label>
-                        <div id="permissions-container" class="border rounded p-2">
-                            <style>.module-group {display:none;}</style>
-                            {% for entry in form.permissions.field.choices %}
-                                {% if entry.1 and entry.1.0 %}
-                                    {% with module_label=entry.0 perms=entry.1 %}
-                                        <div class="mb-2">
-                                            <div class="form-check d-flex align-items-center">
-                                                <input class="form-check-input module-checkbox" type="checkbox" id="module_{{ forloop.counter0 }}" data-module-index="{{ forloop.counter0 }}">
-                                                <span class="expand-label ms-2" data-module-index="{{ forloop.counter0 }}" style="cursor:pointer; font-weight:bold; user-select:none;">{{ module_label }}</span>
-                                            </div>
-                                            <div class="ms-3 mt-1 module-group module-group-{{ forloop.counter0 }}">
-                                                {% for code,label in perms %}
-                                                    <div class="form-check">
-                                                        <input class="form-check-input perm-checkbox" type="checkbox" name="permissions" value="{{ code }}" id="perm_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}" {% if code in form.permissions.value %}checked{% endif %}>
-                                                        <label class="form-check-label" for="perm_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}">{{ label }}</label>
-                                                    </div>
-                                                {% endfor %}
-                                            </div>
-                                        </div>
-                                    {% endwith %}
-                                {% else %}
-                                    <div class="mb-2">
-                                        <div class="form-check d-flex align-items-center">
-                                            <input class="form-check-input module-checkbox" type="checkbox" id="module_{{ forloop.counter0 }}" data-module-index="{{ forloop.counter0 }}">
-                                            <span class="expand-label ms-2" data-module-index="{{ forloop.counter0 }}" style="cursor:pointer; font-weight:bold; user-select:none;">{{ entry.1 }}</span>
+                </div>
+
+                <!-- PERMISSÕES DIRETAS -->
+                <div class="permissions-section">
+                    <h5 class="mb-3">
+                        <i class="bi bi-key text-success me-2"></i>Permissões Diretas
+                        <small class="text-muted font-weight-normal">- Adicione permissões específicas além dos papéis</small>
+                    </h5>
+                    
+                    <!-- Barra de controle -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-md-6">
+                            <input 
+                                type="text" 
+                                class="form-control form-control-sm" 
+                                id="permSearch"
+                                placeholder="🔍 Buscar permissão..."
+                            >
+                        </div>
+                        <div class="col-md-6 d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="expandAllBtn">
+                                <i class="bi bi-fullscreen me-1"></i>Expandir All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="collapseAllBtn">
+                                <i class="bi bi-fullscreen-exit me-1"></i>Recolher
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Permissões por módulo -->
+                    <div id="permissions-container" class="permissions-by-module">
+                        <style>
+                            .module-group { display: none; max-height: 0; overflow: hidden; transition: max-height 0.3s; }
+                            .module-group.expanded { display: block; max-height: 1000px; }
+                            .perm-item { padding: 0.5rem 0; }
+                            .perm-badge { font-size: 0.75rem; }
+                        </style>
+
+                        {% for entry in form.permissions.field.choices %}
+                            {% if entry.1 and entry.1.0 %}
+                                <!-- Grupo com múltiplas permissões -->
+                                {% with module_label=entry.0 perms=entry.1 %}
+                                    <div class="module-container mb-2">
+                                        <div class="module-header d-flex align-items-center p-2 bg-light rounded cursor-pointer module-toggle" data-module-index="{{ forloop.counter0 }}" style="cursor:pointer;">
+                                            <i class="bi bi-chevron-right module-toggle-icon me-2"></i>
+                                            <input 
+                                                class="form-check-input module-checkbox" 
+                                                type="checkbox" 
+                                                id="module_{{ forloop.counter0 }}" 
+                                                data-module-index="{{ forloop.counter0 }}"
+                                                style="margin-top: 0;"
+                                            >
+                                            <span class="ms-2 fw-bold flex-grow-1">{{ module_label }}</span>
+                                            <span class="badge bg-secondary perm-badge">{{ perms|length }} perms</span>
                                         </div>
                                         <div class="ms-3 mt-1 module-group module-group-{{ forloop.counter0 }}">
-                                            <div class="form-check">
-                                                <input class="form-check-input perm-checkbox" type="checkbox" name="permissions" value="{{ entry.0 }}" id="perm_{{ forloop.counter0 }}_0" {% if entry.0 in form.permissions.value %}checked{% endif %}>
-                                                <label class="form-check-label" for="perm_{{ forloop.counter0 }}_0">{{ entry.1 }}</label>
-                                            </div>
+                                            {% for code,label in perms %}
+                                                <div class="perm-item form-check">
+                                                    <input 
+                                                        class="form-check-input perm-checkbox" 
+                                                        type="checkbox" 
+                                                        name="permissions" 
+                                                        value="{{ code }}" 
+                                                        id="perm_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}"
+                                                        data-code="{{ code }}"
+                                                        data-label="{{ label }}"
+                                                        {% if code in form.permissions.value %}checked{% endif %}
+                                                    >
+                                                    <label class="form-check-label small" for="perm_{{ forloop.parentloop.counter0 }}_{{ forloop.counter0 }}">
+                                                        {{ label }}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
                                         </div>
                                     </div>
-                                {% endif %}
-                            {% endfor %}
+                                {% endwith %}
+                            {% else %}
+                                <!-- Permissão única -->
+                                <div class="module-container mb-2">
+                                    <div class="perm-item form-check p-2 bg-light rounded">
+                                        <input 
+                                            class="form-check-input perm-checkbox" 
+                                            type="checkbox" 
+                                            name="permissions" 
+                                            value="{{ entry.0 }}" 
+                                            id="perm_{{ forloop.counter0 }}_0"
+                                            data-code="{{ entry.0 }}"
+                                            {% if entry.0 in form.permissions.value %}checked{% endif %}
+                                        >
+                                        <label class="form-check-label" for="perm_{{ forloop.counter0 }}_0">
+                                            {{ entry.1 }}
+                                        </label>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- RESUMO DE PERMISSÕES -->
+                <div class="mt-4 p-3 bg-light border-left-4 rounded">
+                    <h6 class="mb-2">
+                        <i class="bi bi-info-circle me-2"></i>Resumo de Permissões
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-auto">
+                            <small class="text-muted d-block">Papéis selecionados:</small>
+                            <span class="badge bg-primary" id="selectedRolesCount">0</span>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted d-block">Permissões diretas:</small>
+                            <span class="badge bg-success" id="selectedPermsCount">0</span>
+                        </div>
+                        <div class="col-auto">
+                            <small class="text-muted d-block">Total de permissões:</small>
+                            <span class="badge bg-info" id="totalPermsCount">0</span>
                         </div>
                     </div>
                 </div>
@@ -152,33 +258,129 @@ document.addEventListener('DOMContentLoaded', function(){
         if (realInput) realInput.addEventListener('change', function(e){ handleFiles(e.target.files); });
     }
 
-    // synchronize module toggles (same logic as role_form)
-    document.querySelectorAll('.expand-label').forEach(label=>{
-        const idx = label.dataset.moduleIndex;
-        const container = document.querySelector('.module-group-' + idx);
-        if(container){
-            label.addEventListener('click', function(e){
-                e.preventDefault(); e.stopPropagation();
-                const disp = window.getComputedStyle(container).display;
-                container.style.display = (disp === 'none') ? 'block' : 'none';
-            });
-            container.style.display = 'none';
-        }
-    });
-    document.querySelectorAll('.module-checkbox').forEach(cb => {
+    // synchronize module toggles (NOVO SISTEMA)
+    const moduleToggles = document.querySelectorAll('.module-toggle');
+    const moduleCheckboxes = document.querySelectorAll('.module-checkbox');
+    const permCheckboxes = document.querySelectorAll('.perm-checkbox');
+    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
+
+    // Inicializar checkboxes de módulo
+    moduleCheckboxes.forEach(cb => {
         const idx = cb.dataset.moduleIndex;
-        const children = document.querySelectorAll('.module-group-' + idx + ' .perm-checkbox');
         const container = document.querySelector('.module-group-' + idx);
-        // initialize parent checked state
-        let allChecked = true; children.forEach(p=>{ if(!p.checked) allChecked=false; }); cb.checked = allChecked;
-        cb.addEventListener('change', ()=>{
-            children.forEach(p=> p.checked = cb.checked);
-            if(cb.checked && container) container.style.display = 'block';
+        const children = document.querySelectorAll('.module-group-' + idx + ' .perm-checkbox');
+        
+        // State inicial
+        let allChecked = true;
+        children.forEach(p => { if (!p.checked) allChecked = false; });
+        cb.checked = allChecked;
+        
+        // Comportamento
+        cb.addEventListener('change', () => {
+            children.forEach(p => p.checked = cb.checked);
+            if (cb.checked && container) {
+                container.classList.add('expanded');
+            }
+            updatePermissionCounts();
         });
-        children.forEach(p=> p.addEventListener('change', ()=>{
-            let all = true; children.forEach(c=>{ if(!c.checked) all=false; }); cb.checked = all;
+        
+        children.forEach(p => p.addEventListener('change', () => {
+            let all = true;
+            children.forEach(c => { if (!c.checked) all = false; });
+            cb.checked = all;
+            updatePermissionCounts();
         }));
     });
+
+    // Toggle módulos
+    moduleToggles.forEach(toggle => {
+        toggle.addEventListener('click', () => {
+            const idx = toggle.dataset.moduleIndex;
+            const container = document.querySelector('.module-group-' + idx);
+            const icon = toggle.querySelector('.module-toggle-icon');
+            
+            if (container) {
+                container.classList.toggle('expanded');
+                icon.style.transform = container.classList.contains('expanded') ? 'rotate(90deg)' : 'rotate(0deg)';
+            }
+        });
+    });
+
+    // Pesquisa de permissões
+    const permSearch = document.getElementById('permSearch');
+    if (permSearch) {
+        permSearch.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const containers = document.querySelectorAll('.module-container');
+            
+            containers.forEach(container => {
+                if (!query) {
+                    container.style.display = 'block';
+                    return;
+                }
+                
+                const perms = container.querySelectorAll('.perm-item label');
+                let found = false;
+                
+                perms.forEach(label => {
+                    if (label.textContent.toLowerCase().includes(query)) {
+                        found = true;
+                    }
+                });
+                
+                container.style.display = found ? 'block' : 'none';
+            });
+        });
+    }
+
+    // Botões expandir/recolher
+    const expandAllBtn = document.getElementById('expandAllBtn');
+    const collapseAllBtn = document.getElementById('collapseAllBtn');
+    
+    if (expandAllBtn) {
+        expandAllBtn.addEventListener('click', () => {
+            document.querySelectorAll('.module-group').forEach(g => {
+                g.classList.add('expanded');
+                const i = g.previousElementSibling?.querySelector('.module-toggle-icon');
+                if (i) i.style.transform = 'rotate(90deg)';
+            });
+        });
+    }
+    
+    if (collapseAllBtn) {
+        collapseAllBtn.addEventListener('click', () => {
+            document.querySelectorAll('.module-group').forEach(g => {
+                g.classList.remove('expanded');
+                const i = g.previousElementSibling?.querySelector('.module-toggle-icon');
+                if (i) i.style.transform = 'rotate(0deg)';
+            });
+        });
+    }
+
+    // Contador de permissões
+    function updatePermissionCounts() {
+        const selectedRoles = document.querySelectorAll('.role-checkbox:checked').length;
+        const selectedPerms = document.querySelectorAll('input[name="permissions"]:checked').length;
+        const totalGrouped = document.querySelectorAll('.perm-checkbox').length;
+        
+        const totalPerms = selectedRoles > 0 ? 'Auto-calculado' : selectedPerms;
+        
+        document.getElementById('selectedRolesCount').textContent = selectedRoles;
+        document.getElementById('selectedPermsCount').textContent = selectedPerms;
+        document.getElementById('totalPermsCount').textContent = totalPerms;
+    }
+
+    // Listener para mudanças em roles e permissões
+    roleCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updatePermissionCounts);
+    });
+    
+    permCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updatePermissionCounts);
+    });
+    
+    // Inicializar contadores
+    updatePermissionCounts();
 
     // Password strength (simple heuristic)
     const pwInput = document.querySelector('input[name="password"]');
@@ -206,4 +408,7 @@ document.addEventListener('DOMContentLoaded', function(){
     if (pwInput) { pwInput.addEventListener('input', updatePwMeter); updatePwMeter(); }
 });
 </script>
+
+<!-- Custom JavaScript para Pessoa Form -->
+<script src="{% static 'js/pessoa_form.js' %}"></script>
 {% endblock %}

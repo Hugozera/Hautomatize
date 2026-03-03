@@ -1,0 +1,408 @@
+/* Estilos para o formulário de pessoa com gerenciamento visual de permissões */
+
+.pessoa-form-container {
+    max-width: 1000px;
+    margin: auto;
+}
+
+.pessoa-form-card {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.pessoa-form-card .card-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 1.5rem;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+/* Avatar Drop Zone - estilos específicos do formulário */
+.avatar-drop {
+    border: 2px dashed #667eea;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #f8f9ff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-height: 220px;
+    overflow: hidden;
+}
+
+.avatar-drop:hover,
+.avatar-drop.drag-over {
+    border-color: #764ba2;
+    background: #eef2ff;
+}
+
+/* Avatar Preview - redimensionamento garantido */
+#avatarPreview {
+    display: block;
+    width: 120px !important;
+    height: 120px !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    object-fit: cover !important;
+    border-radius: 12px !important;
+    flex-shrink: 0;
+    margin-bottom: 1rem;
+    border: 2px solid #667eea;
+}
+
+.avatar-drop img {
+    max-width: 100%;
+    max-height: 200px;
+    display: block;
+}
+
+.avatar-hint {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+/* Seção de permissões */
+.permissions-section {
+    background: #ffffff;
+    padding: 1.5rem;
+    border-radius: 8px;
+    margin-bottom: 1.5rem;
+}
+
+.permissions-section h5 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #333;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 0.5rem;
+}
+
+/* Grid de papéis (roles) */
+.roles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.role-card {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.role-card:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+    transform: translateY(-2px);
+}
+
+.role-card.selected {
+    border-color: #667eea;
+    background: #f8f9ff;
+}
+
+.role-checkbox {
+    cursor: pointer;
+    accent-color: #667eea;
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.role-checkbox:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+.role-card strong {
+    color: #333;
+    display: block;
+    margin-bottom: 0.25rem;
+}
+
+.role-card .badge {
+    font-size: 0.7rem;
+    padding: 0.35rem 0.6rem;
+    font-weight: 600;
+}
+
+/* Permissões por módulo */
+.permissions-by-module {
+    background: #fafafa;
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.module-container {
+    margin-bottom: 0.5rem;
+}
+
+.module-header {
+    background: linear-gradient(135deg, #f0f4ff 0%, #f8f9ff 100%);
+    border-left: 4px solid #667eea;
+    transition: all 0.2s ease;
+}
+
+.module-header:hover {
+    background: linear-gradient(135deg, #e8ecff 0%, #f0f4ff 100%);
+}
+
+.module-toggle-icon {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.module-header .fw-bold {
+    color: #333;
+    font-size: 0.95rem;
+}
+
+.module-group {
+    background: white;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.module-group.expanded {
+    background: white;
+    border: 1px solid #e0e0e0;
+}
+
+.perm-item {
+    display: flex;
+    align-items: center;
+}
+
+.perm-checkbox {
+    accent-color: #667eea;
+    cursor: pointer;
+    width: 1rem;
+    height: 1rem;
+    margin-right: 0.5rem;
+    flex-shrink: 0;
+}
+
+.perm-item label {
+    cursor: pointer;
+    flex-grow: 1;
+    user-select: none;
+    margin-bottom: 0;
+}
+
+.perm-item:hover {
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.perm-badge {
+    font-size: 0.7rem;
+    padding: 0.25rem 0.6rem;
+    font-weight: 600;
+}
+
+/* Controles de busca e ações */
+#permSearch {
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    padding: 0.6rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+#permSearch:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.btn-outline-primary {
+    color: #667eea;
+    border-color: #667eea;
+}
+
+.btn-outline-primary:hover {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.btn-outline-secondary:hover {
+    background: #999;
+    border-color: #999;
+}
+
+/* Resumo de permissões */
+.bg-light.border-left-4 {
+    border-left: 4px solid #667eea !important;
+    background: #f8f9ff !important;
+}
+
+.bg-light.border-left-4 h6 {
+    color: #333;
+    font-weight: 600;
+}
+
+.bg-light.border-left-4 .badge {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    font-weight: 600;
+    min-width: 40px;
+    text-align: center;
+}
+
+/* Alertas */
+.alert-info {
+    background: #e7f3ff;
+    border: 1px solid #b3d9ff;
+    color: #004085;
+    border-radius: 6px;
+}
+
+.alert-info i {
+    color: #0056b3;
+}
+
+/* Botões de ação */
+.btn-success {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    background: linear-gradient(135deg, #5568d3 0%, #6b428a 100%);
+}
+
+.btn-secondary {
+    background: #999;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+}
+
+.btn-secondary:hover {
+    background: #777;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .roles-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pessoa-form-container {
+        padding: 0 1rem;
+    }
+    
+    .row.g-4 {
+        grid-gap: 1rem !important;
+    }
+}
+
+/* Animações */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate__animated {
+    animation-duration: 0.5s;
+    animation-fill-mode: both;
+}
+
+.animate__fadeInUp {
+    animation-name: slideIn;
+}
+
+/* Password meter */
+.pw-meter {
+    display: flex;
+    height: 6px;
+    background: #e0e0e0;
+    border-radius: 3px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.pw-fill {
+    height: 100%;
+    width: 0%;
+    transition: width 0.3s ease;
+    background: linear-gradient(90deg, #ff6b6b, #ff9a9a);
+}
+
+.pw-text {
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+    text-align: right;
+}
+
+/* Estilo para estado de checkbox quando selecionado */
+.form-check-input:checked {
+    background-color: #667eea;
+    border-color: #667eea;
+    box-shadow: inset 0 0 0 3px white, inset 0 0 0 5px #667eea;
+}
+
+.form-check-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.25);
+}
+
+/* Label com melhor legibilidade */
+.form-check-label {
+    color: #333;
+    font-weight: 400;
+    cursor: pointer;
+    user-select: none;
+}
+
+.form-check-label.fw-semibold {
+    font-weight: 600;
+    color: #333;
+}
+
+/* Container geral */
+.container {
+    padding: 2rem 1rem;
+}
+
+/* Suporte a temas escuros (opcional) */
+@media (prefers-color-scheme: dark) {
+    .permissions-section {
+        background: #2a2a2a;
+        color: #e0e0e0;
+    }
+    
+    .module-header {
+        background: #3a3a3a;
+    }
+    
+    .module-group {
+        background: #333;
+    }
+    
+    .role-card {
+        background: #2a2a2a;
+        border-color: #444;
+    }
+    
+    .perm-checkbox,
+    .role-checkbox {
+        accent-color: #8b9eff;
+    }
+}

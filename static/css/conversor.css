@@ -67,7 +67,6 @@ body { background: #f6f8fa; }
 .btn { border-radius: 8px; }
 .table { background: white; border-radius:8px; overflow:hidden; }
 .badge { border-radius: 6px; }
-
 /* Small utility spacing */
 .gap-2 { gap: .5rem; }
 .mt-2 { margin-top: .5rem !important; }
@@ -75,8 +74,7 @@ body { background: #f6f8fa; }
 /* Improve table row hover */
 .table tbody tr:hover { background: rgba(0,0,0,0.02); }
 
-/* Avatar */
-.avatar-sm { width:32px; height:32px; border-radius:50%; object-fit:cover; display:inline-block; vertical-align:middle; }
+/* Avatar - estilos consolidados em core/css/avatars.css */
 
 /* Compact table */
 .table--compact td, .table--compact th { padding: .6rem .75rem; }
@@ -90,12 +88,6 @@ body { background: #f6f8fa; }
 /* Empresa icon specific */
 .icon-empresa { color: var(--verde-deep) !important; }
 
-/* Avatar preview & drag-drop */
-.avatar-drop { border: 2px dashed #e9ecef; border-radius: 12px; padding: 12px; text-align: center; background: #fff; cursor: pointer; }
-.avatar-drop.drag-over { border-color: var(--verde-deep); background: rgba(44,138,79,0.03); }
-.avatar-preview { width: 128px; height:128px; border-radius: 12px; object-fit:cover; display:block; margin: 0 auto 8px; }
-.avatar-hint { font-size: .9rem; color: #666; }
-
 /* Password strength meter */
 .pw-meter { height: 8px; background: #e9ecef; border-radius: 6px; overflow:hidden; }
 .pw-meter > .pw-fill { height:100%; width:0%; background: linear-gradient(90deg,#ff6b6b,#ffd166); transition: width .2s ease; }
@@ -106,6 +98,4 @@ body { background: #f6f8fa; }
 
 /* Profile page tweaks */
 .profile-container { max-width: 900px; margin: 0 auto; }
-.avatar-lg { width:120px; height:120px; border-radius:50%; object-fit:cover; display:inline-block; }
-.avatar-placeholder { width:120px; height:120px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; }
 

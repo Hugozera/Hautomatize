@@ -142,6 +142,10 @@ class PessoaForm(forms.ModelForm):
     def save(self, commit=True):
         pessoa = super().save(commit=False)
         
+        # Redimensionar imagem se foi feito upload
+        if pessoa.foto and hasattr(pessoa.foto, 'file'):
+            self._resize_image(pessoa.foto)
+        
         if not pessoa.pk:
             user = User.objects.create_user(
                 username=self.cleaned_data['username'],
@@ -172,6 +176,43 @@ class PessoaForm(forms.ModelForm):
                 pessoa.roles.set(self.cleaned_data['roles'])
         
         return pessoa
+
+    def _resize_image(self, image_field):
+        """Redimensiona a imagem para tamanho máximo de 300x300px"""
+        from PIL import Image
+        from io import BytesIO
+        from django.core.files.base import ContentFile
+        
+        try:
+            img = Image.open(image_field.file)
+            
+            # Limite máximo
+            max_size = (300, 300)
+            
+            # Se imagem é maior que o limite, redimensionar
+            if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                
+                # Converter para RGB se for PNG com alpha
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    rgb_img.paste(img, mask=img.split()[-1] if img.mode == 'RGBA' else None)
+                    img = rgb_img
+                
+                # Salvar em BytesIO
+                img_io = BytesIO()
+                img.save(img_io, format='JPEG', quality=85, optimize=True)
+                img_io.seek(0)
+                
+                # Substituir arquivo
+                image_field.save(
+                    os.path.splitext(image_field.name)[0] + '.jpg',
+                    ContentFile(img_io.read()),
+                    save=False
+                )
+        except Exception as e:
+            # Se houver erro, apenas deixar como está
+            pass
 
 class EmpresaForm(forms.ModelForm):
     class Meta:
