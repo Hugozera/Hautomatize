@@ -1,6 +1,6 @@
 """
 Serviço de automação com Playwright para o Emissor Nacional
-VERSÃO COM PAGINAÇÃO COMPLETA - Baseada no HTML real do site
+VERSÃO OTIMIZADA - Download e classificação de notas fiscais
 """
 
 import os
@@ -11,153 +11,154 @@ import pickle
 import asyncio
 import threading
 import re
+import xml.etree.ElementTree as ET
+import zipfile
 from datetime import datetime
-from urllib.parse import quote, urlparse, parse_qs
-from typing import List, Dict, Tuple, Optional
-import traceback
+from urllib.parse import quote
+from typing import List, Dict, Tuple
+import shutil
+from pathlib import Path
+from enum import Enum
 
 import requests
 
-# Importações do projeto
-from .certificado_service import (
-    converter_pfx_para_cert_e_key
-)
+from .certificado_service import converter_pfx_para_cert_e_key
 
-# Configuração do event loop para Windows (UMA VEZ, no início)
+# Namespace do XML da NFSe
+NAMESPACES = {
+    'nfse': 'http://www.sped.fazenda.gov.br/nfse',
+    'dsig': 'http://www.w3.org/2000/09/xmldsig#'
+}
+
+# Configuração do event loop para Windows
 if sys.platform == "win32":
     try:
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-        # Cria um loop principal
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
-    except Exception as e:
-        print(f"⚠️ Aviso ao configurar event loop: {e}")
+    except:
+        pass
+
+
+class ClassificacaoNota(Enum):
+    """Classificações possíveis para uma nota fiscal"""
+    SEM_IRRF_SEM_RETENCAO = "SEM IRRF - SEM RETENÇÃO"
+    SEM_IRRF_COM_RETENCAO = "SEM IRRF - COM RETENÇÃO"
+    COM_IRRF_SEM_RETENCAO = "COM IRRF - SEM RETENÇÃO"
+    COM_IRRF_COM_RETENCAO = "COM IRRF - COM RETENÇÃO"
+    
+    @classmethod
+    def get_pasta(cls, classificacao):
+        pastas = {
+            cls.SEM_IRRF_SEM_RETENCAO: "01 - SEM IRRF - SEM RETENCAO",
+            cls.SEM_IRRF_COM_RETENCAO: "02 - SEM IRRF - COM RETENCAO",
+            cls.COM_IRRF_SEM_RETENCAO: "03 - COM IRRF - SEM RETENCAO",
+            cls.COM_IRRF_COM_RETENCAO: "04 - COM IRRF - COM RETENCAO",
+        }
+        return pastas.get(classificacao, "05 - OUTROS")
+
+
+class AnalisadorImpostos:
+    """Analisa XMLs de NFSe para identificar impostos"""
+    
+    @staticmethod
+    def analisar_xml(caminho_xml: str) -> Dict:
+        resultado = {
+            'tem_irrf': False,
+            'retencao_issqn': 'NAO_INFORMADO',
+            'numero_nfse': Path(caminho_xml).stem,
+            'classificacao': None
+        }
+        
+        try:
+            tree = ET.parse(caminho_xml)
+            root = tree.getroot()
+            
+            # Extrair número da NFSe
+            nfse_elem = root.find('.//nfse:nNFSe', NAMESPACES)
+            if nfse_elem is not None and nfse_elem.text:
+                resultado['numero_nfse'] = nfse_elem.text.strip()
+            
+            # Verificar IRRF
+            locais_irrf = ['.//nfse:vIRRF', './/nfse:irrf', './/nfse:valorIRRF']
+            for local in locais_irrf:
+                elem = root.find(local, NAMESPACES)
+                if elem is not None and elem.text:
+                    try:
+                        if float(elem.text.replace(',', '.')) > 0:
+                            resultado['tem_irrf'] = True
+                            break
+                    except:
+                        pass
+            
+            # Verificar retenção de ISSQN
+            locais_retencao = ['.//nfse:tribMun//nfse:tpRetISSQN', './/nfse:trib//nfse:tribMun//nfse:tpRetISSQN']
+            for local in locais_retencao:
+                elem = root.find(local, NAMESPACES)
+                if elem is not None and elem.text:
+                    resultado['retencao_issqn'] = 'RETIDO' if elem.text == '1' else 'NAO RETIDO'
+                    break
+            
+            # Classificar
+            if not resultado['tem_irrf'] and resultado['retencao_issqn'] == 'NAO RETIDO':
+                resultado['classificacao'] = ClassificacaoNota.SEM_IRRF_SEM_RETENCAO
+            elif not resultado['tem_irrf'] and resultado['retencao_issqn'] == 'RETIDO':
+                resultado['classificacao'] = ClassificacaoNota.SEM_IRRF_COM_RETENCAO
+            elif resultado['tem_irrf'] and resultado['retencao_issqn'] == 'NAO RETIDO':
+                resultado['classificacao'] = ClassificacaoNota.COM_IRRF_SEM_RETENCAO
+            elif resultado['tem_irrf'] and resultado['retencao_issqn'] == 'RETIDO':
+                resultado['classificacao'] = ClassificacaoNota.COM_IRRF_COM_RETENCAO
+            else:
+                resultado['classificacao'] = ClassificacaoNota.SEM_IRRF_SEM_RETENCAO if not resultado['tem_irrf'] else ClassificacaoNota.COM_IRRF_SEM_RETENCAO
+            
+        except:
+            resultado['classificacao'] = ClassificacaoNota.SEM_IRRF_SEM_RETENCAO
+        
+        return resultado
 
 
 class EmissorNacionalPlaywright:
-    """Classe principal para automação com Playwright - COM PAGINAÇÃO"""
+    """Automação com Playwright para download de notas"""
     
-    __slots__ = ('empresa', 'cert_path', 'senha', 'base_url', 'headless',
-                 'playwright', 'browser', 'context', 'page', 'download_path',
-                 'cert_pem', 'key_pem', 'cookies_path', '_session', '_thread_id',
-                 '_pagina_atual', '_total_paginas')
-
     def __init__(self, empresa, download_path=None, headless=True):
         self.empresa = empresa
-        if not empresa.certificado_arquivo:
-            raise Exception("Objeto Empresa sem arquivo de certificado")
-        if not empresa.certificado_senha:
-            raise Exception("Objeto Empresa sem senha de certificado")
         self.cert_path = empresa.certificado_arquivo.path
         self.senha = empresa.certificado_senha
         self.base_url = "https://www.nfse.gov.br"
         self.headless = headless
-
-        self.playwright = None
-        self.browser = None
+        self._thread_id = threading.get_ident()
+        
+        self.download_path = download_path or os.path.join(tempfile.gettempdir(), "nfse_downloads")
+        os.makedirs(self.download_path, exist_ok=True)
+        
+        self.cert_pem = None
+        self.key_pem = None
         self.context = None
         self.page = None
         self._session = None
-        self._thread_id = threading.get_ident()
-        
-        self._pagina_atual = 1
-        self._total_paginas = None
-
-        self.download_path = download_path or os.path.join(tempfile.gettempdir(), "nfse_downloads")
-        os.makedirs(self.download_path, exist_ok=True)
-
-        self.cert_pem = None
-        self.key_pem = None
-        self.cookies_path = None
-
-        if empresa.certificado_thumbprint:
-            self.cookies_path = os.path.join(
-                tempfile.gettempdir(),
-                f"cookies_{empresa.certificado_thumbprint[:8]}.pkl"
-            )
 
     def _verificar_thread(self):
-        """Verifica se está na mesma thread"""
         if threading.get_ident() != self._thread_id:
-            raise RuntimeError(
-                f"Playwright não pode ser usado em threads diferentes. "
-                f"Criado na thread {self._thread_id}, usado na {threading.get_ident()}"
-            )
+            raise RuntimeError("Playwright não pode ser usado em threads diferentes")
 
     def extrair_certificado(self):
-        """Extrai certificado do PFX para PEM"""
         self._verificar_thread()
         if not os.path.exists(self.cert_path):
             raise Exception("Certificado não encontrado")
-
-        cert_pem, key_pem = converter_pfx_para_cert_e_key(self.cert_path, self.senha)
         
-        if not cert_pem or not key_pem:
+        self.cert_pem, self.key_pem = converter_pfx_para_cert_e_key(self.cert_path, self.senha)
+        if not self.cert_pem or not self.key_pem:
             raise Exception("Falha ao extrair certificado")
-        
-        self.cert_pem = cert_pem
-        self.key_pem = key_pem
 
-    def salvar_cookies(self):
-        """Salva cookies para reuso futuro"""
-        self._verificar_thread()
-        if not self.cookies_path or not self.context:
-            return
-        try:
-            with open(self.cookies_path, 'wb') as f:
-                pickle.dump(self.context.cookies(), f)
-        except Exception as e:
-            print(f"⚠️ Erro ao salvar cookies: {e}")
-
-    def carregar_cookies(self) -> bool:
-        """Carrega cookies salvos anteriormente"""
-        self._verificar_thread()
-        if not self.cookies_path or not os.path.exists(self.cookies_path):
-            return False
-        try:
-            with open(self.cookies_path, 'rb') as f:
-                cookies = pickle.load(f)
-            if cookies and self.context:
-                self.context.add_cookies(cookies)
-                return True
-        except Exception as e:
-            print(f"⚠️ Erro ao carregar cookies: {e}")
-        return False
-
-    def iniciar(self, usar_cookies=True):
-        """Inicia navegador com configurações otimizadas"""
+    def iniciar(self):
         self._verificar_thread()
         self.extrair_certificado()
         
-        # Import Playwright aqui para evitar problemas de importação
-        try:
-            from playwright.sync_api import sync_playwright
-        except ImportError:
-            raise Exception("Playwright não instalado. Execute: pip install playwright && playwright install chromium")
-
-        try:
-            self.playwright = sync_playwright().start()
-        except Exception as e:
-            print(f"❌ Erro ao iniciar Playwright: {e}")
-            raise
-
-        # Otimizações de performance
-        launch_options = {
-            "headless": self.headless,
-            "args": [
-                '--disable-gpu',
-                '--disable-dev-shm-usage',
-                '--disable-setuid-sandbox',
-                '--no-first-run',
-                '--no-sandbox',
-                '--no-zygote',
-                '--disable-web-security',
-                '--disable-features=VizDisplayCompositor'
-            ]
-        }
+        from playwright.sync_api import sync_playwright
         
-        self.browser = self.playwright.chromium.launch(**launch_options)
-
+        self.playwright = sync_playwright().start()
+        self.browser = self.playwright.chromium.launch(headless=self.headless)
+        
         context_options = {
             "accept_downloads": True,
             "ignore_https_errors": True,
@@ -165,473 +166,231 @@ class EmissorNacionalPlaywright:
                 "origin": self.base_url,
                 "certPath": self.cert_pem,
                 "keyPath": self.key_pem
-            }],
-            "viewport": {"width": 1280, "height": 800},
-            "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            }]
         }
-
+        
         self.context = self.browser.new_context(**context_options)
-        self.context.set_default_timeout(15000)
-
-        if usar_cookies and self.cookies_path:
-            self.carregar_cookies()
-
         self.page = self.context.new_page()
-        self.page.set_default_timeout(15000)
         return True
 
     def fazer_login(self) -> bool:
-        """Login ultra rápido"""
         self._verificar_thread()
         
-        # Tentativa 1: Verificar se já está autenticado
         try:
             self.page.goto(f"{self.base_url}/EmissorNacional/Dashboard", timeout=5000)
             self.page.wait_for_load_state("domcontentloaded", timeout=5000)
-            if self._verificar_autenticado():
-                self.salvar_cookies()
+            if self.page.locator("a[href*='/Notas/']").count() > 0:
                 return True
-        except Exception as e:
-            print(f"⚠️ Erro na verificação inicial: {e}")
+        except:
+            pass
 
-        # Tentativa 2: Login com certificado
         try:
             self.page.goto(f"{self.base_url}/EmissorNacional/Login", timeout=10000)
             self.page.wait_for_load_state("domcontentloaded", timeout=5000)
-            
-            # Clicar no botão de certificado
             self.page.locator("a[href*='Certificado']").first.click(timeout=5000)
-            
-            # Aguardar redirecionamento
-            try:
-                self.page.wait_for_url("**/Dashboard**", timeout=10000)
-                if self._verificar_autenticado():
-                    self.salvar_cookies()
-                    return True
-            except Exception as e:
-                print(f"⚠️ Erro no redirecionamento: {e}")
-                
-        except Exception as e:
-            print(f"⚠️ Erro no login: {e}")
-
-        return False
-
-    def _verificar_autenticado(self) -> bool:
-        """Verifica se já está autenticado"""
-        self._verificar_thread()
-        try:
-            return self.page.locator("a[href*='/Notas/']").count() > 0
+            self.page.wait_for_url("**/Dashboard**", timeout=10000)
+            return True
         except:
             return False
 
-    def acessar_notas(self, tipo: str) -> str:
-        """Acessa página de notas"""
+    def aplicar_filtro(self, tipo: str, data_inicio: str, data_fim: str):
         self._verificar_thread()
         url = f"{self.base_url}/EmissorNacional/Notas/{'Emitidas' if tipo == 'emitidas' else 'Recebidas'}"
         self.page.goto(url, timeout=10000)
         self.page.wait_for_load_state("domcontentloaded", timeout=5000)
-        return self.page.url
-
-    def aplicar_filtro(self, data_inicio: str, data_fim: str) -> str:
-        """Aplica filtro de datas"""
-        self._verificar_thread()
+        
         data_inicio_fmt = datetime.strptime(data_inicio, "%Y-%m-%d").strftime("%d/%m/%Y")
         data_fim_fmt = datetime.strptime(data_fim, "%Y-%m-%d").strftime("%d/%m/%Y")
-
-        base_url = self.page.url.split("?")[0]
-        url_busca = f"{base_url}?executar=1&busca=&datainicio={quote(data_inicio_fmt)}&datafim={quote(data_fim_fmt)}"
-
+        
+        url_busca = f"{url}?executar=1&busca=&datainicio={quote(data_inicio_fmt)}&datafim={quote(data_fim_fmt)}"
         self.page.goto(url_busca, timeout=10000)
         self.page.wait_for_load_state("domcontentloaded", timeout=5000)
-        
-        # Após aplicar filtro, identificar total de páginas
-        self._identificar_total_paginas()
-        
-        return self.page.url
 
-    def _identificar_total_paginas(self):
-        """Identifica o total de páginas disponíveis baseado na paginação"""
-        try:
-            # Procura todos os links de página (excluindo primeiro/anterior/próxima/última)
-            links_pagina = self.page.locator("ul.pagination li a[href*='pg=']").all()
-            
-            maiores_numeros = []
-            for link in links_pagina:
-                href = link.get_attribute("href") or ""
-                # Extrair número da página do href
-                match = re.search(r'[?&]pg=(\d+)', href)
-                if match:
-                    maiores_numeros.append(int(match.group(1)))
-            
-            if maiores_numeros:
-                self._total_paginas = max(maiores_numeros)
-                print(f"📊 Total de páginas identificado: {self._total_paginas}")
-            else:
-                # Se não encontrou links com pg, pode ser página única
-                self._total_paginas = 1
-                print(f"📊 Aparentemente página única")
-                
-        except Exception as e:
-            print(f"⚠️ Erro ao identificar total de páginas: {e}")
-            self._total_paginas = None
-
-    def extrair_links_todas_paginas(self) -> List[Dict]:
-        """
-        Extrai links de PDF e XML de TODAS as páginas
-        Navega pela paginação usando a estrutura exata do site
-        """
+    def extrair_links(self) -> Tuple[List[Dict], int]:
+        """Extrai links de todas as páginas"""
         self._verificar_thread()
         todos_links = []
-        self._pagina_atual = 1
-        
-        print(f"\n🔄 Iniciando extração de links de TODAS as páginas...")
+        pagina = 1
         
         while True:
-            print(f"  📄 Processando página {self._pagina_atual}" + 
-                  (f" de {self._total_paginas}" if self._total_paginas else ""))
+            # Extrair PDFs
+            pdf_links = self.page.locator("a[href*='/Notas/Download/DANFSe/']").all()
+            for link in pdf_links:
+                href = link.get_attribute("href")
+                if href:
+                    if not href.startswith('http'):
+                        href = f"https://www.nfse.gov.br{href}"
+                    numero = href.split('/')[-1]
+                    todos_links.append({"numero": numero, "url": href, "tipo": "PDF"})
             
-            # Extrair links da página atual
-            links_pagina = self._extrair_links_pagina_atual()
-            todos_links.extend(links_pagina)
+            # Extrair XMLs
+            xml_links = self.page.locator("a[href*='/Notas/Download/NFSe/']").all()
+            for link in xml_links:
+                href = link.get_attribute("href")
+                if href:
+                    if not href.startswith('http'):
+                        href = f"https://www.nfse.gov.br{href}"
+                    numero = href.split('/')[-1]
+                    todos_links.append({"numero": numero, "url": href, "tipo": "XML"})
             
-            print(f"     → Encontrados {len(links_pagina)} links nesta página (total acumulado: {len(todos_links)})")
-            
-            # Verificar se existe próxima página
-            if not self._ir_para_proxima_pagina():
-                print(f"  ✅ Fim da paginação. Total final: {len(todos_links)} links em {self._pagina_atual} páginas")
+            # Próxima página
+            proximo = self.page.locator("ul.pagination li a i.fa-angle-right").first
+            if proximo.count() == 0:
                 break
-            
-            self._pagina_atual += 1
-            
-            # Pequena pausa para não sobrecarregar
+                
+            link_pai = proximo.locator("xpath=..")
+            href = link_pai.get_attribute("href")
+            if not href or href == "javascript:":
+                break
+                
+            self.page.goto(f"https://www.nfse.gov.br{href}", timeout=10000)
+            self.page.wait_for_load_state("domcontentloaded", timeout=5000)
+            pagina += 1
             time.sleep(0.5)
         
-        return todos_links
+        total_notas = len([l for l in todos_links if l['tipo'] == 'XML'])
+        return todos_links, total_notas
 
-    def _extrair_links_pagina_atual(self) -> List[Dict]:
-        """Extrai links da página atual"""
-        links = []
-        
-        # Aguardar a tabela carregar
-        try:
-            self.page.wait_for_selector("table", timeout=5000)
-        except:
-            print("  ⚠️ Tabela não encontrada na página")
-            return links
-        
-        # Extrair PDFs
-        pdf_links = self.page.locator("a[href*='/Notas/Download/DANFSe/']").all()
-        for link in pdf_links:
-            try:
-                href = link.get_attribute("href")
-                if href:
-                    if not href.startswith('http'):
-                        href = f"https://www.nfse.gov.br{href}"
-                    numero = href.split('/')[-1]
-                    links.append({"numero": numero, "url": href, "tipo": "PDF"})
-            except:
-                continue
-
-        # Extrair XMLs
-        xml_links = self.page.locator("a[href*='/Notas/Download/NFSe/']").all()
-        for link in xml_links:
-            try:
-                href = link.get_attribute("href")
-                if href:
-                    if not href.startswith('http'):
-                        href = f"https://www.nfse.gov.br{href}"
-                    numero = href.split('/')[-1]
-                    links.append({"numero": numero, "url": href, "tipo": "XML"})
-            except:
-                continue
-        
-        return links
-
-    def _ir_para_proxima_pagina(self) -> bool:
-        """
-        Navega para a próxima página baseado na estrutura EXATA do site:
-        <ul class="pagination">
-            <li class="disabled"><a><i class="fa fa-angle-left"></i></a></li>
-            <li class="active"><a>1</a></li>
-            <li><a href="/EmissorNacional/Notas/Emitidas?pg=2">2</a></li>
-            <li><a href="/EmissorNacional/Notas/Emitidas?pg=3">3</a></li>
-            <li><a href="/EmissorNacional/Notas/Emitidas?pg=2"><i class="fa fa-angle-right"></i></a></li>
-        </ul>
-        """
-        try:
-            # Verificar se o link "Próxima" (seta para direita) existe e não está desabilitado
-            proximo_link = self.page.locator("ul.pagination li a i.fa-angle-right").first
-            
-            if proximo_link.count() > 0:
-                # Encontrou o ícone, pegar o link pai
-                link_pai = proximo_link.locator("xpath=..")
-                
-                if link_pai.count() > 0:
-                    href = link_pai.get_attribute("href")
-                    if href:
-                        print(f"     → Navegando para próxima página: {href}")
-                        self.page.goto(f"https://www.nfse.gov.br{href}", timeout=10000)
-                        self.page.wait_for_load_state("domcontentloaded", timeout=5000)
-                        return True
-            
-            # Alternativa: procurar pelo link com texto igual ao número da próxima página
-            proximo_numero = self._pagina_atual + 1
-            link_proximo_numero = self.page.locator(f"ul.pagination li a:has-text('{proximo_numero}')").first
-            
-            if link_proximo_numero.count() > 0:
-                href = link_proximo_numero.get_attribute("href")
-                if href:
-                    print(f"     → Navegando para página {proximo_numero}")
-                    self.page.goto(f"https://www.nfse.gov.br{href}", timeout=10000)
-                    self.page.wait_for_load_state("domcontentloaded", timeout=5000)
-                    return True
-            
-            # Se chegou aqui, não há próxima página
-            return False
-            
-        except Exception as e:
-            print(f"  ⚠️ Erro ao navegar para próxima página: {e}")
-            return False
-
-    def _get_session(self) -> requests.Session:
-        """Obtém ou cria sessão HTTP reutilizável"""
-        self._verificar_thread()
-        if self._session is None:
-            cookies = {c['name']: c['value'] for c in self.context.cookies()}
-            
-            session = requests.Session()
-            session.cert = (self.cert_pem, self.key_pem)
-            session.verify = False
-            session.cookies.update(cookies)
-            session.headers.update({
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'Connection': 'keep-alive',
-            })
-            self._session = session
-        
-        return self._session
-
-    def baixar_notas(self, links: List[Dict]) -> int:
-        """Download sequencial (mais estável que paralelo)"""
+    def baixar_arquivos(self, links: List[Dict]) -> int:
+        """Download sequencial dos arquivos"""
         self._verificar_thread()
         if not links:
             return 0
-
+        
+        session = requests.Session()
+        session.cert = (self.cert_pem, self.key_pem)
+        session.verify = False
+        
+        cookies = {c['name']: c['value'] for c in self.context.cookies()}
+        session.cookies.update(cookies)
+        
         sucessos = 0
-        session = self._get_session()
         total = len(links)
         
-        print(f"\n📥 Iniciando download de {total} arquivos...")
-        
-        for i, link in enumerate(links, 1):
+        for link in links:
             try:
-                print(f"  [{i}/{total}] Baixando {link['tipo']} {link['numero']}...", end=" ")
-                
                 resp = session.get(link["url"], timeout=30)
                 if resp.status_code == 200:
-                    filename = f"{link['numero']}.{link['tipo'].lower()}"
+                    ext = 'pdf' if link['tipo'] == 'PDF' else 'xml'
+                    filename = f"{link['numero']}.{ext}"
                     caminho = os.path.join(self.download_path, filename)
                     
                     with open(caminho, 'wb') as f:
                         f.write(resp.content)
-                    
                     sucessos += 1
-                    print(f"✅ OK")
-                else:
-                    print(f"❌ HTTP {resp.status_code}")
-            except Exception as e:
-                print(f"❌ Erro: {str(e)[:50]}")
-
+            except:
+                pass
+        
         return sucessos
 
     def fechar(self):
-        """Fecha recursos de forma ordenada"""
-        self._verificar_thread()
-        if self._session:
-            self._session.close()
-            self._session = None
-            
-        if self.page:
-            try:
-                self.page.close()
-            except:
-                pass
-            
-        if self.context:
-            try:
+        try:
+            if self.context:
                 self.context.close()
-            except:
-                pass
-            
-        if self.browser:
-            try:
+            if self.browser:
                 self.browser.close()
-            except:
-                pass
-            
-        if self.playwright:
-            try:
+            if self.playwright:
                 self.playwright.stop()
-            except:
-                pass
-            
-        # Limpar arquivos temporários
-        for f in [self.cert_pem, self.key_pem]:
-            if f and os.path.exists(f):
-                try:
-                    os.remove(f)
-                except:
-                    pass
+        except:
+            pass
 
 
-# ==================== FUNÇÃO PRINCIPAL ====================
+def organizar_notas(pasta_download: str) -> str:
+    """Organiza as notas em pastas por classificação"""
+    
+    # Criar estrutura de pastas
+    pasta_org = os.path.join(pasta_download, "organizado")
+    pastas = {
+        ClassificacaoNota.SEM_IRRF_SEM_RETENCAO: os.path.join(pasta_org, "01 - SEM IRRF - SEM RETENCAO"),
+        ClassificacaoNota.SEM_IRRF_COM_RETENCAO: os.path.join(pasta_org, "02 - SEM IRRF - COM RETENCAO"),
+        ClassificacaoNota.COM_IRRF_SEM_RETENCAO: os.path.join(pasta_org, "03 - COM IRRF - SEM RETENCAO"),
+        ClassificacaoNota.COM_IRRF_COM_RETENCAO: os.path.join(pasta_org, "04 - COM IRRF - COM RETENCAO"),
+    }
+    
+    for pasta in pastas.values():
+        os.makedirs(pasta, exist_ok=True)
+    
+    # Listar arquivos
+    arquivos_xml = list(Path(pasta_download).glob("*.xml"))
+    arquivos_pdf = {f.stem: f for f in Path(pasta_download).glob("*.pdf")}
+    
+    # Analisar e organizar
+    contagem = {p: 0 for p in pastas.values()}
+    
+    for xml_path in arquivos_xml:
+        resultado = AnalisadorImpostos.analisar_xml(str(xml_path))
+        pasta_dest = pastas[resultado['classificacao']]
+        
+        # Copiar XML
+        shutil.copy2(xml_path, os.path.join(pasta_dest, xml_path.name))
+        contagem[pasta_dest] += 1
+        
+        # Copiar PDF correspondente (mesmo nome)
+        if xml_path.stem in arquivos_pdf:
+            pdf_path = arquivos_pdf[xml_path.stem]
+            shutil.copy2(pdf_path, os.path.join(pasta_dest, pdf_path.name))
+    
+    # Criar ZIP
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    zip_path = os.path.join(pasta_download, f"notas_{timestamp}.zip")
+    
+    with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zipf:
+        for root, _, files in os.walk(pasta_org):
+            for file in files:
+                file_path = os.path.join(root, file)
+                arcname = os.path.relpath(file_path, pasta_org)
+                zipf.write(file_path, arcname)
+    
+    # Limpar
+    shutil.rmtree(pasta_org)
+    
+    return zip_path
+
 
 def baixar_com_playwright(empresa, tipo, data_inicio, data_fim, pasta_destino=None, headless=True):
-    """
-    Função principal que executa o download com Playwright
-    Com paginação completa baseada na estrutura real do site
-    """
+    """Função principal - Download e organização das notas"""
     
     if not pasta_destino:
         pasta_destino = os.path.join('media', 'nfse', tipo, data_inicio[:4], data_inicio[5:7])
     pasta_destino = os.path.abspath(pasta_destino)
     os.makedirs(pasta_destino, exist_ok=True)
     
-    # Validações
-    if not empresa.certificado_arquivo:
-        raise Exception("Empresa não possui certificado. Faça upload antes de tentar o download.")
-    if not empresa.certificado_senha:
-        raise Exception("Senha do certificado não está configurada para esta empresa.")
-    
     cliente = None
+    
     try:
-        print(f"\n{'='*60}")
-        print(f"🚀 Iniciando download para empresa {empresa.id if hasattr(empresa, 'id') else 'desconhecida'}")
-        print(f"📅 Período: {data_inicio} a {data_fim}")
-        print(f"📁 Pasta: {pasta_destino}")
-        print(f"{'='*60}\n")
+        print(f"\n📥 Iniciando download de {tipo} - {data_inicio} a {data_fim}")
         
-        # Criar cliente
         cliente = EmissorNacionalPlaywright(empresa, pasta_destino, headless=headless)
+        cliente.iniciar()
         
-        # Iniciar navegador
-        print("🔄 Iniciando navegador...")
-        if not cliente.iniciar(usar_cookies=True):
-            cliente.fechar()
-            cliente = EmissorNacionalPlaywright(empresa, pasta_destino, headless=headless)
-            if not cliente.iniciar(usar_cookies=False):
-                raise Exception("Falha ao iniciar Playwright após 2 tentativas")
-        print("✅ Navegador iniciado")
-        
-        # Fazer login
-        print("🔄 Fazendo login...")
         if not cliente.fazer_login():
             raise Exception("Falha no login")
-        print("✅ Login realizado")
         
-        # Acessar notas
-        print(f"🔄 Acessando notas {tipo}...")
-        cliente.acessar_notas(tipo)
-        print("✅ Página de notas acessada")
+        cliente.aplicar_filtro(tipo, data_inicio, data_fim)
+        links, total_notas = cliente.extrair_links()
         
-        # Aplicar filtro
-        print(f"🔄 Aplicando filtro de {data_inicio} a {data_fim}...")
-        cliente.aplicar_filtro(data_inicio, data_fim)
-        print("✅ Filtro aplicado")
+        if total_notas == 0:
+            print("ℹ️ Nenhuma nota encontrada")
+            return 0, 0, pasta_destino, None
         
-        # Extrair links de TODAS as páginas
-        links = cliente.extrair_links_todas_paginas()
-        print(f"\n✅ Total encontrado: {len(links)} notas no período")
+        print(f"📊 Encontradas {total_notas} notas")
+        print(f"📥 Baixando arquivos...")
         
-        if not links:
-            print("⚠️ Nenhuma nota encontrada no período")
-            return 0, 0, pasta_destino
+        sucessos = cliente.baixar_arquivos(links)
         
-        # Download sequencial
-        print(f"\n📥 Iniciando download dos arquivos...")
-        sucessos = cliente.baixar_notas(links)
-        print(f"\n✅ Download concluído: {sucessos}/{len(links)} sucessos")
+        if sucessos < len(links):
+            print(f"⚠️ Baixados {sucessos} de {len(links)} arquivos")
         
-        return len(links), sucessos, pasta_destino
+        print(f"📦 Organizando e compactando...")
+        zip_path = organizar_notas(pasta_destino)
+        
+        print(f"✅ Concluído! ZIP: {zip_path}")
+        
+        return total_notas, total_notas, pasta_destino, zip_path
         
     except Exception as e:
-        print(f"\n❌ Erro durante o download: {e}")
-        traceback.print_exc()
+        print(f"❌ Erro: {e}")
         raise
-    finally:
-        if cliente:
-            print("\n🔄 Fechando navegador...")
-            cliente.fechar()
-            print("✅ Navegador fechado")
-
-
-# ==================== VERSÃO EM THREAD (OPCIONAL) ====================
-
-def baixar_com_playwright_em_thread(empresa, tipo, data_inicio, data_fim, pasta_destino=None, headless=True):
-    """
-    Executa o download em uma thread separada com seu próprio event loop
-    Útil se precisar rodar em background sem bloquear o Django
-    """
-    
-    def _worker():
-        # Configura event loop na thread filha
-        if sys.platform == "win32":
-            try:
-                asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            except Exception as e:
-                print(f"⚠️ Erro configurando loop na thread: {e}")
-        
-        # Executa o download
-        return baixar_com_playwright(empresa, tipo, data_inicio, data_fim, pasta_destino, headless)
-    
-    # Executa em thread
-    import concurrent.futures
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        future = executor.submit(_worker)
-        try:
-            return future.result(timeout=600)  # 10 minutos timeout
-        except concurrent.futures.TimeoutError:
-            raise Exception("Download excedeu o tempo limite de 10 minutos")
-
-
-# ==================== FUNÇÃO PARA TESTE RÁPIDO ====================
-
-def testar_paginacao(empresa, tipo='emitidas', data_inicio='2026-02-01', data_fim='2026-03-03'):
-    """
-    Função de teste para verificar se a paginação está funcionando
-    Sem fazer download, apenas conta as notas
-    """
-    cliente = None
-    try:
-        print("\n🔍 TESTE DE PAGINAÇÃO")
-        print("="*60)
-        
-        cliente = EmissorNacionalPlaywright(empresa, headless=False)  # headless=False para ver o que acontece
-        
-        if not cliente.iniciar(usar_cookies=True):
-            cliente.fechar()
-            cliente = EmissorNacionalPlaywright(empresa, headless=False)
-            if not cliente.iniciar(usar_cookies=False):
-                raise Exception("Falha ao iniciar")
-        
-        if not cliente.fazer_login():
-            raise Exception("Falha no login")
-        
-        cliente.acessar_notas(tipo)
-        cliente.aplicar_filtro(data_inicio, data_fim)
-        
-        links = cliente.extrair_links_todas_paginas()
-        
-        print("\n" + "="*60)
-        print(f"✅ RESULTADO DO TESTE:")
-        print(f"   Total de notas encontradas: {len(links)}")
-        print("="*60)
-        
-        return len(links)
-        
     finally:
         if cliente:
             cliente.fechar()
