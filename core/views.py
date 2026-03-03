@@ -18,6 +18,7 @@ import json
 import os
 import re
 import hashlib
+import time
 from datetime import datetime
 from functools import lru_cache
 
@@ -230,13 +231,16 @@ def progresso_download(request, tarefa_id):
 def api_progresso_download(request, tarefa_id):
     """API para obter progresso via AJAX"""
     tarefa = get_object_or_404(TarefaDownload, pk=tarefa_id)
-    
-    # Verifica permissão
+
     if not request.user.is_superuser:
         if not hasattr(request.user, 'pessoa') or tarefa.usuario != request.user.pessoa:
             return JsonResponse({'error': 'Permissão negada'}, status=403)
-    
-    data = {
+
+    return JsonResponse(_serializar_progresso_tarefa(tarefa))
+
+
+def _serializar_progresso_tarefa(tarefa):
+    return {
         'id': tarefa.pk,
         'status': tarefa.status,
         'progresso': tarefa.progresso,
@@ -250,8 +254,244 @@ def api_progresso_download(request, tarefa_id):
         'logs': tarefa.logs,
         'zip_url': tarefa.arquivo_zip.url if tarefa.arquivo_zip else None,
     }
-    
-    return JsonResponse(data)
+
+
+def _extrair_token_api(request):
+    auth = request.headers.get('Authorization') or request.headers.get('authorization')
+    if auth:
+        if auth.startswith('Token '):
+            return auth.split(' ', 1)[1].strip()
+        if auth.startswith('Bearer '):
+            return auth.split(' ', 1)[1].strip()
+    return request.headers.get('X-Api-Key') or request.POST.get('api_key') or request.GET.get('api_key')
+
+
+def _autenticar_pessoa_por_token(request):
+    token = _extrair_token_api(request)
+    if not token:
+        return None, JsonResponse({'status': 'ERRO', 'msg': 'Token obrigatório.'}, status=401)
+
+    pessoa = Pessoa.objects.filter(client_api_token=token, ativo=True).select_related('user').first()
+    if not pessoa:
+        return None, JsonResponse({'status': 'ERRO', 'msg': 'Token inválido.'}, status=403)
+    if not pessoa.user or not pessoa.user.is_active:
+        return None, JsonResponse({'status': 'ERRO', 'msg': 'Usuário do token está inativo.'}, status=403)
+
+    return pessoa, None
+
+
+def _iniciar_download_por_parametros(request, user, pessoa_for_tarefa=None, aguardar_padrao=False):
+    from django.urls import reverse
+    from .permissions import can_edit_empresa
+
+    def normalizar_cnpj(valor):
+        return re.sub(r'\D', '', (valor or ''))
+
+    payload = request.POST
+    if not request.POST:
+        try:
+            payload = json.loads(request.body.decode('utf-8') or '{}')
+        except Exception:
+            payload = {}
+
+    cnpj = (payload.get('cnpj') or '').strip()
+    tipo_input = (payload.get('tipo') or '').strip().lower()
+    data_inicio_str = (payload.get('data_inicio') or '').strip()
+    data_fim_str = (payload.get('data_fim') or '').strip()
+    senha = (payload.get('senha') or '').strip()
+    certificado_file = request.FILES.get('certificado')
+
+    aguardar_raw = payload.get('aguardar_zip', payload.get('aguardar_conclusao', None))
+    if aguardar_raw is None:
+        aguardar_zip = bool(aguardar_padrao)
+    else:
+        aguardar_zip = str(aguardar_raw).strip().lower() in ('1', 'true', 'sim', 'yes')
+
+    timeout_raw = payload.get('timeout_segundos', 900)
+    try:
+        timeout_segundos = int(timeout_raw)
+    except Exception:
+        timeout_segundos = 900
+    timeout_segundos = max(10, min(timeout_segundos, 3600))
+
+    if not cnpj or not tipo_input or not data_inicio_str or not data_fim_str:
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': 'Parâmetros obrigatórios: cnpj, tipo, data_inicio, data_fim.'
+        }, status=400)
+
+    tipo_map = {
+        'emitida': 'emitidas',
+        'emitidas': 'emitidas',
+        'recebida': 'recebidas',
+        'recebidas': 'recebidas',
+    }
+    tipo = tipo_map.get(tipo_input)
+    if not tipo:
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': "Tipo inválido. Use: emitida/emitidas/recebida/recebidas."
+        }, status=400)
+
+    data_inicio = parse_date(data_inicio_str)
+    data_fim = parse_date(data_fim_str)
+    if not data_inicio or not data_fim:
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': 'Datas inválidas. Use formato YYYY-MM-DD.'
+        }, status=400)
+
+    if data_inicio > data_fim:
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': 'data_inicio não pode ser maior que data_fim.'
+        }, status=400)
+
+    cnpj_limpo = normalizar_cnpj(cnpj)
+    empresa = None
+    for item in Empresa.objects.filter(ativo=True):
+        if normalizar_cnpj(item.cnpj) == cnpj_limpo:
+            empresa = item
+            break
+
+    if not empresa:
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': 'Empresa não encontrada para o CNPJ informado.'
+        }, status=404)
+
+    if not can_edit_empresa(user, empresa):
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': 'Permissão negada para iniciar download desta empresa.'
+        }, status=403)
+
+    certificado_origem = 'stored'
+
+    if certificado_file:
+        if not senha:
+            return JsonResponse({
+                'status': 'ERRO',
+                'msg': 'Senha é obrigatória ao enviar certificado.'
+            }, status=400)
+        empresa.certificado_arquivo.save(certificado_file.name, certificado_file, save=False)
+        empresa.certificado_senha = senha
+        empresa.save()
+        certificado_origem = 'request'
+    elif not empresa.certificado_arquivo or not empresa.certificado_senha:
+        return JsonResponse({
+            'status': 'ERRO',
+            'msg': 'Primeiro acesso requer envio de certificado e senha para esta empresa.'
+        }, status=400)
+
+    pasta_destino = os.path.join(
+        'media', 'nfse', tipo,
+        data_inicio_str[:4], data_inicio_str[5:7]
+    )
+    pasta_destino = os.path.abspath(pasta_destino)
+    os.makedirs(pasta_destino, exist_ok=True)
+
+    tarefa_id = iniciar_download_tarefa(
+        empresa=empresa,
+        tipo=tipo,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        pasta_destino=pasta_destino,
+        usuario=pessoa_for_tarefa
+    )
+
+    response_data = {
+        'status': 'OK',
+        'msg': 'Download iniciado com sucesso.',
+        'tarefa_id': tarefa_id,
+        'empresa_id': empresa.pk,
+        'empresa_cnpj': empresa.cnpj,
+        'tipo': tipo,
+        'data_inicio': data_inicio_str,
+        'data_fim': data_fim_str,
+        'certificado_origem': certificado_origem,
+        'progresso_url': reverse('api_progresso_download', args=[tarefa_id]),
+        'progresso_token_url': reverse('api_progresso_download_token', args=[tarefa_id]),
+        'detalhe_url': reverse('progresso_download', args=[tarefa_id]),
+    }
+
+    if aguardar_zip:
+        inicio_espera = time.time()
+        tarefa = TarefaDownload.objects.get(pk=tarefa_id)
+
+        while tarefa.status not in ['concluido', 'erro'] and (time.time() - inicio_espera) < timeout_segundos:
+            time.sleep(2)
+            tarefa.refresh_from_db()
+
+        response_data['status_tarefa'] = tarefa.status
+        response_data['progresso'] = tarefa.progresso
+        response_data['mensagem_tarefa'] = tarefa.mensagem
+
+        if tarefa.arquivo_zip:
+            zip_url = tarefa.arquivo_zip.url
+            response_data['zip_url'] = zip_url
+            try:
+                response_data['zip_url_absoluta'] = request.build_absolute_uri(zip_url)
+            except Exception:
+                pass
+        else:
+            response_data['zip_url'] = None
+            response_data['aguardando_zip_timeout'] = tarefa.status not in ['concluido', 'erro']
+
+    return JsonResponse(response_data)
+
+
+@login_required
+@csrf_exempt
+@require_POST
+def api_iniciar_download_parametros(request):
+    """
+    Inicia download por parâmetros de API:
+    - cnpj
+    - tipo (emitida/emitidas/recebida/recebidas)
+    - data_inicio (YYYY-MM-DD)
+    - data_fim (YYYY-MM-DD)
+    - certificado (arquivo .pfx/.p12) e senha (opcional se já existir certificado salvo)
+    """
+    return _iniciar_download_por_parametros(
+        request,
+        user=request.user,
+        pessoa_for_tarefa=request.user.pessoa if hasattr(request.user, 'pessoa') else None,
+        aguardar_padrao=False
+    )
+
+
+@csrf_exempt
+@require_POST
+def api_iniciar_download_parametros_token(request):
+    """
+    Versão token da API de download.
+    Auth: Authorization: Token <token> | Authorization: Bearer <token> | X-Api-Key
+    """
+    pessoa, erro = _autenticar_pessoa_por_token(request)
+    if erro:
+        return erro
+
+    return _iniciar_download_por_parametros(
+        request,
+        user=pessoa.user,
+        pessoa_for_tarefa=pessoa,
+        aguardar_padrao=True
+    )
+
+
+@csrf_exempt
+def api_progresso_download_token(request, tarefa_id):
+    """Consulta progresso de tarefa usando token."""
+    pessoa, erro = _autenticar_pessoa_por_token(request)
+    if erro:
+        return erro
+
+    tarefa = get_object_or_404(TarefaDownload, pk=tarefa_id)
+    if not pessoa.user.is_superuser and tarefa.usuario != pessoa:
+        return JsonResponse({'status': 'ERRO', 'msg': 'Permissão negada.'}, status=403)
+
+    return JsonResponse(_serializar_progresso_tarefa(tarefa))
 
 @login_required
 def listar_downloads(request):
