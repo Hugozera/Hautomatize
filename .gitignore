@@ -88,3 +88,5 @@ media/conversor/originais/
 db_prod.sqlite3
 # Docker compose local overrides
 docker-compose.override.yml
+core/__pycache__/playwright_service.cpython-313.pyc
+db_prod.sqlite3
