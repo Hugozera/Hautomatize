@@ -46,21 +46,42 @@
             <form method="post">
                 {% csrf_token %}
                 
+                <!-- Filtros de Busca -->
+                <div class="row g-3 mb-4 p-3 bg-light rounded">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-search me-1 text-info"></i>Buscar por CNPJ
+                        </label>
+                        <input type="text" id="filtro_cnpj" class="form-control" placeholder="Digite o CNPJ...">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">
+                            <i class="bi bi-search me-1 text-info"></i>Buscar por Razão Social
+                        </label>
+                        <input type="text" id="filtro_razao" class="form-control" placeholder="Digite a razão social...">
+                    </div>
+                </div>
+                
                 <div class="row g-4">
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
                             <i class="bi bi-building me-1 text-success"></i>Empresa *
                         </label>
-                        <select name="empresa" class="form-select" required>
+                        <select name="empresa" class="form-select" id="select_empresa" required>
                             <option value="">Selecione uma empresa...</option>
                             {% for e in empresas %}
                                 <option value="{{ e.pk }}" 
+                                    data-cnpj="{{ e.cnpj }}"
+                                    data-razao="{{ e.razao_social }}"
                                     {% if empresa_selecionada and e.pk == empresa_selecionada.pk %}selected{% endif %}
                                     {% if request.GET.empresa == e.pk|stringformat:"s" %}selected{% endif %}>
-                                    {{ e.nome_fantasia }} ({{ e.cnpj }})
+                                    {{ e.nome_fantasia }} ({{ e.cnpj }}) - {{ e.razao_social }}
                                 </option>
                             {% endfor %}
                         </select>
+                        <div class="form-text" id="texto_filtro" style="display: none; color: #6c757d; margin-top: 0.5rem;">
+                            <i class="bi bi-info-circle me-1"></i><span id="count_filtro">0</span> empresa(s) encontrada(s)
+                        </div>
                     </div>
                     
                     <div class="col-md-3">
@@ -470,6 +491,63 @@ function uploadCertificado() {
         statusDiv.classList.remove('d-none');
     });
 }
+
+// Função de Filtro de Empresa por CNPJ e Razão Social
+function inicializarFiltrosEmpresa() {
+    const filtroCNPJ = document.getElementById('filtro_cnpj');
+    const filtroRazao = document.getElementById('filtro_razao');
+    const selectEmpresa = document.getElementById('select_empresa');
+    const textoFiltro = document.getElementById('texto_filtro');
+    const countFiltro = document.getElementById('count_filtro');
+    
+    if (!filtroCNPJ || !selectEmpresa) return; // Sai se elementos não existem
+    
+    // Escuta mudanças nos campos de filtro
+    [filtroCNPJ, filtroRazao].forEach(input => {
+        input.addEventListener('input', aplicarFiltro);
+    });
+    
+    function aplicarFiltro() {
+        const cnpjBusca = filtroCNPJ.value.toLowerCase().trim();
+        const razaoBusca = filtroRazao.value.toLowerCase().trim();
+        
+        let visiveisCount = 0;
+        
+        // Percorre todas as opções (exceto a primeira que é placeholder)
+        const options = selectEmpresa.querySelectorAll('option');
+        options.forEach((option, index) => {
+            if (index === 0) return; // Pula o placeholder
+            
+            const textoCompleto = option.textContent.toLowerCase();
+            const cnpjAtual = option.getAttribute('data-cnpj') || '';
+            const razaoAtual = option.getAttribute('data-razao') || '';
+            
+            // Verifica se o CNPJ e razão social correspondem aos filtros
+            const matchCNPJ = cnpjBusca === '' || cnpjAtual.includes(cnpjBusca) || textoCompleto.includes(cnpjBusca);
+            const matchRazao = razaoBusca === '' || razaoAtual.includes(razaoBusca) || textoCompleto.includes(razaoBusca);
+            
+            const deve_mostrar = matchCNPJ && matchRazao;
+            
+            if (deve_mostrar) {
+                option.style.display = '';
+                visiveisCount++;
+            } else {
+                option.style.display = 'none';
+            }
+        });
+        
+        // Atualiza o texto de informação
+        if (cnpjBusca !== '' || razaoBusca !== '') {
+            textoFiltro.style.display = 'block';
+            countFiltro.textContent = visiveisCount;
+        } else {
+            textoFiltro.style.display = 'none';
+        }
+    }
+}
+
+// Inicializa os filtros quando a página carrega
+document.addEventListener('DOMContentLoaded', inicializarFiltrosEmpresa);
 </script>
 
 <style>
