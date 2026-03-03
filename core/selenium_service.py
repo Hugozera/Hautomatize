@@ -21,6 +21,8 @@ import subprocess
 import pickle
 import traceback
 
+from .certificado_service import converter_pfx_para_pem
+
 # Força saída imediata no console
 try:
     sys.stdout.reconfigure(line_buffering=True)
@@ -94,33 +96,27 @@ class EmissorNacionalSelenium:
             sys.stdout.flush()
     
     def exportar_certificado_para_pem(self):
-        """Converte o certificado .pfx para .pem"""
+        """Converte o certificado .pfx para .pem usando converter otimizado"""
         if not self.cert_path or not os.path.exists(self.cert_path):
             return None
         
         try:
-            fd, pem_path = tempfile.mkstemp(suffix='.pem')
-            os.close(fd)
-            
             print(f"   Convertendo {self.cert_path} para PEM...")
             sys.stdout.flush()
             
-            cmd = [
-                'openssl', 'pkcs12',
-                '-in', self.cert_path,
-                '-out', pem_path,
-                '-nodes',
-                '-password', f'pass:{self.senha}'
-            ]
+            # Cria arquivo temporário para o PEM
+            fd, pem_path = tempfile.mkstemp(suffix='.pem')
+            os.close(fd)
             
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            # Usa o novo converter que suporta certificados legados
+            resultado = converter_pfx_para_pem(self.cert_path, self.senha, pem_path)
             
-            if result.returncode == 0 and os.path.getsize(pem_path) > 0:
+            if resultado and os.path.getsize(pem_path) > 0:
                 print("   ✅ Certificado convertido para PEM")
                 sys.stdout.flush()
                 return pem_path
             else:
-                print(f"   ❌ Erro na conversão: {result.stderr}")
+                print(f"   ❌ Erro na conversão")
                 sys.stdout.flush()
                 if os.path.exists(pem_path):
                     os.remove(pem_path)
