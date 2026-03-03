@@ -107,6 +107,54 @@ class Pessoa(models.Model):
         """Retorna True se o usuário tem a permissão, seja direta ou via papel (role)."""
         return code in self.perm_list()
 
+    def save(self, *args, **kwargs):
+        """Redimensiona imagem antes de salvar."""
+        if self.foto:
+            self._resize_image()
+        super().save(*args, **kwargs)
+
+    def _resize_image(self):
+        """Redimensiona a imagem para máximo de 300x300px."""
+        from PIL import Image
+        from io import BytesIO
+        from django.core.files.base import ContentFile
+        
+        try:
+            img = Image.open(self.foto.file)
+            
+            # Limite máximo
+            max_size = (300, 300)
+            
+            # Se imagem é maior que o limite, redimensionar
+            if img.size[0] > max_size[0] or img.size[1] > max_size[1]:
+                img.thumbnail(max_size, Image.Resampling.LANCZOS)
+                
+                # Converter para RGB se for PNG com alpha
+                if img.mode in ('RGBA', 'LA', 'P'):
+                    rgb_img = Image.new('RGB', img.size, (255, 255, 255))
+                    if img.mode == 'RGBA':
+                        rgb_img.paste(img, mask=img.split()[-1])
+                    else:
+                        rgb_img.paste(img)
+                    img = rgb_img
+                
+                # Salvar em BytesIO
+                img_io = BytesIO()
+                img.save(img_io, format='JPEG', quality=85, optimize=True)
+                img_io.seek(0)
+                
+                # Substituir arquivo
+                import os
+                filename = os.path.splitext(self.foto.name)[0] + '.jpg'
+                self.foto.save(
+                    filename,
+                    ContentFile(img_io.read()),
+                    save=False
+                )
+        except Exception:
+            # Se houver erro ao redimensionar, deixar como está
+            pass
+
     class Meta:
         verbose_name = 'Pessoa'
         verbose_name_plural = 'Pessoas'

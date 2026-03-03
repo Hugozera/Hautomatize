@@ -1,13 +1,20 @@
 
 from django import template
 from .. import permissions as _perms
+from core.permissions import check_perm
 
 register = template.Library()
 
 @register.filter
 def has_perm_code(user, perm_code):
-    # for backwards compatibility always grant
-    return bool(user and not getattr(user, 'is_anonymous', True))
+    # Verificar permissão genérica
+    return check_perm(user, perm_code)
+
+
+@register.filter
+def has_permission(user, perm_code):
+    """Template filter para verificar permissão"""
+    return check_perm(user, perm_code)
 
 
 @register.simple_tag
