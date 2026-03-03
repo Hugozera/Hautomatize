@@ -1,6 +1,6 @@
 """
 Serviço de automação com Playwright para o Emissor Nacional
-VERSÃO COM THREAD ÚNICA - Resolve problemas de greenlet
+VERSÃO COM PAGINAÇÃO COMPLETA - Baseada no HTML real do site
 """
 
 import os
@@ -10,8 +10,9 @@ import tempfile
 import pickle
 import asyncio
 import threading
+import re
 from datetime import datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlparse, parse_qs
 from typing import List, Dict, Tuple, Optional
 import traceback
 
@@ -34,11 +35,12 @@ if sys.platform == "win32":
 
 
 class EmissorNacionalPlaywright:
-    """Classe principal para automação com Playwright - OTIMIZADA"""
+    """Classe principal para automação com Playwright - COM PAGINAÇÃO"""
     
     __slots__ = ('empresa', 'cert_path', 'senha', 'base_url', 'headless',
                  'playwright', 'browser', 'context', 'page', 'download_path',
-                 'cert_pem', 'key_pem', 'cookies_path', '_session', '_thread_id')
+                 'cert_pem', 'key_pem', 'cookies_path', '_session', '_thread_id',
+                 '_pagina_atual', '_total_paginas')
 
     def __init__(self, empresa, download_path=None, headless=True):
         self.empresa = empresa
@@ -56,7 +58,10 @@ class EmissorNacionalPlaywright:
         self.context = None
         self.page = None
         self._session = None
-        self._thread_id = threading.get_ident()  # Armazena ID da thread
+        self._thread_id = threading.get_ident()
+        
+        self._pagina_atual = 1
+        self._total_paginas = None
 
         self.download_path = download_path or os.path.join(tempfile.gettempdir(), "nfse_downloads")
         os.makedirs(self.download_path, exist_ok=True)
@@ -238,12 +243,81 @@ class EmissorNacionalPlaywright:
 
         self.page.goto(url_busca, timeout=10000)
         self.page.wait_for_load_state("domcontentloaded", timeout=5000)
+        
+        # Após aplicar filtro, identificar total de páginas
+        self._identificar_total_paginas()
+        
         return self.page.url
 
-    def extrair_links(self) -> List[Dict]:
-        """Extrai links de PDF e XML"""
+    def _identificar_total_paginas(self):
+        """Identifica o total de páginas disponíveis baseado na paginação"""
+        try:
+            # Procura todos os links de página (excluindo primeiro/anterior/próxima/última)
+            links_pagina = self.page.locator("ul.pagination li a[href*='pg=']").all()
+            
+            maiores_numeros = []
+            for link in links_pagina:
+                href = link.get_attribute("href") or ""
+                # Extrair número da página do href
+                match = re.search(r'[?&]pg=(\d+)', href)
+                if match:
+                    maiores_numeros.append(int(match.group(1)))
+            
+            if maiores_numeros:
+                self._total_paginas = max(maiores_numeros)
+                print(f"📊 Total de páginas identificado: {self._total_paginas}")
+            else:
+                # Se não encontrou links com pg, pode ser página única
+                self._total_paginas = 1
+                print(f"📊 Aparentemente página única")
+                
+        except Exception as e:
+            print(f"⚠️ Erro ao identificar total de páginas: {e}")
+            self._total_paginas = None
+
+    def extrair_links_todas_paginas(self) -> List[Dict]:
+        """
+        Extrai links de PDF e XML de TODAS as páginas
+        Navega pela paginação usando a estrutura exata do site
+        """
         self._verificar_thread()
+        todos_links = []
+        self._pagina_atual = 1
+        
+        print(f"\n🔄 Iniciando extração de links de TODAS as páginas...")
+        
+        while True:
+            print(f"  📄 Processando página {self._pagina_atual}" + 
+                  (f" de {self._total_paginas}" if self._total_paginas else ""))
+            
+            # Extrair links da página atual
+            links_pagina = self._extrair_links_pagina_atual()
+            todos_links.extend(links_pagina)
+            
+            print(f"     → Encontrados {len(links_pagina)} links nesta página (total acumulado: {len(todos_links)})")
+            
+            # Verificar se existe próxima página
+            if not self._ir_para_proxima_pagina():
+                print(f"  ✅ Fim da paginação. Total final: {len(todos_links)} links em {self._pagina_atual} páginas")
+                break
+            
+            self._pagina_atual += 1
+            
+            # Pequena pausa para não sobrecarregar
+            time.sleep(0.5)
+        
+        return todos_links
+
+    def _extrair_links_pagina_atual(self) -> List[Dict]:
+        """Extrai links da página atual"""
         links = []
+        
+        # Aguardar a tabela carregar
+        try:
+            self.page.wait_for_selector("table", timeout=5000)
+        except:
+            print("  ⚠️ Tabela não encontrada na página")
+            return links
         
         # Extrair PDFs
         pdf_links = self.page.locator("a[href*='/Notas/Download/DANFSe/']").all()
@@ -270,8 +344,54 @@ class EmissorNacionalPlaywright:
                     links.append({"numero": numero, "url": href, "tipo": "XML"})
             except:
                 continue
-
+        
         return links
+
+    def _ir_para_proxima_pagina(self) -> bool:
+        """
+        Navega para a próxima página baseado na estrutura EXATA do site:
+        <ul class="pagination">
+            <li class="disabled"><a><i class="fa fa-angle-left"></i></a></li>
+            <li class="active"><a>1</a></li>
+            <li><a href="/EmissorNacional/Notas/Emitidas?pg=2">2</a></li>
+            <li><a href="/EmissorNacional/Notas/Emitidas?pg=3">3</a></li>
+            <li><a href="/EmissorNacional/Notas/Emitidas?pg=2"><i class="fa fa-angle-right"></i></a></li>
+        </ul>
+        """
+        try:
+            # Verificar se o link "Próxima" (seta para direita) existe e não está desabilitado
+            proximo_link = self.page.locator("ul.pagination li a i.fa-angle-right").first
+            
+            if proximo_link.count() > 0:
+                # Encontrou o ícone, pegar o link pai
+                link_pai = proximo_link.locator("xpath=..")
+                
+                if link_pai.count() > 0:
+                    href = link_pai.get_attribute("href")
+                    if href:
+                        print(f"     → Navegando para próxima página: {href}")
+                        self.page.goto(f"https://www.nfse.gov.br{href}", timeout=10000)
+                        self.page.wait_for_load_state("domcontentloaded", timeout=5000)
+                        return True
+            
+            # Alternativa: procurar pelo link com texto igual ao número da próxima página
+            proximo_numero = self._pagina_atual + 1
+            link_proximo_numero = self.page.locator(f"ul.pagination li a:has-text('{proximo_numero}')").first
+            
+            if link_proximo_numero.count() > 0:
+                href = link_proximo_numero.get_attribute("href")
+                if href:
+                    print(f"     → Navegando para página {proximo_numero}")
+                    self.page.goto(f"https://www.nfse.gov.br{href}", timeout=10000)
+                    self.page.wait_for_load_state("domcontentloaded", timeout=5000)
+                    return True
+            
+            # Se chegou aqui, não há próxima página
+            return False
+            
+        except Exception as e:
+            print(f"  ⚠️ Erro ao navegar para próxima página: {e}")
+            return False
 
     def _get_session(self) -> requests.Session:
         """Obtém ou cria sessão HTTP reutilizável"""
@@ -300,9 +420,14 @@ class EmissorNacionalPlaywright:
 
         sucessos = 0
         session = self._get_session()
+        total = len(links)
         
-        for link in links:
+        print(f"\n📥 Iniciando download de {total} arquivos...")
+        
+        for i, link in enumerate(links, 1):
             try:
+                print(f"  [{i}/{total}] Baixando {link['tipo']} {link['numero']}...", end=" ")
+                
                 resp = session.get(link["url"], timeout=30)
                 if resp.status_code == 200:
                     filename = f"{link['numero']}.{link['tipo'].lower()}"
@@ -312,11 +437,11 @@ class EmissorNacionalPlaywright:
                         f.write(resp.content)
                     
                     sucessos += 1
-                    print(f"✅ Baixado: {filename}")
+                    print(f"✅ OK")
                 else:
-                    print(f"❌ Falha {link['url']}: HTTP {resp.status_code}")
+                    print(f"❌ HTTP {resp.status_code}")
             except Exception as e:
-                print(f"❌ Erro ao baixar {link.get('numero', 'desconhecido')}: {e}")
+                print(f"❌ Erro: {str(e)[:50]}")
 
         return sucessos
 
@@ -365,7 +490,7 @@ class EmissorNacionalPlaywright:
 def baixar_com_playwright(empresa, tipo, data_inicio, data_fim, pasta_destino=None, headless=True):
     """
     Função principal que executa o download com Playwright
-    Versão estável - SEM threads, SEM paralelismo nos downloads
+    Com paginação completa baseada na estrutura real do site
     """
     
     if not pasta_destino:
@@ -415,34 +540,33 @@ def baixar_com_playwright(empresa, tipo, data_inicio, data_fim, pasta_destino=No
         cliente.aplicar_filtro(data_inicio, data_fim)
         print("✅ Filtro aplicado")
         
-        # Extrair links
-        print("🔄 Extraindo links de notas...")
-        links = cliente.extrair_links()
-        print(f"✅ Encontradas {len(links)} notas para download")
+        # Extrair links de TODAS as páginas
+        links = cliente.extrair_links_todas_paginas()
+        print(f"\n✅ Total encontrado: {len(links)} notas no período")
         
         if not links:
             print("⚠️ Nenhuma nota encontrada no período")
             return 0, 0, pasta_destino
         
-        # Download sequencial (mais estável)
-        print(f"🔄 Iniciando download de {len(links)} arquivos...")
+        # Download sequencial
+        print(f"\n📥 Iniciando download dos arquivos...")
         sucessos = cliente.baixar_notas(links)
-        print(f"✅ Download concluído: {sucessos}/{len(links)} sucessos")
+        print(f"\n✅ Download concluído: {sucessos}/{len(links)} sucessos")
         
         return len(links), sucessos, pasta_destino
         
     except Exception as e:
-        print(f"❌ Erro durante o download: {e}")
+        print(f"\n❌ Erro durante o download: {e}")
         traceback.print_exc()
         raise
     finally:
         if cliente:
-            print("🔄 Fechando navegador...")
+            print("\n🔄 Fechando navegador...")
             cliente.fechar()
             print("✅ Navegador fechado")
 
 
-# ==================== VERSÃO COM THREAD (SE NECESSÁRIO) ====================
+# ==================== VERSÃO EM THREAD (OPCIONAL) ====================
 
 def baixar_com_playwright_em_thread(empresa, tipo, data_inicio, data_fim, pasta_destino=None, headless=True):
     """
@@ -471,3 +595,43 @@ def baixar_com_playwright_em_thread(empresa, tipo, data_inicio, data_fim, pasta_
             return future.result(timeout=600)  # 10 minutos timeout
         except concurrent.futures.TimeoutError:
             raise Exception("Download excedeu o tempo limite de 10 minutos")
+
+
+# ==================== FUNÇÃO PARA TESTE RÁPIDO ====================
+
+def testar_paginacao(empresa, tipo='emitidas', data_inicio='2026-02-01', data_fim='2026-03-03'):
+    """
+    Função de teste para verificar se a paginação está funcionando
+    Sem fazer download, apenas conta as notas
+    """
+    cliente = None
+    try:
+        print("\n🔍 TESTE DE PAGINAÇÃO")
+        print("="*60)
+        
+        cliente = EmissorNacionalPlaywright(empresa, headless=False)  # headless=False para ver o que acontece
+        
+        if not cliente.iniciar(usar_cookies=True):
+            cliente.fechar()
+            cliente = EmissorNacionalPlaywright(empresa, headless=False)
+            if not cliente.iniciar(usar_cookies=False):
+                raise Exception("Falha ao iniciar")
+        
+        if not cliente.fazer_login():
+            raise Exception("Falha no login")
+        
+        cliente.acessar_notas(tipo)
+        cliente.aplicar_filtro(data_inicio, data_fim)
+        
+        links = cliente.extrair_links_todas_paginas()
+        
+        print("\n" + "="*60)
+        print(f"✅ RESULTADO DO TESTE:")
+        print(f"   Total de notas encontradas: {len(links)}")
+        print("="*60)
+        
+        return len(links)
+        
+    finally:
+        if cliente:
+            cliente.fechar()
