@@ -826,8 +826,6 @@ def pessoa_list(request):
     
     # Verificar permissão
     if not check_perm(request.user, 'pessoa.edit'):
-        from django.contrib.auth.decorators import login_required
-        from django.shortcuts import redirect
         return redirect('home')
     
     q = request.GET.get('q', '').strip()
@@ -867,7 +865,6 @@ def pessoa_create(request):
     
     # Verificar permissão
     if not check_perm(request.user, 'pessoa.create'):
-        from django.shortcuts import redirect
         return redirect('home')
     
     if request.method == 'POST':
@@ -891,7 +888,6 @@ def pessoa_create(request):
 def pessoa_edit(request, pk):
     """Edita uma pessoa existente (admin)"""
     from core.permissions import check_perm
-    from django.shortcuts import redirect
     
     # Verificar permissão
     if not check_perm(request.user, 'pessoa.edit'):

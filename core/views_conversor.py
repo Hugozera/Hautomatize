@@ -69,7 +69,7 @@ def upload_arquivo_conversor(request):
         
         # 3. Obter arquivo e formato destino
         arquivo = request.FILES.get('arquivo')
-        formato_destino = request.POST.get('formato_destino')
+        formato_destino = (request.POST.get('formato_destino') or '').strip().lower()
         
         print(f"\n📁 Arquivo: {arquivo.name if arquivo else 'NENHUM'}")
         print(f"🎯 Formato destino: {formato_destino}")
@@ -216,7 +216,8 @@ def processar_conversao(request, conversao_id):
 
     try:
         # Converter o arquivo
-        print(f"🔄 Iniciando conversão para {conversao.formato_destino}...")
+        formato_destino = (conversao.formato_destino or '').strip().lower()
+        print(f"🔄 Iniciando conversão para {formato_destino}...")
         # Permitir reprocessar com parser/banco forçado via POST (param 'parser')
         banco_forcado = None
         try:
@@ -252,7 +253,7 @@ def processar_conversao(request, conversao_id):
 
         arquivo_convertido, erro = converter_arquivo(
             caminho_original,
-            conversao.formato_destino,
+            formato_destino,
             processamento_dir,
             banco_override=banco_forcado,
             force_quality=force_quality,
@@ -260,6 +261,13 @@ def processar_conversao(request, conversao_id):
         )
 
         if arquivo_convertido and os.path.exists(arquivo_convertido):
+            ext_gerada = os.path.splitext(arquivo_convertido)[1].lower().replace('.', '')
+            if formato_destino != 'zip' and ext_gerada and ext_gerada != formato_destino:
+                conversao.status = 'erro'
+                conversao.mensagem_erro = f'Formato gerado inesperado: {ext_gerada}. Esperado: {formato_destino}.'
+                conversao.save()
+                return JsonResponse({'erro': conversao.mensagem_erro}, status=500)
+
             tamanho = os.path.getsize(arquivo_convertido)
             print(f"✅ Conversão concluída! Tamanho: {tamanho} bytes")
 
@@ -267,10 +275,10 @@ def processar_conversao(request, conversao_id):
             from django.core.files.base import ContentFile
 
             with open(arquivo_convertido, 'rb') as f:
-                if conversao.formato_destino == 'zip' or arquivo_convertido.endswith('.zip'):
+                if arquivo_convertido.endswith('.zip'):
                     nome_convertido = f"{os.path.splitext(conversao.nome_original)[0]}.zip"
                 else:
-                    nome_convertido = f"{os.path.splitext(conversao.nome_original)[0]}.{conversao.formato_destino}"
+                    nome_convertido = f"{os.path.splitext(conversao.nome_original)[0]}.{ext_gerada or formato_destino}"
 
                 conversao.arquivo_convertido.save(nome_convertido, ContentFile(f.read()), save=True)
 
@@ -296,7 +304,9 @@ def processar_conversao(request, conversao_id):
                 'id': conversao.id,
                 'status': 'concluido',
                 'url': conversao.arquivo_convertido.url,
-                'tamanho': conversao.tamanho_convertido
+                'tamanho': conversao.tamanho_convertido,
+                'formato_destino': formato_destino,
+                'formato_gerado': ext_gerada
             }
             if texto_completo is not None:
                 resp['texto_completo'] = texto_completo

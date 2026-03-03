@@ -72,6 +72,17 @@ try:
 except ImportError:
     HAS_OCR = False
 
+try:
+    from docx import Document
+    HAS_DOCX = True
+except ImportError:
+    HAS_DOCX = False
+
+try:
+    HAS_PDF2DOCX = importlib.util.find_spec('pdf2docx') is not None
+except Exception:
+    HAS_PDF2DOCX = False
+
 
 class ConversorService:
     # CORREÇÃO: Root do projeto é C:\Hautomatize
@@ -94,14 +105,16 @@ class ConversorService:
     MAX_WORKERS = multiprocessing.cpu_count()
 
     FORMATOS_SUPORTADOS = {
-        'pdf': ['ofx', 'txt', 'html', 'xml', 'csv', 'jpg', 'png', 'zip'],
-        'ofx': ['pdf', 'txt', 'csv', 'xml', 'html', 'zip'],
-        'txt': ['pdf', 'ofx', 'html', 'xml', 'csv', 'zip'],
-        'csv': ['ofx', 'pdf', 'txt', 'xml', 'html', 'zip'],
-        'xml': ['ofx', 'pdf', 'txt', 'html', 'csv', 'zip'],
-        'jpg': ['pdf', 'png', 'ofx', 'txt', 'zip'],
-        'jpeg': ['pdf', 'png', 'ofx', 'txt', 'zip'],
-        'png': ['pdf', 'jpg', 'ofx', 'txt', 'zip'],
+        'pdf': ['ofx', 'txt', 'html', 'xml', 'csv', 'jpg', 'png', 'zip', 'docx'],
+        'ofx': ['pdf', 'txt', 'csv', 'xml', 'html', 'zip', 'docx'],
+        'txt': ['pdf', 'ofx', 'html', 'xml', 'csv', 'zip', 'docx'],
+        'csv': ['ofx', 'pdf', 'txt', 'xml', 'html', 'zip', 'docx'],
+        'xml': ['ofx', 'pdf', 'txt', 'html', 'csv', 'zip', 'docx'],
+        'jpg': ['pdf', 'png', 'ofx', 'txt', 'zip', 'docx'],
+        'jpeg': ['pdf', 'png', 'ofx', 'txt', 'zip', 'docx'],
+        'png': ['pdf', 'jpg', 'ofx', 'txt', 'zip', 'docx'],
+        'html': ['pdf', 'txt', 'ofx', 'csv', 'xml', 'zip', 'docx'],
+        'docx': ['pdf', 'ofx', 'txt', 'csv', 'xml', 'html', 'zip'],
         'zip': ['*'],
     }
 
@@ -111,6 +124,40 @@ class ConversorService:
             (formato_origem or '').lower().replace('.', ''), 
             ['ofx', 'pdf', 'txt', 'zip']
         )
+
+    @staticmethod
+    def extract_text_from_docx(docx_path: str) -> Tuple[Optional[str], Optional[str]]:
+        """
+        Extrai texto de um arquivo DOCX.
+        Retorna (texto, erro) onde texto é uma string ou None em caso de erro.
+        """
+        if not HAS_DOCX:
+            return None, "python-docx não está instalado"
+        
+        try:
+            doc = Document(docx_path)
+            paragraphs = []
+            
+            # Extrai texto de parágrafos
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    paragraphs.append(para.text.strip())
+            
+            # Extrai texto de tabelas
+            for table in doc.tables:
+                for row in table.rows:
+                    row_text = []
+                    for cell in row.cells:
+                        cell_text = cell.text.strip()
+                        if cell_text:
+                            row_text.append(cell_text)
+                    if row_text:
+                        paragraphs.append(' | '.join(row_text))
+            
+            texto = '\n'.join(paragraphs)
+            return texto or None, None
+        except Exception as e:
+            return None, f"Erro ao extrair DOCX: {str(e)}"
 
     @classmethod
     def _corrigir_encoding_santander(cls, texto: str) -> str:
@@ -1183,6 +1230,147 @@ class ConversorService:
         except Exception:
             return False
 
+    @classmethod
+    def _salvar_como_docx(
+        cls,
+        transacoes: List[Dict],
+        texto_original: str,
+        docx_path: str,
+        banco_detectado: str = "DESCONHECIDO",
+        modo_fiel: bool = False,
+    ) -> bool:
+        """Salva transações e texto em um documento DOCX."""
+        if not HAS_DOCX:
+            return False
+        
+        try:
+            from docx import Document
+            from docx.enum.text import WD_ALIGN_PARAGRAPH
+            
+            doc = Document()
+
+            if modo_fiel:
+                linhas = (texto_original or '').split('\n')
+                if not linhas:
+                    linhas = ['']
+                
+                for linha in linhas:
+                    # Detecta quebra de página e adiciona quebra real (sem texto)
+                    if '=== PAGE BREAK ===' in linha:
+                        doc.add_page_break()
+                        continue
+                    
+                    # Preserva identação usando espaços (python-docx não preserva tabs)
+                    # Conta quantos espaços/tabs no início
+                    espacos_inicio = len(linha) - len(linha.lstrip())
+                    
+                    # Adiciona o parágrafo
+                    para = doc.add_paragraph(linha)
+                    
+                    # Define fonte monoespaçada para preservar alinhamento
+                    for run in para.runs:
+                        run.font.name = 'Courier New'
+                        run.font.size = 190000  # 10pt em EMUs (English Metric Units)
+                    
+                    # Remove espaçamento extra entre parágrafos
+                    para_format = para.paragraph_format
+                    para_format.space_before = 0
+                    para_format.space_after = 0
+                    para_format.line_spacing = 1.0
+                
+                doc.save(docx_path)
+                return True
+            
+            # Adiciona título
+            titulo = doc.add_heading('Extração de Transações Bancárias', 0)
+            titulo.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            
+            # Adiciona informações gerais
+            info = doc.add_paragraph()
+            info.add_run(f'Banco Detectado: ').bold = True
+            info.add_run(banco_detectado)
+            
+            # Adiciona seção de transações se houver
+            if transacoes:
+                doc.add_heading('Transações', level=1)
+                
+                # Cria tabela com transações
+                table = doc.add_table(rows=1, cols=6)
+                table.style = 'Light Grid Accent 1'
+                
+                # Cabeçalho da tabela
+                hdr_cells = table.rows[0].cells
+                headers = ['Data', 'Tipo', 'Valor', 'Descrição', 'Documento', 'FITID']
+                for idx, header in enumerate(headers):
+                    hdr_cells[idx].text = header
+                    # Formata o cabeçalho em negrito
+                    for paragraph in hdr_cells[idx].paragraphs:
+                        for run in paragraph.runs:
+                            run.bold = True
+                
+                # Adiciona linhas de dados
+                for transacao in transacoes:
+                    row_cells = table.add_row().cells
+                    row_cells[0].text = str(transacao.get('data', ''))
+                    row_cells[1].text = str(transacao.get('tipo', ''))
+                    row_cells[2].text = f"{float(transacao.get('valor', 0)):.2f}"
+                    row_cells[3].text = str(transacao.get('descricao', ''))
+                    row_cells[4].text = str(transacao.get('documento', ''))
+                    row_cells[5].text = str(transacao.get('fitid', ''))
+            
+            # Adiciona seção de texto original
+            if texto_original:
+                doc.add_heading('Texto Extraído Original', level=1)
+                
+                para = doc.add_paragraph(texto_original)
+                para_format = para.paragraph_format
+                para_format.line_spacing = 1.0
+            
+            doc.save(docx_path)
+            return True
+        except Exception as e:
+            print(f"Erro ao salvar DOCX: {e}")
+            return False
+
+    @classmethod
+    def _converter_pdf_para_docx_alta_qualidade(
+        cls,
+        pdf_path: str,
+        docx_path: str,
+        force_quality: bool = False,
+    ) -> Tuple[bool, Optional[str]]:
+        """Converte PDF para DOCX preservando layout usando pdf2docx."""
+        if not HAS_PDF2DOCX:
+            return False, "Biblioteca pdf2docx não instalada"
+
+        converter = None
+        try:
+            pdf2docx_module = importlib.import_module('pdf2docx')
+            Pdf2DocxConverter = getattr(pdf2docx_module, 'Converter')
+            converter = Pdf2DocxConverter(pdf_path)
+            kwargs = {
+                'start': 0,
+                'end': None,
+            }
+
+            if force_quality:
+                kwargs.update({
+                    'multi_processing': True,
+                })
+
+            converter.convert(docx_path, **kwargs)
+            if os.path.exists(docx_path) and os.path.getsize(docx_path) > 0:
+                return True, None
+            return False, "Arquivo DOCX não foi gerado"
+        except Exception as e:
+            return False, str(e)
+        finally:
+            try:
+                if converter is not None:
+                    converter.close()
+            except Exception:
+                pass
+
 
 # ========== FUNÇÕES DE INTERFACE PÚBLICA ==========
 
@@ -1295,6 +1483,12 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
             txt_path = arquivo_path
         except Exception as e:
             return None, f"Erro ao ler TXT original: {e}"
+    elif origem_ext == '.docx':
+        # Extrae texto do DOCX
+        texto, erro = ConversorService.extract_text_from_docx(arquivo_path)
+        if erro:
+            return None, erro
+        txt_path = arquivo_path
     else:
         # Fast-path: if PyMuPDF (fitz) is available, try extracting embedded text first
         # Only run extraction pipeline if we don't already have cached text
@@ -1786,6 +1980,31 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
             return ofx_path, None
         else:
             return None, 'Erro ao gerar OFX'
+
+    if formato_destino == 'docx':
+        docx_path = os.path.join(output_dir, f"{nome_base}.docx")
+
+        if origem_ext == '.pdf':
+            ok_hq, err_hq = ConversorService._converter_pdf_para_docx_alta_qualidade(
+                arquivo_path,
+                docx_path,
+                force_quality=force_quality,
+            )
+            if ok_hq and os.path.exists(docx_path):
+                return docx_path, None
+
+        ok = ConversorService._salvar_como_docx(
+            transacoes,
+            texto,
+            docx_path,
+            banco_detectado,
+            modo_fiel=(origem_ext == '.pdf'),
+        )
+        
+        if ok and os.path.exists(docx_path):
+            return docx_path, None
+        else:
+            return None, 'Erro ao gerar DOCX'
 
 
 def processar_pasta(pasta_path: str, formato_destino: str = 'ofx', 

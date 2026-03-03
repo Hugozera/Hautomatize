@@ -748,6 +748,27 @@ function showHeuristicMeta(meta) {
     container.innerHTML = `<div class="alert alert-info p-2 mb-2">${parts.join(' · ')}</div>`;
 }
 
+function atualizarAcoesResultado(data) {
+    const downloadLink = document.getElementById('downloadLink');
+    const btnOfx = document.getElementById('btnVerOfx');
+    const formatoGerado = ((data && (data.formato_gerado || data.formato_destino)) || '').toLowerCase();
+
+    if (downloadLink && data && data.url) {
+        downloadLink.href = data.url;
+        downloadLink.setAttribute('download', '');
+    }
+
+    if (btnOfx) {
+        if (formatoGerado === 'ofx' && conversaoId) {
+            btnOfx.href = `/conversor/ver_ofx/${conversaoId}/`;
+            btnOfx.style.display = 'inline-block';
+        } else {
+            btnOfx.removeAttribute('href');
+            btnOfx.style.display = 'none';
+        }
+    }
+}
+
 function verificarStatus() {
     if (!conversaoId) return;
     
@@ -782,13 +803,7 @@ function verificarStatus() {
             document.getElementById('progressBar').textContent = '100%';
             document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
             
-            document.getElementById('downloadLink').href = data.url;
-            // show OFX viewer link
-            const btnOfx = document.getElementById('btnVerOfx');
-            if (btnOfx) {
-                btnOfx.href = `/conversor/ver_ofx/${conversaoId}/`;
-                btnOfx.style.display = 'inline-block';
-            }
+            atualizarAcoesResultado(data);
             document.getElementById('resultadoArea').classList.remove('d-none');
             // Show extracted text button if server returned the text
             const txtEl = document.getElementById('txtExtraido');
@@ -871,13 +886,7 @@ function verificarStatus() {
                         document.getElementById('progressBar').style.width = '100%';
                         document.getElementById('progressBar').textContent = '100%';
                         document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
-                        document.getElementById('downloadLink').href = d.url;
-                        // show OFX viewer link
-                        const btnOfx2 = document.getElementById('btnVerOfx');
-                        if (btnOfx2) {
-                            btnOfx2.href = `/conversor/ver_ofx/${conversaoId}/`;
-                            btnOfx2.style.display = 'inline-block';
-                        }
+                        atualizarAcoesResultado(d);
                         document.getElementById('resultadoArea').classList.remove('d-none');
                         if (d.meta) showHeuristicMeta(d.meta);
                     } else if (d.status === 'banco_nao_detectado') {
@@ -935,13 +944,7 @@ function verificarStatus() {
                             document.getElementById('progressBar').style.width = '100%';
                             document.getElementById('progressBar').textContent = '100%';
                             document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
-                            document.getElementById('downloadLink').href = d.url;
-                                // show OFX viewer link
-                                const btnOfx3 = document.getElementById('btnVerOfx');
-                                if (btnOfx3) {
-                                    btnOfx3.href = `/conversor/ver_ofx/${conversaoId}/`;
-                                    btnOfx3.style.display = 'inline-block';
-                                }
+                            atualizarAcoesResultado(d);
                             document.getElementById('resultadoArea').classList.remove('d-none');
                             const txtEl = document.getElementById('txtExtraido');
                             txtEl.textContent = d.texto_completo || '';
@@ -1029,13 +1032,7 @@ function verificarStatus() {
             document.getElementById('progressBar').textContent = '100%';
             document.getElementById('statusMensagem').textContent = 'Conversão concluída!';
             
-            document.getElementById('downloadLink').href = data.url;
-            // show OFX viewer link
-            const btnOfx4 = document.getElementById('btnVerOfx');
-            if (btnOfx4) {
-                btnOfx4.href = `/conversor/ver_ofx/${conversaoId}/`;
-                btnOfx4.style.display = 'inline-block';
-            }
+            atualizarAcoesResultado(data);
             document.getElementById('resultadoArea').classList.remove('d-none');
             // Also show extracted text / new-file button for this handler
             const txtEl2 = document.getElementById('txtExtraido');
@@ -1114,6 +1111,11 @@ function resetConverterUI() {
     if (btnVerTxt) btnVerTxt.style.display = 'none';
     const downloadLink = document.getElementById('downloadLink');
     if (downloadLink) downloadLink.href = '#';
+    const btnVerOfx = document.getElementById('btnVerOfx');
+    if (btnVerOfx) {
+        btnVerOfx.removeAttribute('href');
+        btnVerOfx.style.display = 'none';
+    }
 }
 </script>
 
