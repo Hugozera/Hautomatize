@@ -87,6 +87,9 @@ urlpatterns = [
     path('historico/', views.historico, name='historico'),
     path('download/progresso/<int:tarefa_id>/', views.progresso_download, name='progresso_download'),
     path('download/api/progresso/<int:tarefa_id>/', views.api_progresso_download, name='api_progresso_download'),
+    path('download/api/progresso-token/<int:tarefa_id>/', views.api_progresso_download_token, name='api_progresso_download_token'),
+    path('download/api/iniciar/', views.api_iniciar_download_parametros, name='api_iniciar_download_parametros'),
+    path('download/api/iniciar-token/', views.api_iniciar_download_parametros_token, name='api_iniciar_download_parametros_token'),
     path('download/lista/', views.listar_downloads, name='lista_downloads'),
     
  
