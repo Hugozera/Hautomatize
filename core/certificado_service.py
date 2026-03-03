@@ -17,6 +17,47 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.backends import default_backend
 
 # ============================================
+# CONFIGURAÇÃO DE DIRETÓRIOS
+# ============================================
+
+# Obtém o diretório raiz do projeto (pai do diretório core)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# Caminhos do OpenSSL no projeto
+OPENSSL_BIN_PATH = os.path.join(PROJECT_ROOT, 'OpenSSL-Win64', 'bin')
+OPENSSL_LIB_PATH = os.path.join(PROJECT_ROOT, 'OpenSSL-Win64', 'lib')
+OPENSSL_MODULES_PATH = os.path.join(OPENSSL_LIB_PATH, 'ossl-modules')
+OPENSSL_EXE = os.path.join(OPENSSL_BIN_PATH, 'openssl.exe')
+
+def configurar_ambiente_openssl():
+    r"""
+    Configura as variáveis de ambiente para usar OpenSSL com suporte a certificados legados.
+    
+    Isso permite que certificados antigos (com algoritmos SHA1, MD5, etc) sejam processados
+    pelo OpenSSL 3.x através das DLLs legacy em OpenSSL-Win64\lib\ossl-modules\
+    """
+    try:
+        # Adiciona o diretório bin ao PATH
+        if os.path.exists(OPENSSL_BIN_PATH):
+            path_atual = os.environ.get('PATH', '')
+            if OPENSSL_BIN_PATH not in path_atual:
+                os.environ['PATH'] = f"{OPENSSL_BIN_PATH};{path_atual}"
+                print(f"✅ OpenSSL bin adicionado ao PATH: {OPENSSL_BIN_PATH}")
+        
+        # Configura o diretório de módulos para DLL legacy
+        if os.path.exists(OPENSSL_MODULES_PATH):
+            os.environ['OPENSSL_MODULES'] = OPENSSL_MODULES_PATH
+            print(f"✅ OPENSSL_MODULES configurado para suporte a certificados legados: {OPENSSL_MODULES_PATH}")
+        
+        # Define a biblioteca do OpenSSL explicitamente
+        if os.path.exists(OPENSSL_LIB_PATH):
+            os.environ['LD_LIBRARY_PATH'] = OPENSSL_LIB_PATH
+            print(f"✅ LD_LIBRARY_PATH configurado: {OPENSSL_LIB_PATH}")
+            
+    except Exception as e:
+        print(f"⚠️ Erro ao configurar ambiente OpenSSL: {e}")
+
+# ============================================
 # FUNÇÕES AUXILIARES
 # ============================================
 
@@ -37,8 +78,15 @@ def limpar_arquivo_temporario(caminho):
 def verificar_openssl_instalado():
     """Verifica se o OpenSSL está instalado no sistema"""
     try:
-        # Tenta encontrar o openssl em locais comuns
+        # Configura variáveis de ambiente primeiro
+        configurar_ambiente_openssl()
+        
+        # Prioridade: tenta o OpenSSL do projeto primeiro
         openssl_paths = [
+            OPENSSL_EXE,  # OpenSSL-Win64\bin\openssl.exe (LOCAL DO PROJETO)
+            os.path.join(PROJECT_ROOT, 'lib', 'OpenSSL-Win64', 'bin', 'openssl.exe'),
+            os.path.join(PROJECT_ROOT, 'lib', 'openssl.exe'),
+            os.path.join(PROJECT_ROOT, 'tools', 'openssl.exe'),
             'openssl',
             'C:\\Program Files\\OpenSSL-Win64\\bin\\openssl.exe',
             'C:\\Program Files (x86)\\OpenSSL-Win32\\bin\\openssl.exe',
@@ -103,7 +151,7 @@ def exportar_certificado_powershell(thumbprint, senha):
     $ErrorActionPreference = "Stop"
     
     try {{
-        $cert = Get-ChildItem -Path Cert:\CurrentUser\My | Where-Object {{ $_.Thumbprint -eq '{thumbprint}' }}
+        $cert = Get-ChildItem -Path Cert:\\CurrentUser\\My | Where-Object {{ $_.Thumbprint -eq '{thumbprint}' }}
         
         if (-not $cert) {{
             Write-Error "Certificado não encontrado"
@@ -178,14 +226,101 @@ def exportar_certificado_pfx(thumbprint):
 
 openssl_path = None  # Variável global para cache do caminho do OpenSSL
 
+def converter_pfx_para_pem_python(pfx_path, senha, pem_path):
+    """
+    Converte arquivo PFX para formato PEM usando Python puro (cryptography)
+    
+    Este método nativo do Python é mais robusto para certificados legados com
+    SHA1, MD5, e algoritmos deprecated que OpenSSL 3.x bloqueia por padrão.
+    
+    Returns:
+        str: Caminho do arquivo PEM ou None se falhar
+    """
+    try:
+        from cryptography.hazmat.primitives.serialization import pkcs12
+        from cryptography import x509
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.backends import default_backend
+        
+        print(f"Convertendo PFX para PEM usando Python (cryptography)...")
+        
+        # Lê o arquivo PFX
+        with open(pfx_path, 'rb') as f:
+            pfx_data = f.read()
+        
+        print(f"Arquivo PFX lido: {len(pfx_data)} bytes")
+        
+        # Carrega o PKCS12
+        try:
+            private_key, certificate, additional_certs = pkcs12.load_key_and_certificates(
+                pfx_data,
+                senha.encode() if isinstance(senha, str) else senha,
+                backend=default_backend()
+            )
+        except TypeError:
+            # Versões antigas podem ter assinatura diferente
+            private_key, certificate, additional_certs = pkcs12.load_key_and_certificates(
+                pfx_data,
+                senha.encode() if isinstance(senha, str) else senha
+            )
+        
+        print(f"PKCS12 carregado com sucesso")
+        print(f"  Certificado: {certificate is not None}")
+        print(f"  Chave privada: {private_key is not None}")
+        print(f"  Certificados adicionais: {len(additional_certs) if additional_certs else 0}")
+        
+        # Escreve o PEM
+        pem_data = b''
+        
+        # Adiciona certificado
+        if certificate:
+            pem_data += certificate.public_bytes(serialization.Encoding.PEM)
+        
+        # Adiciona chave privada
+        if private_key:
+            pem_data += private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+        
+        # Adiciona certificados adicionais
+        if additional_certs:
+            for cert in additional_certs:
+                pem_data += cert.public_bytes(serialization.Encoding.PEM)
+        
+        # Escreve o arquivo PEM
+        with open(pem_path, 'wb') as f:
+            f.write(pem_data)
+        
+        print(f"✅ PEM escrito com sucesso: {len(pem_data)} bytes")
+        print(f"Arquivo: {pem_path}")
+        
+        return pem_path
+        
+    except Exception as e:
+        print(f"Erro na conversão Python: {e}")
+        import traceback
+        traceback.print_exc()
+        return None
+
+
 def converter_pfx_para_pem(pfx_path, senha, pem_path):
     """
-    Converte arquivo PFX para formato PEM usando OpenSSL
+    Converte arquivo PFX para formato PEM usando OpenSSL com suporte a certificados legados.
+    
+    Tenta primeiro com Python puro (mais robusto), depois com OpenSSL.
     
     Returns:
         str: Caminho do arquivo PEM ou None se falhar
     """
     global openssl_path
+    
+    # ESTRATÉGIA 0: Tenta com Python puro primeiro (mais robusto para legados)
+    print(f"\nTentativa 0: usando Python puro (cryptography)...")
+    resultado = converter_pfx_para_pem_python(pfx_path, senha, pem_path)
+    if resultado:
+        return resultado
     
     if openssl_path is None:
         openssl_path = verificar_openssl_instalado()
@@ -195,27 +330,197 @@ def converter_pfx_para_pem(pfx_path, senha, pem_path):
         return None
     
     try:
-        # Converte PFX para PEM
+        print(f"Convertendo PFX para PEM com OpenSSL...")
+        print(f"Usando OpenSSL: {openssl_path}")
+        print(f"Arquivo PFX: {pfx_path}")
+        print(f"Arquivo PEM (saída): {pem_path}")
+        
+        # Prepara o ambiente com as variáveis para suporte legado
+        env = os.environ.copy()
+        
+        # Converte PFX para PEM (estratégia 1: com -provider-path legacy + -nomacver)
         cmd = [
             openssl_path, 'pkcs12',
             '-in', pfx_path,
             '-out', pem_path,
-            '-nodes',  # Não criptografar a chave privada
-            '-password', f'pass:{senha}'
+            '-nodes',
+            '-passin', 'stdin',
+            '-nomacver',
+            '-provider-path', OPENSSL_MODULES_PATH,
+            '-provider', 'legacy',
+            '-legacy'
         ]
         
-        print(f"Convertendo PFX para PEM com OpenSSL...")
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        print(f"\nTentativa 1: usando -nomacver -provider-path -provider legacy...")
+        result = subprocess.run(
+            cmd, 
+            input=senha, 
+            capture_output=True, 
+            text=True, 
+            timeout=30,
+            env=env,
+            shell=False
+        )
         
-        if result.returncode == 0 and os.path.getsize(pem_path) > 0:
-            print("✅ Conversão para PEM bem-sucedida")
+        if result.returncode == 0 and os.path.exists(pem_path) and os.path.getsize(pem_path) > 0:
+            print("✅ Conversão para PEM bem-sucedida (estratégia 1)")
+            print(f"Arquivo criado: {pem_path}")
             return pem_path
-        else:
-            print(f"❌ Falha na conversão: {result.stderr}")
-            return None
+        
+        # Se falhar, tenta estratégia 2: com arquivo temporário para senha
+        if result.returncode != 0:
+            print(f"⚠️ Estratégia 1 falhou: {result.stderr[:200]}")
+            print(f"\nTentativa 2: usando arquivo temporário para senha com -nomacver...")
             
+            # Cria arquivo temporário com a senha
+            fd_senha, temp_senha = tempfile.mkstemp(suffix='.txt')
+            try:
+                with os.fdopen(fd_senha, 'w') as f:
+                    f.write(senha)
+                
+                # Tenta com arquivo de senha
+                cmd2 = [
+                    openssl_path, 'pkcs12',
+                    '-in', pfx_path,
+                    '-out', pem_path,
+                    '-nodes',
+                    '-passin', f'file:{temp_senha}',
+                    '-nomacver',
+                    '-provider-path', OPENSSL_MODULES_PATH,
+                    '-provider', 'legacy',
+                    '-legacy'
+                ]
+                
+                result = subprocess.run(
+                    cmd2,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    env=env,
+                    shell=False
+                )
+                
+                if result.returncode == 0 and os.path.exists(pem_path) and os.path.getsize(pem_path) > 0:
+                    print("✅ Conversão para PEM bem-sucedida (estratégia 2)")
+                    print(f"Arquivo criado: {pem_path}")
+                    return pem_path
+                else:
+                    print(f"⚠️ Estratégia 2 também falhou: {result.stderr[:200]}")
+            finally:
+                if os.path.exists(temp_senha):
+                    os.remove(temp_senha)
+        
+        # Se ambas falharem, tenta estratégia 3: com -provider default + stdin + nomacver
+        if result.returncode != 0:
+            print(f"\nTentativa 3: usando -nomacver -provider-path + default...")
+            
+            cmd3 = [
+                openssl_path, 'pkcs12',
+                '-in', pfx_path,
+                '-out', pem_path,
+                '-nodes',
+                '-passin', 'stdin',
+                '-nomacver',
+                '-provider-path', OPENSSL_MODULES_PATH,
+                '-provider', 'default'
+            ]
+            
+            result = subprocess.run(
+                cmd3,
+                input=senha,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                env=env,
+                shell=False
+            )
+            
+            if result.returncode == 0 and os.path.exists(pem_path) and os.path.getsize(pem_path) > 0:
+                print("✅ Conversão para PEM bem-sucedida (estratégia 3)")
+                print(f"Arquivo criado: {pem_path}")
+                return pem_path
+        
+        # Estratégia 4: tenta apenas com stdin + nomacver + provider-path, sem legacy
+        if result.returncode != 0:
+            print(f"\nTentativa 4: usando -nomacver -provider-path stdin (sem legacy)...")
+            
+            cmd4 = [
+                openssl_path, 'pkcs12',
+                '-in', pfx_path,
+                '-out', pem_path,
+                '-nodes',
+                '-passin', 'stdin',
+                '-nomacver',
+                '-provider-path', OPENSSL_MODULES_PATH
+            ]
+            
+            result = subprocess.run(
+                cmd4,
+                input=senha,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                env=env,
+                shell=False
+            )
+            
+            if result.returncode == 0 and os.path.exists(pem_path) and os.path.getsize(pem_path) > 0:
+                print("✅ Conversão para PEM bem-sucedida (estratégia 4)")
+                print(f"Arquivo criado: {pem_path}")
+                return pem_path
+        
+        # Estratégia 5: tenta apenas com stdin + nomacver, sem providers (fallback)
+        if result.returncode != 0:
+            print(f"\nTentativa 5: usando stdin + nomacver (sem providers)...")
+            
+            cmd5 = [
+                openssl_path, 'pkcs12',
+                '-in', pfx_path,
+                '-out', pem_path,
+                '-nodes',
+                '-passin', 'stdin',
+                '-nomacver'
+            ]
+            
+            result = subprocess.run(
+                cmd5,
+                input=senha,
+                capture_output=True,
+                text=True,
+                timeout=30,
+                env=env,
+                shell=False
+            )
+            
+            if result.returncode == 0 and os.path.exists(pem_path) and os.path.getsize(pem_path) > 0:
+                print("✅ Conversão para PEM bem-sucedida (estratégia 5)")
+                print(f"Arquivo criado: {pem_path}")
+                return pem_path
+        
+        # Se nada funcionou, imprime debug detalhado
+        print(f"\n❌ Todas as estratégias falharam!")
+        print(f"Código de retorno: {result.returncode}")
+        print(f"\nSTDERR completo (últimos 500 chars):")
+        print(result.stderr[-500:] if len(result.stderr) > 500 else result.stderr)
+        print(f"\nSTDOUT completo (últimos 500 chars):")
+        print(result.stdout[-500:] if len(result.stdout) > 500 else result.stdout)
+        print(f"\nDicas de debug:")
+        print(f"- Verificar se o arquivo PFX existe: {os.path.exists(pfx_path)}")
+        print(f"- Verificar se o OpenSSL funciona: {openssl_path}")
+        print(f"- OPENSSL_MODULES_PATH: {OPENSSL_MODULES_PATH}")
+        print(f"- Módulos legacy.dll existe: {os.path.exists(os.path.join(OPENSSL_MODULES_PATH, 'legacy.dll'))}")
+        print(f"- Variável OPENSSL_MODULES: {env.get('OPENSSL_MODULES', 'NÃO DEFINIDA')}")
+        print(f"- Variável PATH contem bin dir: {OPENSSL_BIN_PATH in env.get('PATH', '')}")
+        
+        return None
+            
+    except subprocess.TimeoutExpired:
+        print("❌ Timeout na conversão (30s excedido)")
+        return None
     except Exception as e:
-        print(f"Erro na conversão OpenSSL: {e}")
+        print(f"❌ Erro na conversão OpenSSL: {e}")
+        import traceback
+        traceback.print_exc()
         return None
 
 # ============================================
@@ -450,8 +755,124 @@ def testar_certificado(thumbprint, senha):
             session.close()
 
 # ============================================
+# TESTE DE CONVERSÃO PFX PARA PEM
+# ============================================
+
+def testar_conversao_pfx(pfx_path, senha):
+    """
+    Testa a conversão de PFX para PEM diretamente
+    """
+    print(f"\n{'='*60}")
+    print("TESTE DE CONVERSÃO PFX PARA PEM")
+    print(f"{'='*60}")
+    print(f"Arquivo PFX: {pfx_path}")
+    
+    if not os.path.exists(pfx_path):
+        print(f"❌ Arquivo não encontrado: {pfx_path}")
+        return False
+    
+    # Configura ambiente
+    configurar_ambiente_openssl()
+    
+    # Cria arquivo PEM temporário
+    fd, pem_path = tempfile.mkstemp(suffix='.pem')
+    os.close(fd)
+    
+    try:
+        # Converte
+        resultado = converter_pfx_para_pem(pfx_path, senha, pem_path)
+        
+        if resultado:
+            print(f"\n✅ Conversão bem-sucedida!")
+            print(f"Arquivo PEM: {pem_path}")
+            
+            # Mostra tamanho e primeiras linhas
+            with open(pem_path, 'r') as f:
+                conteudo = f.read()
+                print(f"Tamanho: {len(conteudo)} bytes")
+                print(f"Primeiras linhas:")
+                print("\n".join(conteudo.split("\n")[:5]))
+            
+            return True
+        else:
+            print(f"\n❌ Conversão falhou")
+            return False
+            
+    except Exception as e:
+        print(f"❌ Erro: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+    finally:
+        if os.path.exists(pem_path):
+            os.remove(pem_path)
+
+# ============================================
 # EXEMPLO DE USO
 # ============================================
+
+def converter_pfx_para_cert_e_key(pfx_path, senha):
+    """
+    Converte PFX para dois arquivos separados: certificado e chave privada.
+    Retorna tupla (cert_pem_path, key_pem_path)
+    """
+    # Cria arquivos temporários
+    fd_cert, cert_pem_path = tempfile.mkstemp(suffix='.pem')
+    os.close(fd_cert)
+    fd_key, key_pem_path = tempfile.mkstemp(suffix='.pem')
+    os.close(fd_key)
+    
+    try:
+        # Python puro primeiro
+        from cryptography.hazmat.primitives.serialization import pkcs12
+        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.backends import default_backend
+        
+        with open(pfx_path, 'rb') as f:
+            pfx_data = f.read()
+        
+        try:
+            private_key, certificate, additional_certs = pkcs12.load_key_and_certificates(
+                pfx_data,
+                senha.encode() if isinstance(senha, str) else senha,
+                backend=default_backend()
+            )
+        except TypeError:
+            private_key, certificate, additional_certs = pkcs12.load_key_and_certificates(
+                pfx_data,
+                senha.encode() if isinstance(senha, str) else senha
+            )
+        
+        # Escreve certificado
+        cert_data = b''
+        if certificate:
+            cert_data += certificate.public_bytes(serialization.Encoding.PEM)
+        if additional_certs:
+            for cert in additional_certs:
+                cert_data += cert.public_bytes(serialization.Encoding.PEM)
+        
+        with open(cert_pem_path, 'wb') as f:
+            f.write(cert_data)
+        
+        # Escreve chave privada
+        if private_key:
+            key_data = private_key.private_bytes(
+                encoding=serialization.Encoding.PEM,
+                format=serialization.PrivateFormat.TraditionalOpenSSL,
+                encryption_algorithm=serialization.NoEncryption()
+            )
+            with open(key_pem_path, 'wb') as f:
+                f.write(key_data)
+        
+        return cert_pem_path, key_pem_path
+        
+    except Exception as e:
+        print(f"Erro na conversão separada: {e}")
+        if os.path.exists(cert_pem_path):
+            os.remove(cert_pem_path)
+        if os.path.exists(key_pem_path):
+            os.remove(key_pem_path)
+        return None, None
 
 if __name__ == "__main__":
     print("="*60)

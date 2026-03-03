@@ -43,16 +43,17 @@
                 </div>
             {% endif %}
             
-            <form method="post">
+            <form method="post" id="formDownloadManual">
                 {% csrf_token %}
                 
                 <!-- Filtros de Busca -->
                 <div class="row g-3 mb-4 p-3 bg-light rounded">
-                    <div class="col-md-6">
+                    <div class="col-md-6 position-relative">
                         <label class="form-label fw-semibold">
                             <i class="bi bi-search me-1 text-info"></i>Buscar por CNPJ
                         </label>
-                        <input type="text" id="filtro_cnpj" class="form-control" placeholder="Digite o CNPJ...">
+                        <input type="text" id="filtro_cnpj" class="form-control" placeholder="Digite o CNPJ..." autocomplete="off">
+                        <div id="sugestoes_cnpj" class="list-group position-absolute w-100 shadow-sm d-none" style="z-index: 20; max-height: 220px; overflow-y: auto;"></div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label fw-semibold">
@@ -73,6 +74,7 @@
                                 <option value="{{ e.pk }}" 
                                     data-cnpj="{{ e.cnpj }}"
                                     data-razao="{{ e.razao_social }}"
+                                    data-has-cert="{% if e.certificado_arquivo %}1{% else %}0{% endif %}"
                                     {% if empresa_selecionada and e.pk == empresa_selecionada.pk %}selected{% endif %}
                                     {% if request.GET.empresa == e.pk|stringformat:"s" %}selected{% endif %}>
                                     {{ e.nome_fantasia }} ({{ e.cnpj }}) - {{ e.razao_social }}
@@ -221,8 +223,298 @@ document.addEventListener('DOMContentLoaded', function() {
             select.value = empresaParam;
         }
     }
+
+    inicializarFiltrosEmpresa();
 });
+
+function inicializarFiltrosEmpresa() {
+    const filtroCNPJ = document.getElementById('filtro_cnpj');
+    const filtroRazao = document.getElementById('filtro_razao');
+    const selectEmpresa = document.getElementById('select_empresa');
+    const textoFiltro = document.getElementById('texto_filtro');
+    const countFiltro = document.getElementById('count_filtro');
+    const sugestoesCNPJ = document.getElementById('sugestoes_cnpj');
+    const formDownload = document.getElementById('formDownloadManual');
+
+    if (!filtroCNPJ || !selectEmpresa || !sugestoesCNPJ) return;
+
+    function empresaSelecionadaSemCertificado() {
+        const option = selectEmpresa.options[selectEmpresa.selectedIndex];
+        if (!option || !option.value) return false;
+        return option.getAttribute('data-has-cert') !== '1';
+    }
+
+    function abrirFluxoModalCertificado() {
+        const option = selectEmpresa.options[selectEmpresa.selectedIndex];
+        if (!option || !option.value) return;
+
+        const currentEmpresa = new URLSearchParams(window.location.search).get('empresa');
+        if (currentEmpresa === option.value) {
+            return;
+        }
+
+        const target = `${window.location.pathname}?empresa=${encodeURIComponent(option.value)}`;
+        window.location.href = target;
+    }
+
+    const placeholderOption = selectEmpresa.querySelector('option');
+    const empresasOriginais = Array.from(selectEmpresa.querySelectorAll('option'))
+        .filter((option, index) => index !== 0)
+        .map(option => ({
+            value: option.value,
+            cnpj: option.getAttribute('data-cnpj') || '',
+            razao: option.getAttribute('data-razao') || '',
+            text: option.textContent || ''
+        }));
+
+    let sugestoesAtuais = [];
+    let indiceAtivo = -1;
+
+    function normalizarCNPJ(valor) {
+        return String(valor || '').replace(/\D/g, '');
+    }
+
+    function formatarCNPJ(valor) {
+        const digitos = normalizarCNPJ(valor).slice(0, 14);
+        if (!digitos) return '';
+        if (digitos.length <= 2) return digitos;
+        if (digitos.length <= 5) return `${digitos.slice(0, 2)}.${digitos.slice(2)}`;
+        if (digitos.length <= 8) return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5)}`;
+        if (digitos.length <= 12) return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8)}`;
+        return `${digitos.slice(0, 2)}.${digitos.slice(2, 5)}.${digitos.slice(5, 8)}/${digitos.slice(8, 12)}-${digitos.slice(12)}`;
+    }
+
+    function escaparHTML(valor) {
+        return String(valor || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function destacarTexto(texto, termo) {
+        const base = String(texto || '');
+        const busca = String(termo || '').trim();
+        const safeBase = escaparHTML(base);
+        if (!busca) return safeBase;
+
+        const indice = base.toLowerCase().indexOf(busca.toLowerCase());
+        if (indice < 0) return safeBase;
+
+        const inicio = escaparHTML(base.slice(0, indice));
+        const match = escaparHTML(base.slice(indice, indice + busca.length));
+        const fim = escaparHTML(base.slice(indice + busca.length));
+        return `${inicio}<mark class="sugestao-mark">${match}</mark>${fim}`;
+    }
+
+    function esconderSugestoes() {
+        sugestoesCNPJ.classList.add('d-none');
+        sugestoesCNPJ.innerHTML = '';
+        sugestoesAtuais = [];
+        indiceAtivo = -1;
+    }
+
+    function selecionarEmpresa(item) {
+        selectEmpresa.value = item.value;
+        filtroCNPJ.value = formatarCNPJ(item.cnpj);
+        if (filtroRazao) {
+            filtroRazao.value = item.razao || '';
+        }
+        esconderSugestoes();
+    }
+
+    function renderizarSelect(listaFiltrada) {
+        const selecionadoAtual = selectEmpresa.value;
+        selectEmpresa.innerHTML = '';
+
+        if (placeholderOption) {
+            selectEmpresa.appendChild(placeholderOption.cloneNode(true));
+        }
+
+        listaFiltrada.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item.value;
+            option.textContent = item.text;
+            option.setAttribute('data-cnpj', item.cnpj);
+            option.setAttribute('data-razao', item.razao);
+            selectEmpresa.appendChild(option);
+        });
+
+        if (listaFiltrada.some(item => item.value === selecionadoAtual)) {
+            selectEmpresa.value = selecionadoAtual;
+        }
+    }
+
+    function atualizarSugestaoAtiva() {
+        const botoes = sugestoesCNPJ.querySelectorAll('.list-group-item');
+        botoes.forEach((botao, index) => {
+            botao.classList.toggle('active', index === indiceAtivo);
+        });
+    }
+
+    function renderizarSugestoes(listaFiltrada) {
+        const termoCNPJ = normalizarCNPJ(filtroCNPJ.value);
+        const termoRazao = (filtroRazao?.value || '').trim();
+
+        if ((!termoCNPJ && !termoRazao) || !listaFiltrada.length) {
+            esconderSugestoes();
+            return;
+        }
+
+        sugestoesCNPJ.innerHTML = '';
+        sugestoesAtuais = listaFiltrada.slice(0, 8);
+        indiceAtivo = -1;
+
+        sugestoesAtuais.forEach(item => {
+            const botao = document.createElement('button');
+            botao.type = 'button';
+            botao.className = 'list-group-item list-group-item-action sugestao-empresa-item';
+
+            const nomeEmpresa = (item.razao || item.text || '').trim();
+            const cnpjFormatado = formatarCNPJ(item.cnpj);
+            const cnpjDestacado = destacarTexto(cnpjFormatado, formatarCNPJ(termoCNPJ));
+            const nomeDestacado = destacarTexto(nomeEmpresa, termoRazao);
+
+            botao.innerHTML = `
+                <div class="sugestao-empresa-nome">${nomeDestacado}</div>
+                <div class="sugestao-empresa-meta">
+                    <i class="bi bi-upc-scan me-1"></i>${cnpjDestacado}
+                </div>
+            `;
+            botao.addEventListener('click', () => selecionarEmpresa(item));
+            sugestoesCNPJ.appendChild(botao);
+        });
+
+        sugestoesCNPJ.classList.remove('d-none');
+    }
+
+    function aplicarFiltro() {
+        const cnpjBusca = normalizarCNPJ(filtroCNPJ.value);
+        const razaoBusca = (filtroRazao?.value || '').toLowerCase().trim();
+
+        const listaFiltrada = empresasOriginais.filter(item => {
+            const textoCompleto = (item.text || '').toLowerCase();
+            const cnpjAtual = normalizarCNPJ(item.cnpj);
+            const razaoAtual = (item.razao || '').toLowerCase();
+            const matchCNPJ = cnpjBusca === '' || cnpjAtual.includes(cnpjBusca);
+            const matchRazao = razaoBusca === '' || razaoAtual.includes(razaoBusca) || textoCompleto.includes(razaoBusca);
+            return matchCNPJ && matchRazao;
+        });
+
+        renderizarSelect(listaFiltrada);
+        renderizarSugestoes(listaFiltrada);
+
+        if (cnpjBusca !== '' || razaoBusca !== '') {
+            textoFiltro.style.display = 'block';
+            countFiltro.textContent = listaFiltrada.length;
+        } else {
+            textoFiltro.style.display = 'none';
+            esconderSugestoes();
+        }
+
+        if (cnpjBusca && listaFiltrada.length === 1 && normalizarCNPJ(listaFiltrada[0].cnpj) === cnpjBusca) {
+            selecionarEmpresa(listaFiltrada[0]);
+        }
+    }
+
+    function tratarTeclado(event) {
+        if (sugestoesCNPJ.classList.contains('d-none') || !sugestoesAtuais.length) return;
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            indiceAtivo = (indiceAtivo + 1) % sugestoesAtuais.length;
+            atualizarSugestaoAtiva();
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            indiceAtivo = indiceAtivo <= 0 ? sugestoesAtuais.length - 1 : indiceAtivo - 1;
+            atualizarSugestaoAtiva();
+            return;
+        }
+
+        if (event.key === 'Enter' && indiceAtivo >= 0) {
+            event.preventDefault();
+            selecionarEmpresa(sugestoesAtuais[indiceAtivo]);
+            return;
+        }
+
+        if (event.key === 'Escape') {
+            esconderSugestoes();
+        }
+    }
+
+    filtroCNPJ.addEventListener('input', function() {
+        this.value = formatarCNPJ(this.value);
+        aplicarFiltro();
+    });
+
+    if (filtroRazao) {
+        filtroRazao.addEventListener('input', aplicarFiltro);
+        filtroRazao.addEventListener('keydown', tratarTeclado);
+    }
+
+    filtroCNPJ.addEventListener('keydown', tratarTeclado);
+
+    selectEmpresa.addEventListener('change', function() {
+        const selecionada = empresasOriginais.find(item => item.value === this.value);
+        if (!selecionada) return;
+        filtroCNPJ.value = formatarCNPJ(selecionada.cnpj);
+        if (filtroRazao) {
+            filtroRazao.value = selecionada.razao || '';
+        }
+        esconderSugestoes();
+
+        if (empresaSelecionadaSemCertificado()) {
+            abrirFluxoModalCertificado();
+        }
+    });
+
+    document.addEventListener('click', function(event) {
+        if (event.target === filtroCNPJ || event.target === filtroRazao || sugestoesCNPJ.contains(event.target)) return;
+        esconderSugestoes();
+    });
+}
 </script>
+
+<style>
+#sugestoes_cnpj {
+    border: 1px solid rgba(0, 0, 0, .08);
+    border-radius: .5rem;
+}
+
+.sugestao-empresa-item {
+    padding: .55rem .75rem;
+    line-height: 1.2;
+}
+
+.sugestao-empresa-nome {
+    font-size: .92rem;
+    font-weight: 600;
+    color: var(--verde-deep);
+    margin-bottom: .2rem;
+}
+
+.sugestao-empresa-meta {
+    font-size: .8rem;
+    color: #6c757d;
+}
+
+.sugestao-mark {
+    background: rgba(255, 193, 7, .35);
+    border-radius: .2rem;
+    padding: 0 .1rem;
+}
+
+.sugestao-empresa-item.active,
+.sugestao-empresa-item:active {
+    background-color: rgba(25, 135, 84, .12);
+    border-color: rgba(25, 135, 84, .2);
+    color: inherit;
+}
+</style>
 <!-- Modal de Upload de Certificado -->
 {% if precisa_certificado and empresa_selecionada %}
 <div class="modal fade show" id="modalCertificado" style="display: block; background-color: rgba(0,0,0,0.5);" tabindex="-1">
@@ -492,62 +784,6 @@ function uploadCertificado() {
     });
 }
 
-// Função de Filtro de Empresa por CNPJ e Razão Social
-function inicializarFiltrosEmpresa() {
-    const filtroCNPJ = document.getElementById('filtro_cnpj');
-    const filtroRazao = document.getElementById('filtro_razao');
-    const selectEmpresa = document.getElementById('select_empresa');
-    const textoFiltro = document.getElementById('texto_filtro');
-    const countFiltro = document.getElementById('count_filtro');
-    
-    if (!filtroCNPJ || !selectEmpresa) return; // Sai se elementos não existem
-    
-    // Escuta mudanças nos campos de filtro
-    [filtroCNPJ, filtroRazao].forEach(input => {
-        input.addEventListener('input', aplicarFiltro);
-    });
-    
-    function aplicarFiltro() {
-        const cnpjBusca = filtroCNPJ.value.toLowerCase().trim();
-        const razaoBusca = filtroRazao.value.toLowerCase().trim();
-        
-        let visiveisCount = 0;
-        
-        // Percorre todas as opções (exceto a primeira que é placeholder)
-        const options = selectEmpresa.querySelectorAll('option');
-        options.forEach((option, index) => {
-            if (index === 0) return; // Pula o placeholder
-            
-            const textoCompleto = option.textContent.toLowerCase();
-            const cnpjAtual = option.getAttribute('data-cnpj') || '';
-            const razaoAtual = option.getAttribute('data-razao') || '';
-            
-            // Verifica se o CNPJ e razão social correspondem aos filtros
-            const matchCNPJ = cnpjBusca === '' || cnpjAtual.includes(cnpjBusca) || textoCompleto.includes(cnpjBusca);
-            const matchRazao = razaoBusca === '' || razaoAtual.includes(razaoBusca) || textoCompleto.includes(razaoBusca);
-            
-            const deve_mostrar = matchCNPJ && matchRazao;
-            
-            if (deve_mostrar) {
-                option.style.display = '';
-                visiveisCount++;
-            } else {
-                option.style.display = 'none';
-            }
-        });
-        
-        // Atualiza o texto de informação
-        if (cnpjBusca !== '' || razaoBusca !== '') {
-            textoFiltro.style.display = 'block';
-            countFiltro.textContent = visiveisCount;
-        } else {
-            textoFiltro.style.display = 'none';
-        }
-    }
-}
-
-// Inicializa os filtros quando a página carrega
-document.addEventListener('DOMContentLoaded', inicializarFiltrosEmpresa);
 </script>
 
 <style>
