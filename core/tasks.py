@@ -66,47 +66,6 @@ class DownloadTask(threading.Thread):
         except:
             pass
     
-    def criar_zip(self):
-        """Cria arquivo ZIP com as notas baixadas"""
-        self.log("📦 Criando arquivo ZIP...")
-        self.atualizar_status('zipando', 95, "Compactando arquivos...")
-        
-        try:
-            from .models import TarefaDownload
-            tarefa = TarefaDownload.objects.get(pk=self.tarefa_id)
-            
-            # Nome do arquivo ZIP
-            nome_zip = f"nfse_{self.empresa.pk}_{self.tipo}_{self.data_inicio}_a_{self.data_fim}.zip"
-            # primeiro caminho dentro da pasta geral de zips (para compatibilidade histórica)
-            caminho_zip = os.path.join('media', 'zips', nome_zip)
-            os.makedirs(os.path.dirname(caminho_zip), exist_ok=True)
-            
-            # Cria o ZIP
-            with zipfile.ZipFile(caminho_zip, 'w', zipfile.ZIP_DEFLATED) as zipf:
-                arquivos = os.listdir(self.pasta_destino)
-                for arquivo in arquivos:
-                    if arquivo.endswith(('.pdf', '.xml')):
-                        caminho_completo = os.path.join(self.pasta_destino, arquivo)
-                        zipf.write(caminho_completo, arquivo)
-                        self.log(f"   Adicionado: {arquivo}")
-            
-            # Salva referência no modelo da tarefa
-            from django.core.files import File
-            with open(caminho_zip, 'rb') as f:
-                tarefa.arquivo_zip.save(nome_zip, File(f), save=True)
-
-            # Também guarda cópia no registro da empresa para acesso direto
-            try:
-                with open(caminho_zip, 'rb') as f:
-                    self.empresa.ultimo_zip.save(nome_zip, File(f), save=True)
-            except Exception as e:
-                self.log(f"⚠️ Falha ao salvar ZIP na empresa: {e}")
-
-            self.log(f"✅ ZIP criado: {caminho_zip}")
-            
-        except Exception as e:
-            self.log(f"❌ Erro ao criar ZIP: {e}")
-    
     def run(self):
         """Executa o download"""
         self.log("🚀 Iniciando tarefa de download...")
@@ -116,7 +75,8 @@ class DownloadTask(threading.Thread):
             # Executa o download
             self.atualizar_status('extraindo_links', 30, "Buscando notas...")
             
-            total, baixadas, pasta = baixar_com_playwright(
+            # AGORA RECEBE 4 VALORES: total, baixadas, pasta, zip_path
+            total, baixadas, pasta, zip_path = baixar_com_playwright(
                 empresa=self.empresa,
                 tipo=self.tipo,
                 data_inicio=self.data_inicio,
@@ -133,24 +93,46 @@ class DownloadTask(threading.Thread):
                 self.log("ℹ️ Nenhuma nota encontrada")
                 return
             
-            # Cria ZIP
-            self.criar_zip()
+            # Salvar referência do ZIP no modelo da tarefa
+            if zip_path and os.path.exists(zip_path):
+                self.log(f"📦 ZIP gerado: {zip_path}")
+                
+                from django.core.files import File
+                from .models import TarefaDownload
+                
+                try:
+                    tarefa = TarefaDownload.objects.get(pk=self.tarefa_id)
+                    nome_zip = os.path.basename(zip_path)
+                    
+                    with open(zip_path, 'rb') as f:
+                        tarefa.arquivo_zip.save(nome_zip, File(f), save=True)
+                    
+                    # Também guarda cópia no registro da empresa para acesso direto
+                    try:
+                        with open(zip_path, 'rb') as f:
+                            self.empresa.ultimo_zip.save(nome_zip, File(f), save=True)
+                    except Exception as e:
+                        self.log(f"⚠️ Falha ao salvar ZIP na empresa: {e}")
+                    
+                    self.log(f"✅ ZIP salvo nos registros")
+                    
+                except Exception as e:
+                    self.log(f"❌ Erro ao salvar ZIP: {e}")
             
-            # Dispara parsing assíncrono dos XMLs baixados (sem bloquear esta thread)
+            # Dispara parsing assíncrono dos XMLs baixados
             parser = XMLParseThread(self.pasta_destino, self.empresa.pk)
             parser.start()
             
             # Finaliza
             self.atualizar_status('concluido', 100, f"Download concluído! {baixadas}/{total} notas")
             self.log(f"✅ Tarefa concluída! {baixadas}/{total} notas baixadas")
+            self.log(f"📦 ZIP disponível: {zip_path}")
             
         except Exception as e:
             self.log(f"❌ Erro: {e}")
             self.atualizar_status('erro', 0, str(e))
             import traceback
             traceback.print_exc()
-
-
 
 
 class XMLParseThread(threading.Thread):
