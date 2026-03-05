@@ -12,6 +12,7 @@ import xml.etree.ElementTree as ET
 from typing import List, Dict, Tuple, Optional
 import traceback
 import csv
+from html import escape
 from . import conversor_pipeline
 from .learning_store import LearningStore
 import pkgutil
@@ -83,6 +84,15 @@ try:
 except Exception:
     HAS_PDF2DOCX = False
 
+try:
+    from reportlab.lib import colors
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    HAS_REPORTLAB = True
+except Exception:
+    HAS_REPORTLAB = False
+
 
 class ConversorService:
     # CORREÇÃO: Root do projeto é C:\Hautomatize
@@ -105,16 +115,17 @@ class ConversorService:
     MAX_WORKERS = multiprocessing.cpu_count()
 
     FORMATOS_SUPORTADOS = {
-        'pdf': ['ofx', 'txt', 'html', 'xml', 'csv', 'jpg', 'png', 'zip', 'docx'],
-        'ofx': ['pdf', 'txt', 'csv', 'xml', 'html', 'zip', 'docx'],
-        'txt': ['pdf', 'ofx', 'html', 'xml', 'csv', 'zip', 'docx'],
-        'csv': ['ofx', 'pdf', 'txt', 'xml', 'html', 'zip', 'docx'],
-        'xml': ['ofx', 'pdf', 'txt', 'html', 'csv', 'zip', 'docx'],
-        'jpg': ['pdf', 'png', 'ofx', 'txt', 'zip', 'docx'],
-        'jpeg': ['pdf', 'png', 'ofx', 'txt', 'zip', 'docx'],
-        'png': ['pdf', 'jpg', 'ofx', 'txt', 'zip', 'docx'],
-        'html': ['pdf', 'txt', 'ofx', 'csv', 'xml', 'zip', 'docx'],
-        'docx': ['pdf', 'ofx', 'txt', 'csv', 'xml', 'html', 'zip'],
+        'pdf': ['ofx', 'txt', 'html', 'xml', 'csv', 'jpg', 'png', 'zip', 'docx', 'xlsx'],
+        'ofx': ['pdf', 'txt', 'csv', 'xml', 'html', 'zip', 'docx', 'xlsx'],
+        'txt': ['pdf', 'ofx', 'html', 'xml', 'csv', 'zip', 'docx', 'xlsx'],
+        'csv': ['ofx', 'pdf', 'txt', 'xml', 'html', 'zip', 'docx', 'xlsx'],
+        'xml': ['ofx', 'pdf', 'txt', 'html', 'csv', 'zip', 'docx', 'xlsx'],
+        'jpg': ['pdf', 'png', 'ofx', 'txt', 'zip', 'docx', 'html', 'xml', 'csv', 'xlsx'],
+        'jpeg': ['pdf', 'png', 'ofx', 'txt', 'zip', 'docx', 'html', 'xml', 'csv', 'xlsx'],
+        'png': ['pdf', 'jpg', 'ofx', 'txt', 'zip', 'docx', 'html', 'xml', 'csv', 'xlsx'],
+        'html': ['pdf', 'txt', 'ofx', 'csv', 'xml', 'zip', 'docx', 'xlsx'],
+        'docx': ['pdf', 'ofx', 'txt', 'csv', 'xml', 'html', 'zip', 'xlsx'],
+        'xlsx': ['pdf', 'ofx', 'txt', 'csv', 'xml', 'html', 'zip', 'docx'],
         'zip': ['*'],
     }
 
@@ -124,6 +135,149 @@ class ConversorService:
             (formato_origem or '').lower().replace('.', ''), 
             ['ofx', 'pdf', 'txt', 'zip']
         )
+
+    @staticmethod
+    def _parse_ofx_transactions(ofx_text: str) -> List[Dict]:
+        trans = []
+        if not ofx_text:
+            return trans
+        try:
+            blocks = re.findall(r'<STMTTRN>(.*?)</STMTTRN>', ofx_text, flags=re.S | re.I)
+            for b in blocks:
+                dt = re.search(r'<DTPOSTED>([^\r\n<]+)', b, flags=re.I)
+                amt = re.search(r'<TRNAMT>([^\r\n<]+)', b, flags=re.I)
+                trntype = re.search(r'<TRNTYPE>([^\r\n<]+)', b, flags=re.I)
+                name = re.search(r'<NAME>([^\r\n<]+)', b, flags=re.I)
+                memo = re.search(r'<MEMO>([^\r\n<]+)', b, flags=re.I)
+                fitid = re.search(r'<FITID>([^\r\n<]+)', b, flags=re.I)
+
+                dt_raw = dt.group(1).strip() if dt else ''
+                valor = 0.0
+                try:
+                    valor = float((amt.group(1) if amt else '0').replace(',', '.'))
+                except Exception:
+                    valor = 0.0
+
+                tipo = (trntype.group(1).strip().upper() if trntype else '')
+                if not tipo:
+                    tipo = 'DEBIT' if valor < 0 else 'CREDIT'
+
+                trans.append({
+                    'data': dt_raw,
+                    'valor': abs(valor),
+                    'tipo': tipo,
+                    'descricao': ((name.group(1).strip() if name else '') or (memo.group(1).strip() if memo else '')).strip(),
+                    'documento': fitid.group(1).strip() if fitid else '',
+                    'fitid': fitid.group(1).strip() if fitid else ''
+                })
+        except Exception:
+            return []
+        return trans
+
+    @staticmethod
+    def _extract_text_for_non_pdf(arquivo_path: str, origem_ext: str) -> Tuple[str, Optional[str]]:
+        try:
+            if origem_ext in ['.txt', '.xml', '.html', '.htm', '.ofx']:
+                with open(arquivo_path, 'r', encoding='utf-8', errors='replace') as f:
+                    return f.read(), None
+
+            if origem_ext == '.docx':
+                texto, erro = ConversorService.extract_text_from_docx(arquivo_path)
+                return (texto or '', erro)
+
+            if origem_ext == '.csv':
+                lines = []
+                with open(arquivo_path, 'r', encoding='utf-8', errors='replace', newline='') as f:
+                    reader = csv.reader(f)
+                    for row in reader:
+                        lines.append(' | '.join([str(c) for c in row]))
+                return '\n'.join(lines), None
+
+            if origem_ext in ['.xlsx', '.xls']:
+                try:
+                    import pandas as pd
+                except Exception:
+                    return '', 'pandas/openpyxl são necessários para ler XLSX'
+                lines = []
+                xls = pd.ExcelFile(arquivo_path)
+                for sheet in xls.sheet_names:
+                    df = pd.read_excel(arquivo_path, sheet_name=sheet)
+                    lines.append(f'### PLANILHA: {sheet}')
+                    lines.append(df.to_csv(index=False))
+                return '\n\n'.join(lines), None
+
+            if origem_ext in ['.jpg', '.jpeg', '.png'] and HAS_OCR:
+                try:
+                    from PIL import Image
+                    img = Image.open(arquivo_path)
+                    txt = pytesseract.image_to_string(img, lang='por+eng')
+                    return txt or '', None
+                except Exception as e:
+                    return '', f'Erro no OCR da imagem: {e}'
+        except Exception as e:
+            return '', f'Erro ao extrair texto: {e}'
+
+        return '', f'Formato de origem não suportado para extração direta: {origem_ext}'
+
+    @staticmethod
+    def _write_pdf_pretty(output_pdf: str, titulo: str, transacoes: List[Dict], texto: str = '') -> Tuple[bool, Optional[str]]:
+        if not HAS_REPORTLAB:
+            return False, 'reportlab não está instalado para geração de PDF'
+        try:
+            doc = SimpleDocTemplate(output_pdf, pagesize=A4)
+            styles = getSampleStyleSheet()
+            story = []
+            story.append(Paragraph(escape(titulo), styles['Title']))
+            story.append(Spacer(1, 12))
+
+            if transacoes:
+                data = [['Data', 'Tipo', 'Descrição', 'Documento', 'Valor (R$)']]
+                total = 0.0
+                for t in transacoes:
+                    data_raw = str(t.get('data') or '')
+                    data_fmt = data_raw
+                    m = re.match(r'^(\d{4})(\d{2})(\d{2})', data_raw)
+                    if m:
+                        data_fmt = f"{m.group(3)}/{m.group(2)}/{m.group(1)}"
+                    valor = float(t.get('valor') or 0)
+                    tipo = str(t.get('tipo') or '')
+                    if tipo.upper().startswith('D') or tipo.upper().startswith('B'):
+                        valor = -abs(valor)
+                    total += valor
+                    data.append([
+                        data_fmt,
+                        tipo,
+                        escape(str(t.get('descricao') or '')),
+                        escape(str(t.get('documento') or t.get('fitid') or '')),
+                        f"{valor:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')
+                    ])
+
+                data.append(['', '', '', 'TOTAL', f"{total:,.2f}".replace(',', 'X').replace('.', ',').replace('X', '.')])
+                table = Table(data, colWidths=[75, 50, 220, 90, 80], repeatRows=1)
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#0d6efd')),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                    ('ALIGN', (-1, 1), (-1, -1), 'RIGHT'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('FONTSIZE', (0, 0), (-1, -1), 8),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -2), [colors.whitesmoke, colors.lightgrey]),
+                    ('BACKGROUND', (0, -1), (-1, -1), colors.HexColor('#e9ecef')),
+                    ('FONTNAME', (0, -1), (-1, -1), 'Helvetica-Bold'),
+                ]))
+                story.append(table)
+            else:
+                story.append(Paragraph('Nenhuma transação estruturada encontrada. Conteúdo textual abaixo:', styles['Heading3']))
+                story.append(Spacer(1, 8))
+                preview = (texto or '')[:25000]
+                for chunk in preview.splitlines()[:200]:
+                    story.append(Paragraph(escape(chunk) or '&nbsp;', styles['Normal']))
+
+            doc.build(story)
+            return True, None
+        except Exception as e:
+            return False, str(e)
 
     @staticmethod
     def extract_text_from_docx(docx_path: str) -> Tuple[Optional[str], Optional[str]]:
@@ -1539,6 +1693,12 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
             txt_path = arquivo_path
         except Exception as e:
             return None, f"Erro ao ler TXT original: {e}"
+    elif origem_ext in ['.ofx', '.csv', '.xml', '.html', '.htm', '.xlsx', '.xls', '.jpg', '.jpeg', '.png']:
+        texto_extraido, erro_extraido = ConversorService._extract_text_for_non_pdf(arquivo_path, origem_ext)
+        if erro_extraido:
+            return None, erro_extraido
+        texto = texto_extraido or ''
+        txt_path = arquivo_path
     elif origem_ext == '.docx':
         # Extrae texto do DOCX
         texto, erro = ConversorService.extract_text_from_docx(arquivo_path)
@@ -1830,6 +1990,45 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
     # --- Tentar extrair transações com parser específico ---
     transacoes = extract_with_parser(texto, banco_detectado)
 
+    # Para origens estruturadas, tentar extração direta mais confiável
+    try:
+        if origem_ext == '.ofx':
+            parsed = ConversorService._parse_ofx_transactions(texto)
+            if parsed:
+                transacoes = parsed
+        elif origem_ext == '.csv':
+            rows = []
+            with open(arquivo_path, 'r', encoding='utf-8', errors='replace', newline='') as cf:
+                reader = csv.DictReader(cf)
+                for idx, row in enumerate(reader, start=1):
+                    valor_raw = row.get('valor') or row.get('TRNAMT') or row.get('amount') or row.get('Valor') or '0'
+                    data_raw = row.get('data') or row.get('DTPOSTED') or row.get('date') or row.get('Data') or ''
+                    tipo_raw = row.get('tipo') or row.get('TRNTYPE') or row.get('type') or row.get('Tipo') or ''
+                    desc_raw = row.get('descricao') or row.get('NAME') or row.get('memo') or row.get('Descrição') or row.get('descricao') or ''
+                    doc_raw = row.get('documento') or row.get('FITID') or row.get('id') or ''
+                    try:
+                        valor = float(str(valor_raw).replace('.', '').replace(',', '.'))
+                    except Exception:
+                        try:
+                            valor = float(str(valor_raw).replace(',', '.'))
+                        except Exception:
+                            valor = 0.0
+                    data_norm = re.sub(r'[^0-9]', '', str(data_raw))
+                    if len(data_norm) == 8:
+                        data_norm += '000000'
+                    rows.append({
+                        'data': data_norm,
+                        'valor': abs(valor),
+                        'tipo': tipo_raw or ('DEBIT' if valor < 0 else 'CREDIT'),
+                        'descricao': str(desc_raw),
+                        'documento': str(doc_raw),
+                        'fitid': str(doc_raw or idx)
+                    })
+            if rows:
+                transacoes = rows
+    except Exception:
+        pass
+
     # Record learning data (best-effort)
     try:
         trans_count = len(transacoes) if transacoes else 0
@@ -2061,6 +2260,156 @@ def converter_arquivo(arquivo_path: str, formato_destino: str,
             return docx_path, None
         else:
             return None, 'Erro ao gerar DOCX'
+
+    if formato_destino == 'html':
+        html_path = os.path.join(output_dir, f"{nome_base}.html")
+        try:
+            rows = []
+            for t in transacoes or []:
+                rows.append(
+                    f"<tr><td>{escape(str(t.get('data') or ''))}</td>"
+                    f"<td>{escape(str(t.get('tipo') or ''))}</td>"
+                    f"<td>{escape(str(t.get('descricao') or ''))}</td>"
+                    f"<td>{escape(str(t.get('documento') or t.get('fitid') or ''))}</td>"
+                    f"<td style='text-align:right'>{escape(str(t.get('valor') or '0'))}</td></tr>"
+                )
+
+            if rows:
+                body = "\n".join(rows)
+                html = (
+                    "<html><head><meta charset='utf-8'><style>"
+                    "body{font-family:Arial,sans-serif;margin:20px}"
+                    "table{border-collapse:collapse;width:100%}"
+                    "th,td{border:1px solid #ddd;padding:8px;font-size:12px}"
+                    "th{background:#f0f0f0}"
+                    "</style></head><body>"
+                    f"<h2>Conversão: {escape(nome_base)}</h2>"
+                    "<table><thead><tr><th>Data</th><th>Tipo</th><th>Descrição</th><th>Documento</th><th>Valor</th></tr></thead>"
+                    f"<tbody>{body}</tbody></table></body></html>"
+                )
+            else:
+                html = (
+                    "<html><head><meta charset='utf-8'></head><body>"
+                    f"<h2>Conteúdo convertido: {escape(nome_base)}</h2>"
+                    f"<pre>{escape(texto or '')}</pre></body></html>"
+                )
+            with open(html_path, 'w', encoding='utf-8') as hf:
+                hf.write(html)
+            return html_path, None
+        except Exception as e:
+            return None, f'Erro ao gerar HTML: {e}'
+
+    if formato_destino == 'xml':
+        xml_path = os.path.join(output_dir, f"{nome_base}.xml")
+        try:
+            root = ET.Element('conversao', attrib={'arquivo': nome_base})
+            if transacoes:
+                tx_root = ET.SubElement(root, 'transacoes')
+                for t in transacoes:
+                    tx = ET.SubElement(tx_root, 'transacao')
+                    ET.SubElement(tx, 'data').text = str(t.get('data') or '')
+                    ET.SubElement(tx, 'tipo').text = str(t.get('tipo') or '')
+                    ET.SubElement(tx, 'descricao').text = str(t.get('descricao') or '')
+                    ET.SubElement(tx, 'documento').text = str(t.get('documento') or t.get('fitid') or '')
+                    ET.SubElement(tx, 'valor').text = str(t.get('valor') or '0')
+            else:
+                ET.SubElement(root, 'texto').text = texto or ''
+            tree = ET.ElementTree(root)
+            tree.write(xml_path, encoding='utf-8', xml_declaration=True)
+            return xml_path, None
+        except Exception as e:
+            return None, f'Erro ao gerar XML: {e}'
+
+    if formato_destino == 'pdf':
+        pdf_path = os.path.join(output_dir, f"{nome_base}.pdf")
+        try:
+            if origem_ext == '.pdf':
+                try:
+                    import shutil
+                    shutil.copy2(arquivo_path, pdf_path)
+                    return pdf_path, None
+                except Exception:
+                    pass
+            ok_pdf, err_pdf = ConversorService._write_pdf_pretty(
+                pdf_path,
+                f"Relatório de Conversão - {nome_base}",
+                transacoes or [],
+                texto or ''
+            )
+            if ok_pdf and os.path.exists(pdf_path):
+                return pdf_path, None
+            return None, f'Erro ao gerar PDF: {err_pdf or "falha desconhecida"}'
+        except Exception as e:
+            return None, f'Erro ao gerar PDF: {e}'
+
+    if formato_destino in ['png', 'jpg', 'jpeg']:
+        img_ext = 'png' if formato_destino == 'png' else 'jpg'
+        img_path = os.path.join(output_dir, f"{nome_base}.{img_ext}")
+        try:
+            from PIL import Image, ImageDraw
+            width, height = (1240, 1754)
+            image = Image.new('RGB', (width, height), 'white')
+            draw = ImageDraw.Draw(image)
+            y = 30
+            draw.text((30, y), f"Conversão: {nome_base}", fill='black')
+            y += 40
+            lines = []
+            if transacoes:
+                for t in transacoes[:120]:
+                    lines.append(
+                        f"{t.get('data','')} | {t.get('tipo','')} | {t.get('descricao','')} | {t.get('valor','')}"
+                    )
+            else:
+                lines = (texto or '').splitlines()[:150]
+            for ln in lines:
+                if y > (height - 30):
+                    break
+                draw.text((30, y), str(ln)[:150], fill='black')
+                y += 20
+            if img_ext == 'jpg':
+                image.save(img_path, format='JPEG', quality=90)
+            else:
+                image.save(img_path, format='PNG')
+            return img_path, None
+        except Exception as e:
+            return None, f'Erro ao gerar imagem: {e}'
+
+    if formato_destino == 'xlsx':
+        xlsx_path = os.path.join(output_dir, f"{nome_base}.xlsx")
+        try:
+            import pandas as pd
+            if transacoes:
+                pd.DataFrame(transacoes).to_excel(xlsx_path, index=False)
+            else:
+                lines = (texto or '').splitlines()
+                pd.DataFrame({'conteudo': lines}).to_excel(xlsx_path, index=False)
+            return xlsx_path, None
+        except Exception as e:
+            return None, f'Erro ao gerar XLSX: {e}'
+
+    if formato_destino == 'zip':
+        zip_path = os.path.join(output_dir, f"{nome_base}.zip")
+        try:
+            candidates = []
+            txt_candidate = txt_padrao_path if os.path.exists(txt_padrao_path) else None
+            if txt_candidate:
+                candidates.append(txt_candidate)
+            if transacoes:
+                if not os.path.exists(csv_path):
+                    ConversorService._salvar_como_csv(transacoes, csv_path)
+                candidates.append(csv_path)
+                ofx_pack = os.path.join(output_dir, f"{nome_base}.ofx")
+                if ConversorService.gerar_ofx(transacoes, ofx_pack, banco_id='104'):
+                    candidates.append(ofx_pack)
+            with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zf:
+                for fp in candidates:
+                    if fp and os.path.exists(fp):
+                        zf.write(fp, arcname=os.path.basename(fp))
+            return zip_path, None
+        except Exception as e:
+            return None, f'Erro ao gerar ZIP: {e}'
+
+    return None, f'Formato de destino não implementado: {formato_destino}'
 
 
 def processar_pasta(pasta_path: str, formato_destino: str = 'ofx', 

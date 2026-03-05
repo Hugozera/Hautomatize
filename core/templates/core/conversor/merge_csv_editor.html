@@ -1,0 +1,833 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+  <!-- Cabeçalho da página -->
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 mb-0">
+      <i class="bi bi-file-earmark-spreadsheet me-2"></i>
+      Editor de Junção de Planilhas
+    </h1>
+    {% if session_id %}
+    <div class="session-badge">
+      <i class="bi bi-fingerprint me-1"></i>
+      Sessão: <code class="ms-1">{{ session_id|truncatechars:12 }}</code>
+    </div>
+    {% endif %}
+  </div>
+
+  {% if not session_id %}
+  <!-- Upload Section -->
+  <div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+      <div class="card border-0 shadow-sm">
+        <div class="card-body p-5 text-center">
+          <div class="mb-4">
+            <i class="bi bi-cloud-upload text-success" style="font-size: 4rem;"></i>
+          </div>
+          <h2 class="h4 mb-3">Upload de Planilhas</h2>
+          <p class="text-muted mb-4">Selecione os arquivos CSV ou Excel que deseja combinar</p>
+          
+          <form method="post" enctype="multipart/form-data" class="upload-form">
+            {% csrf_token %}
+            <div class="mb-4">
+              <label for="spreadsheets" class="form-label">Arquivos CSV / Excel</label>
+              <input type="file" class="form-control" id="spreadsheets" name="spreadsheets" multiple accept=".csv,.xlsx,.xls,text/csv" required>
+              <small class="text-muted">Você pode selecionar múltiplos arquivos (.csv, .xlsx, .xls)</small>
+            </div>
+            <button type="submit" class="btn btn-success btn-lg px-5">
+              <i class="bi bi-upload me-2"></i>
+              Enviar e Preparar
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  
+  <!-- Editor Layout (2 colunas: planilhas esquerda, sequência direita) -->
+  <div class="editor-layout">
+    <!-- Planilhas (esquerda) -->
+    <div class="spreadsheets-section">
+      <div class="card border-0 shadow-sm h-100">
+        <div class="card-header bg-transparent border-0 py-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-table me-2 text-success"></i>
+            <h2 class="h6 mb-0">Arquivos Disponíveis</h2>
+          </div>
+        </div>
+        
+        <div class="card-body p-3">
+          <div class="spreadsheets-container">
+            {% if sources_list %}
+              {% for s in sources_list %}
+              <div class="spreadsheet-card" data-key="{{ s.key }}" data-filename="{{ s.filename }}">
+                <div class="card-content">
+                  <div class="file-icon">
+                    <i class="bi bi-file-earmark-spreadsheet"></i>
+                  </div>
+                  <div class="file-info">
+                    <strong class="file-name">{{ s.filename|truncatechars:40 }}</strong>
+                    <small class="file-meta">{{ s.total_rows }} linha{{ s.total_rows|pluralize:"s" }} • {{ s.headers|length }} coluna{{ s.headers|pluralize:"s" }}</small>
+                  </div>
+                </div>
+                <button class="btn-add" title="Adicionar à sequência">
+                  <i class="bi bi-plus-circle"></i>
+                </button>
+              </div>
+              {% endfor %}
+            {% else %}
+              <div class="text-center py-5">
+                <i class="bi bi-exclamation-circle text-warning" style="font-size: 2rem;"></i>
+                <p class="text-muted mt-3">Nenhuma planilha foi processada.</p>
+                <a href="{% url 'merge_editor_csv' %}" class="btn btn-sm btn-outline-success mt-3">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i> Voltar
+                </a>
+              </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sequência (direita - sidebar) -->
+    <div class="builder-section">
+      <div class="card border-0 shadow-sm sticky-card">
+        <div class="card-header bg-transparent border-0 py-3">
+          <div class="d-flex align-items-center justify-content-between">
+            <div class="d-flex align-items-center">
+              <i class="bi bi-layers me-2 text-success"></i>
+              <h2 class="h6 mb-0">Ordem de Merging</h2>
+            </div>
+            <span class="sequence-count badge bg-success" id="sequenceCount">0</span>
+          </div>
+        </div>
+        
+        <div class="card-body p-3">
+          <!-- Lista de sequência -->
+          <div class="sequence-container mb-4" id="sequenceContainer">
+            <div class="sequence-list" id="sequence">
+              <div class="empty-sequence">
+                <i class="bi bi-files"></i>
+                <p class="small text-muted mt-2">Clique em <i class="bi bi-plus-circle"></i> nos arquivos</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Formulário -->
+          <form id="mergeCsvForm" method="post" action="{% url 'merge_create_csv' %}">
+            {% csrf_token %}
+            <input type="hidden" name="session_id" value="{{ session_id }}">
+            <input type="hidden" name="sequence" id="sequenceInput">
+            
+            <div class="mb-3">
+              <label class="form-label small">Nome do arquivo final</label>
+              <div class="input-group">
+                <input type="text" class="form-control" name="out_name" placeholder="dados_combinados" id="fileName">
+                <span class="input-group-text" id="fileExtLabel">.csv</span>
+              </div>
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label small" for="outFormat">Formato de saída</label>
+              <select class="form-select" id="outFormat" name="out_format">
+                <option value="csv" selected>CSV (.csv)</option>
+                <option value="xlsx">Excel (.xlsx)</option>
+              </select>
+            </div>
+
+            <div class="mb-3">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="add_source_column" id="add_source_column" checked>
+                <label class="form-check-label small" for="add_source_column">
+                  Adicionar coluna de origem
+                </label>
+              </div>
+            </div>
+
+            <div class="d-grid gap-2">
+              <button type="button" class="btn btn-outline-danger btn-sm" id="clearSequence">
+                <i class="bi bi-trash me-2"></i>
+                Limpar tudo
+              </button>
+              <button type="button" class="btn btn-success" id="downloadBtn">
+                <i class="bi bi-file-earmark-arrow-down me-2"></i>
+                Gerar arquivo
+              </button>
+            </div>
+          </form>
+
+          <!-- Dicas -->
+          <div class="tips-section mt-3">
+            <small class="text-muted d-block">
+              <i class="bi bi-info-circle me-1"></i>
+              Clique no <i class="bi bi-plus-circle"></i> para adicionar
+            </small>
+            <small class="text-muted d-block">
+              <i class="bi bi-arrow-up-down me-1"></i>
+              Arraste para reordenar
+            </small>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pré-visualização das Planilhas (abaixo do editor) -->
+  {% if session_id and sources_list %}
+  <div class="card border-0 shadow-sm mt-4">
+    <div class="card-header bg-transparent border-0 py-3">
+      <div class="d-flex align-items-center">
+        <i class="bi bi-table me-2 text-success"></i>
+        <h2 class="h6 mb-0">Pré-visualização das Planilhas</h2>
+      </div>
+    </div>
+    
+    <div class="card-body p-3">
+      <div class="sources-preview-container">
+        {% for s in sources_list %}
+        <div class="source-group mb-4" data-key="{{ s.key }}">
+          <div class="source-header d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center">
+              <span class="source-badge me-2">{{ s.key }}</span>
+              <span class="filename text-muted small">{{ s.filename|truncatechars:40 }}</span>
+            </div>
+            <span class="page-count badge bg-secondary bg-opacity-10">
+              {{ s.total_rows }} linha{{ s.total_rows|pluralize:"s" }}
+            </span>
+          </div>
+          
+          <div class="table-preview-wrapper">
+            <table class="table table-sm table-hover table-bordered small mb-0">
+              <thead class="table-light sticky-top">
+                <tr>
+                  {% for h in s.headers %}
+                  <th>{{ h }}</th>
+                  {% endfor %}
+                </tr>
+              </thead>
+              <tbody>
+                {% for row in s.preview_rows %}
+                <tr>
+                  {% for col in row %}
+                  <td>{{ col|truncatechars:50 }}</td>
+                  {% endfor %}
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+  {% endif %}
+</div>
+
+<style>
+/* Editor Layout */
+.editor-layout {
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 24px;
+  min-height: calc(100vh - 200px);
+}
+
+/* Spreadsheets Section */
+.spreadsheets-section {
+  position: relative;
+}
+
+.spreadsheets-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+  max-height: calc(100vh - 250px);
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.spreadsheet-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: var(--bs-body-bg);
+  border: 2px solid rgba(var(--bs-secondary-rgb), 0.1);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.spreadsheet-card:hover {
+  border-color: var(--bs-success);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.1);
+}
+
+.spreadsheet-card.added {
+  border-color: var(--bs-success);
+  background: rgba(40, 167, 69, 0.05);
+}
+
+.spreadsheet-card .card-content {
+  width: 100%;
+  text-align: center;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.spreadsheet-card .file-icon {
+  font-size: 2rem;
+  color: var(--bs-success);
+  opacity: 0.8;
+}
+
+.spreadsheet-card .file-name {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--bs-body-color);
+  word-break: break-word;
+  max-height: 2.8em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.spreadsheet-card .file-meta {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--bs-secondary);
+}
+
+.btn-add {
+  background: none;
+  border: none;
+  color: var(--bs-success);
+  font-size: 1.5rem;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+}
+
+.btn-add:hover {
+  transform: scale(1.2);
+  color: var(--bs-success);
+}
+
+/* Builder Section */
+.builder-section {
+  position: sticky;
+  top: 24px;
+  height: fit-content;
+}
+
+.sticky-card {
+  position: sticky;
+  top: 24px;
+}
+
+.sequence-container {
+  background: rgba(var(--bs-secondary-rgb), 0.05);
+  border-radius: 12px;
+  min-height: 200px;
+  max-height: 350px;
+  overflow-y: auto;
+  padding: 12px;
+}
+
+.sequence-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.empty-sequence {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 150px;
+  color: var(--bs-secondary);
+}
+
+.empty-sequence i {
+  font-size: 2.5rem;
+  opacity: 0.5;
+}
+
+.sequence-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bs-body-bg);
+  border: 1px solid rgba(var(--bs-success-rgb), 0.2);
+  border-left: 3px solid var(--bs-success);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: move;
+  transition: all 0.2s;
+  animation: slideIn 0.2s ease;
+}
+
+.sequence-item:hover {
+  border-color: var(--bs-success);
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
+}
+
+.sequence-item.dragging {
+  opacity: 0.5;
+  background: rgba(var(--bs-success-rgb), 0.05);
+}
+
+.sequence-item .item-icon {
+  font-size: 1.2rem;
+  color: var(--bs-success);
+  flex-shrink: 0;
+}
+
+.sequence-item .item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.sequence-item .item-info strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--bs-body-color);
+  word-break: break-word;
+}
+
+.sequence-item .item-info small {
+  display: block;
+  color: var(--bs-secondary);
+  font-size: 0.8rem;
+  word-break: break-word;
+}
+
+.btn-remove-item {
+  background: none;
+  border: none;
+  color: var(--bs-secondary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.btn-remove-item:hover {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+/* Botões */
+.btn-outline-danger {
+  background: rgba(var(--bs-secondary-rgb), 0.1);
+  border: 1px solid rgba(var(--bs-secondary-rgb), 0.2);
+  color: var(--bs-secondary);
+}
+
+.btn-outline-danger:hover {
+  background: rgba(220, 53, 69, 0.1);
+  border-color: #dc3545;
+  color: #dc3545;
+}
+
+/* Preview Section */
+.sources-preview-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.source-group {
+  background: rgba(var(--bs-body-bg-rgb), 0.5);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.source-header {
+  margin-bottom: 12px;
+}
+
+.source-badge {
+  background: var(--bs-success);
+  color: white;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.table-preview-wrapper {
+  max-height: 400px;
+  overflow: auto;
+  border-radius: 8px;
+  background: var(--bs-body-bg);
+  border: 1px solid rgba(var(--bs-secondary-rgb), 0.1);
+}
+
+.table-preview-wrapper table {
+  margin-bottom: 0;
+  width: 100%;
+}
+
+.table-preview-wrapper thead th {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: var(--bs-light);
+  font-weight: 600;
+  white-space: nowrap;
+  padding: 8px 12px;
+}
+
+.table-preview-wrapper td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  padding: 6px 12px;
+}
+
+/* Tips */
+.tips-section {
+  border-top: 1px solid rgba(var(--bs-secondary-rgb), 0.1);
+  padding-top: 12px;
+}
+
+/* Animações */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Scroll customizado */
+.spreadsheets-container::-webkit-scrollbar,
+.sequence-container::-webkit-scrollbar,
+.table-preview-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.spreadsheets-container::-webkit-scrollbar-track,
+.sequence-container::-webkit-scrollbar-track,
+.table-preview-wrapper::-webkit-scrollbar-track {
+  background: rgba(var(--bs-secondary-rgb), 0.05);
+  border-radius: 3px;
+}
+
+.spreadsheets-container::-webkit-scrollbar-thumb,
+.sequence-container::-webkit-scrollbar-thumb,
+.table-preview-wrapper::-webkit-scrollbar-thumb {
+  background: rgba(var(--bs-secondary-rgb), 0.2);
+  border-radius: 3px;
+}
+
+.spreadsheets-container::-webkit-scrollbar-thumb:hover,
+.sequence-container::-webkit-scrollbar-thumb:hover,
+.table-preview-wrapper::-webkit-scrollbar-thumb:hover {
+  background: rgba(var(--bs-secondary-rgb), 0.3);
+}
+
+/* Responsividade */
+@media (max-width: 992px) {
+  .editor-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .builder-section {
+    position: static;
+  }
+  
+  .sticky-card {
+    position: static;
+  }
+
+  .spreadsheets-container {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .spreadsheets-container {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+
+  .spreadsheet-card {
+    padding: 12px;
+  }
+
+  .spreadsheet-card .file-icon {
+    font-size: 1.5rem;
+  }
+
+  .spreadsheet-card .file-name {
+    font-size: 0.8rem;
+  }
+
+  .table-preview-wrapper {
+    max-height: 300px;
+  }
+}
+</style>
+
+<script>
+// Estado da aplicação
+let draggedItem = null;
+
+// Adicionar arquivo à sequência
+function addToSequence(key, filename, card) {
+  const sequenceList = document.getElementById('sequence');
+  const emptyMsg = sequenceList.querySelector('.empty-sequence');
+  if (emptyMsg) emptyMsg.remove();
+
+  // Verifica duplicata
+  const exists = [...document.querySelectorAll('.sequence-item')].some(item => 
+    item.dataset.key === key
+  );
+  
+  if (exists) {
+    showNotification('Arquivo já adicionado', 'warning');
+    return;
+  }
+
+  const item = document.createElement('div');
+  item.className = 'sequence-item';
+  item.draggable = true;
+  item.dataset.key = key;
+
+  item.innerHTML = `
+    <i class="bi bi-check-circle item-icon"></i>
+    <div class="item-info">
+      <strong>${filename}</strong>
+      <small>${key}</small>
+    </div>
+    <button class="btn-remove-item" title="Remover">
+      <i class="bi bi-x-lg"></i>
+    </button>
+  `;
+
+  sequenceList.appendChild(item);
+  card.classList.add('added');
+  updateSequenceCount();
+  initDragAndDrop();
+}
+
+// Remover da sequência
+function removeFromSequence(item, card) {
+  if (card) card.classList.remove('added');
+  item.remove();
+  
+  const sequenceList = document.getElementById('sequence');
+  if (sequenceList.children.length === 0) {
+    sequenceList.innerHTML = `
+      <div class="empty-sequence">
+        <i class="bi bi-files"></i>
+        <p class="small text-muted mt-2">Clique em <i class="bi bi-plus-circle"></i> nos arquivos</p>
+      </div>
+    `;
+  }
+  
+  updateSequenceCount();
+}
+
+// Atualizar contador
+function updateSequenceCount() {
+  const count = document.querySelectorAll('.sequence-item').length;
+  document.getElementById('sequenceCount').textContent = count;
+}
+
+// Drag and drop
+function initDragAndDrop() {
+  const items = document.querySelectorAll('.sequence-item');
+  
+  items.forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedItem = item;
+      item.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      draggedItem = null;
+    });
+  });
+
+  const sequenceList = document.getElementById('sequence');
+  
+  sequenceList.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    const currentItem = e.target.closest('.sequence-item');
+    
+    if (currentItem && currentItem !== draggedItem) {
+      const rect = currentItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      
+      if (e.clientY < midpoint) {
+        currentItem.style.borderTop = '2px solid var(--bs-success)';
+        currentItem.style.borderBottom = '';
+      } else {
+        currentItem.style.borderBottom = '2px solid var(--bs-success)';
+        currentItem.style.borderTop = '';
+      }
+    }
+  });
+
+  sequenceList.addEventListener('dragleave', (e) => {
+    const item = e.target.closest('.sequence-item');
+    if (item) {
+      item.style.borderTop = '';
+      item.style.borderBottom = '';
+    }
+  });
+
+  sequenceList.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!draggedItem) return;
+
+    const currentItem = e.target.closest('.sequence-item');
+    
+    if (currentItem && currentItem !== draggedItem) {
+      const rect = currentItem.getBoundingClientRect();
+      const midpoint = rect.top + rect.height / 2;
+      
+      if (e.clientY < midpoint) {
+        sequenceList.insertBefore(draggedItem, currentItem);
+      } else {
+        sequenceList.insertBefore(draggedItem, currentItem.nextSibling);
+      }
+    }
+    
+    document.querySelectorAll('.sequence-item').forEach(el => {
+      el.style.borderTop = '';
+      el.style.borderBottom = '';
+    });
+  });
+}
+
+// Notificações
+function showNotification(message, type = 'info') {
+  const toast = document.createElement('div');
+  toast.className = `toast align-items-center text-white bg-${type} border-0 position-fixed top-0 end-0 m-3`;
+  toast.setAttribute('role', 'alert');
+  toast.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body">${message}</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  `;
+  document.body.appendChild(toast);
+  
+  const bsToast = new bootstrap.Toast(toast, { delay: 3000 });
+  bsToast.show();
+  
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// Event Listeners
+document.addEventListener('DOMContentLoaded', () => {
+  updateSequenceCount();
+  
+  const outFormat = document.getElementById('outFormat');
+  const fileExtLabel = document.getElementById('fileExtLabel');
+  if (outFormat && fileExtLabel) {
+    const syncOutputFormatUi = () => {
+      fileExtLabel.textContent = outFormat.value === 'xlsx' ? '.xlsx' : '.csv';
+    };
+    outFormat.addEventListener('change', syncOutputFormatUi);
+    syncOutputFormatUi();
+  }
+  
+  // Delegation para cliques
+  document.addEventListener('click', (e) => {
+    // Botão adicionar
+    if (e.target.closest('.btn-add')) {
+      const card = e.target.closest('.spreadsheet-card');
+      if (card) {
+        addToSequence(card.dataset.key, card.dataset.filename, card);
+      }
+    }
+    
+    // Botão remover
+    if (e.target.closest('.btn-remove-item')) {
+      const btn = e.target.closest('.btn-remove-item');
+      const item = btn.closest('.sequence-item');
+      if (item) {
+        const key = item.dataset.key;
+        const card = document.querySelector(`.spreadsheet-card[data-key="${key}"]`);
+        removeFromSequence(item, card);
+      }
+    }
+  });
+});
+
+// Botão limpar tudo
+document.getElementById('clearSequence')?.addEventListener('click', () => {
+  if (document.querySelectorAll('.sequence-item').length === 0) return;
+  
+  if (confirm('Limpar toda a sequência?')) {
+    document.querySelectorAll('.sequence-item').forEach(item => {
+      const key = item.dataset.key;
+      const card = document.querySelector(`.spreadsheet-card[data-key="${key}"]`);
+      if (card) card.classList.remove('added');
+      item.remove();
+    });
+    
+    const sequenceList = document.getElementById('sequence');
+    sequenceList.innerHTML = `
+      <div class="empty-sequence">
+        <i class="bi bi-files"></i>
+        <p class="small text-muted mt-2">Clique em <i class="bi bi-plus-circle"></i> nos arquivos</p>
+      </div>
+    `;
+    
+    updateSequenceCount();
+  }
+});
+
+// Gerar CSV
+document.getElementById('downloadBtn')?.addEventListener('click', () => {
+  const items = [];
+  document.querySelectorAll('.sequence-item').forEach(item => {
+    items.push({
+      source: item.dataset.key
+    });
+  });
+  
+  if (items.length === 0) {
+    showNotification('Adicione arquivos à sequência', 'warning');
+    return;
+  }
+  
+  const fileName = document.getElementById('fileName').value.trim();
+  if (!fileName) {
+    document.getElementById('fileName').value = 'dados_combinados';
+  }
+  
+  document.getElementById('sequenceInput').value = JSON.stringify(items);
+  document.getElementById('mergeCsvForm').submit();
+});
+</script>
+{% endblock %}

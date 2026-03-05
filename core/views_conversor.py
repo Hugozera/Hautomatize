@@ -813,6 +813,198 @@ def merge_create_excel(request):
 
 
 @login_required
+def merge_editor_csv(request):
+    """Spreadsheet merge editor with preview and ordering (CSV/Excel)."""
+    if request.method == 'GET':
+        return render(request, 'core/conversor/merge_csv_editor.html', {})
+
+    files = request.FILES.getlist('spreadsheets')
+    if not files:
+        messages.error(request, 'Nenhum arquivo enviado')
+        return redirect('merge_editor_csv')
+
+    session_id = uuid.uuid4().hex
+    base_tmp = os.path.join(settings.MEDIA_ROOT, 'conversor', 'tmp', session_id)
+    os.makedirs(base_tmp, exist_ok=True)
+
+    sources = {}
+    sources_list = []
+
+    for i, f in enumerate(files, start=1):
+        try:
+            key = f's{i}'
+            filename = f"{key}_{f.name}"
+            path = os.path.join(base_tmp, filename)
+            
+            # Salva arquivo
+            with open(path, 'wb') as out:
+                for chunk in f.chunks():
+                    out.write(chunk)
+            
+            sources[key] = filename
+
+            headers = []
+            preview_rows = []
+            total_rows = 0
+            file_ext = os.path.splitext(f.name)[1].lower()
+            
+            try:
+                import pandas as pd
+                # Detecta tipo de arquivo
+                if file_ext in ['.xlsx', '.xls']:
+                    df = pd.read_excel(path, dtype=str, keep_default_na=False)
+                else:  # CSV
+                    df = pd.read_csv(path, sep=None, engine='python', dtype=str, keep_default_na=False)
+                
+                headers = list(df.columns)
+                total_rows = len(df.index)
+                preview_rows = df.head(12).values.tolist()
+            except Exception as e:
+                # Fallback para CSV manual
+                if file_ext == '.csv' or file_ext == '.txt':
+                    try:
+                        with open(path, 'r', encoding='utf-8', errors='replace', newline='') as cf:
+                            sample = cf.read(4096)
+                            cf.seek(0)
+                            try:
+                                dialect = csv.Sniffer().sniff(sample)
+                            except Exception:
+                                dialect = csv.excel
+                            reader = csv.reader(cf, dialect)
+                            for idx, row in enumerate(reader):
+                                if idx == 0:
+                                    headers = row
+                                    continue
+                                total_rows += 1
+                                if len(preview_rows) < 12:
+                                    preview_rows.append(row)
+                    except Exception as ex:
+                        print(f"Erro ao processar {f.name}: {ex}")
+                        headers = []
+                        preview_rows = []
+                        total_rows = 0
+
+            sources_list.append({
+                'key': key,
+                'filename': f.name,
+                'headers': headers,
+                'preview_rows': preview_rows,
+                'total_rows': total_rows,
+            })
+        except Exception as e:
+            messages.warning(request, f'Erro ao processar {f.name}: {str(e)}')
+            continue
+
+    if not sources_list:
+        messages.error(request, 'Nenhum arquivo foi processado com sucesso')
+        return redirect('merge_editor_csv')
+
+    context = {
+        'session_id': session_id,
+        'sources': sources,
+        'sources_list': sources_list,
+    }
+    return render(request, 'core/conversor/merge_csv_editor.html', context)
+
+
+@login_required
+def merge_create_csv(request):
+    """Receive ordered spreadsheet source keys and return merged CSV file."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+    session_id = request.POST.get('session_id')
+    sequence_text = request.POST.get('sequence')
+    out_format = (request.POST.get('out_format') or 'csv').lower()
+    if out_format not in {'csv', 'xlsx'}:
+        out_format = 'csv'
+
+    default_ext = '.xlsx' if out_format == 'xlsx' else '.csv'
+    out_name_input = (request.POST.get('out_name') or '').strip()
+    if out_name_input:
+        out_name_base = os.path.splitext(out_name_input)[0]
+        out_name = f'{out_name_base}{default_ext}'
+    else:
+        out_name = f'merged_{uuid.uuid4().hex}{default_ext}'
+
+    add_source_column = request.POST.get('add_source_column') == 'on'
+
+    if not session_id or not sequence_text:
+        return JsonResponse({'erro': 'session_id e sequence são obrigatórios'}, status=400)
+
+    try:
+        sequence = _json.loads(sequence_text)
+    except Exception:
+        return JsonResponse({'erro': 'sequence inválida (JSON esperado)'}, status=400)
+
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session_id)
+    if not os.path.exists(base_tmp):
+        return JsonResponse({'erro': 'session não encontrada ou expirada'}, status=400)
+
+    # Busca todos os arquivos (CSV e Excel)
+    sources = {}
+    for fname in os.listdir(base_tmp):
+        if '_' in fname:
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in ['.csv', '.xlsx', '.xls']:
+                key = fname.split('_', 1)[0]
+                sources[key] = os.path.join(base_tmp, fname)
+
+    ordered_keys = [str(item.get('source')) for item in sequence if item.get('source')]
+    if not ordered_keys:
+        return JsonResponse({'erro': 'Sequência vazia'}, status=400)
+
+    try:
+        import pandas as pd
+        frames = []
+        for key in ordered_keys:
+            path = sources.get(key)
+            if not path or not os.path.exists(path):
+                continue
+            
+            # Detecta tipo de arquivo e lê apropriadamente
+            ext = os.path.splitext(path)[1].lower()
+            if ext in ['.xlsx', '.xls']:
+                df = pd.read_excel(path, dtype=str, keep_default_na=False)
+            else:  # CSV
+                df = pd.read_csv(path, sep=None, engine='python', dtype=str, keep_default_na=False)
+            
+            if add_source_column:
+                filename = os.path.basename(path)
+                if '_' in filename:
+                    filename = filename.split('_', 1)[1]
+                df.insert(0, 'arquivo_origem', filename)
+            frames.append(df)
+
+        if not frames:
+            return JsonResponse({'erro': 'Nenhum arquivo válido para junção'}, status=400)
+
+        merged = pd.concat(frames, ignore_index=True, sort=False)
+
+        outdir = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'merged')
+        os.makedirs(outdir, exist_ok=True)
+        out_path = os.path.join(outdir, out_name)
+        if out_format == 'xlsx':
+            merged.to_excel(out_path, index=False)
+        else:
+            merged.to_csv(out_path, index=False, encoding='utf-8-sig')
+    except Exception as e:
+        return JsonResponse({'erro': f'Falha ao gerar arquivo: {str(e)}'}, status=500)
+
+    try:
+        response = FileResponse(open(out_path, 'rb'), as_attachment=True, filename=out_name)
+    except Exception as e:
+        return JsonResponse({'erro': f'Não foi possível ler o arquivo gerado: {str(e)}'}, status=500)
+
+    try:
+        shutil.rmtree(base_tmp)
+    except Exception:
+        pass
+
+    return response
+
+
+@login_required
 def api_preview_from_text(request):
     """AJAX endpoint: accept raw_text (POST) and return detected transactions + OFX text."""
     if request.method != 'POST':

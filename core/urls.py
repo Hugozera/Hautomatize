@@ -120,6 +120,8 @@ urlpatterns = [
     path('conversor/merge_excel/', views_conversor.merge_editor_excel, name='merge_editor_excel'),
     path('conversor/merge_excel_create/', views_conversor.merge_create_excel, name='merge_create_excel'),
     path('conversor/merge_excel_upload/', views_conversor.merge_upload_excel_api, name='merge_upload_excel_api'),
+    path('conversor/merge_csv/', views_conversor.merge_editor_csv, name='merge_editor_csv'),
+    path('conversor/merge_csv_create/', views_conversor.merge_create_csv, name='merge_create_csv'),
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

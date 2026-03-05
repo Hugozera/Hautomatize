@@ -75,19 +75,24 @@
                             <form id="mergeUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor' %}">
                                 {% csrf_token %}
                                 <input type="file" id="mergeFiles" name="pdfs" multiple accept="application/pdf" class="form-control form-control-sm mb-2">
-                                <button type="submit" class="btn btn-outline-danger btn-sm" id="btnUploadMerge">
+                                <button type="submit" class="btn btn-outline-danger btn-sm">
                                     <i class="bi bi-file-earmark-pdf me-1"></i>Juntar PDFs
                                 </button>
                             </form>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="fw-semibold mb-3"><i class="bi bi-file-earmark-excel me-1 text-success"></i>Planilhas Excel</h6>
-                            <p class="text-muted small">Faça upload de vários arquivos Excel (.xlsx) e combine-os em uma única planilha.</p>
-                            <form id="mergeExcelUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor_excel' %}">
+                            <h6 class="fw-semibold mb-3"><i class="bi bi-file-earmark-spreadsheet me-1 text-success"></i>Planilhas (CSV / Excel)</h6>
+                            <p class="text-muted small">Faça upload de planilhas (.csv, .xlsx, .xls) e escolha a ordem de junção com preview das tabelas.</p>
+                            <form id="mergeSpreadsheetUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor_csv' %}">
                                 {% csrf_token %}
-                                <input type="file" id="mergeExcelFiles" name="excels" multiple accept=".xlsx,.xls" class="form-control form-control-sm mb-2">
-                                <button type="submit" class="btn btn-outline-success btn-sm" id="btnUploadMergeExcel">
-                                    <i class="bi bi-file-earmark-excel me-1"></i>Juntar Planilhas
+                                <input type="file" id="mergeSpreadsheetFiles" name="spreadsheets" multiple accept=".csv,.xlsx,.xls,text/csv" class="form-control form-control-sm mb-2">
+                                <button type="submit" class="btn btn-outline-success btn-sm">
+                                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Juntar Planilhas
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                                    <i class="bi bi-filetype-csv me-1"></i>Juntar CSVs
                                 </button>
                             </form>
                         </div>
