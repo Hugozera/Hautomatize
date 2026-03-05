@@ -253,34 +253,24 @@ def admin_permissoes(request):
 
 # ==================== EXEMPLO 10: Auditoria de Permissões ====================
 
-from core.permission_system import get_permissions_for_role
-from core.models import Role, Pessoa
 
-def audit_permissions_change(username, old_roles, new_roles):
-    """Log de auditoria quando permissões são alteradas"""
-    
+def audit_permissions_change(username, old_perms, new_perms):
+    """Log de auditoria quando permissões diretas são alteradas."""
+
     import logging
     logger = logging.getLogger(__name__)
-    
-    # Calcular permissões antigas
-    old_perms = set()
-    for role_code in old_roles:
-        old_perms.update(get_permissions_for_role(role_code))
-    
-    # Calcular permissões novas
-    new_perms = set()
-    for role_code in new_roles:
-        new_perms.update(get_permissions_for_role(role_code))
-    
-    # Registrar mudanças
-    added = new_perms - old_perms
-    removed = old_perms - new_perms
-    
+
+    old_set = set(old_perms or [])
+    new_set = set(new_perms or [])
+
+    added = new_set - old_set
+    removed = old_set - new_set
+
     if added:
-        logger.info(f"{username}: Permissões adicionadas: {added}")
-    
+        logger.info(f"{username}: Permissões adicionadas: {sorted(added)}")
+
     if removed:
-        logger.info(f"{username}: Permissões removidas: {removed}")
+        logger.info(f"{username}: Permissões removidas: {sorted(removed)}")
 
 
 # ==================== COMANDOS DE TESTE ====================

@@ -715,6 +715,104 @@ def merge_thumbnail(request):
 
 
 @login_required
+def merge_editor_excel(request):
+    """Excel merge: upload multiple Excel files and combine them."""
+    if request.method == 'GET':
+        return render(request, 'core/conversor/index.html', {})
+
+    # POST: files uploaded -> redirect to main page (will be handled by AJAX)
+    return redirect('conversor_index')
+
+
+@login_required
+def merge_upload_excel_api(request):
+    """AJAX endpoint: receive Excel files, save to temp session and return session info."""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Método não permitido'}, status=405)
+
+    files = request.FILES.getlist('excels')
+    if not files:
+        return JsonResponse({'error': 'Nenhum arquivo enviado'}, status=400)
+
+    session_id = uuid.uuid4().hex
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session_id)
+    os.makedirs(base_tmp, exist_ok=True)
+
+    sources = {}
+    for i, f in enumerate(files, start=1):
+        key = f'e{i}'
+        filename = f"{key}_{f.name}"
+        path = os.path.join(base_tmp, filename)
+        try:
+            with open(path, 'wb') as out:
+                for chunk in f.chunks():
+                    out.write(chunk)
+            sources[key] = filename
+        except Exception as e:
+            return JsonResponse({'error': f'Erro ao salvar arquivo {f.name}: {str(e)}'}, status=500)
+
+    return JsonResponse({
+        'session_id': session_id,
+        'sources': sources,
+    })
+
+
+@login_required
+def merge_create_excel(request):
+    """Receive session_id, produce merged Excel and return as download."""
+    if request.method != 'POST':
+        return JsonResponse({'erro': 'Método não permitido'}, status=405)
+
+    session_id = request.POST.get('session_id')
+    out_name = request.POST.get('out_name') or f'merged_{uuid.uuid4().hex}.xlsx'
+    add_source_column = request.POST.get('add_source_column') == 'on'
+
+    # ensure filename has .xlsx extension
+    if not out_name.lower().endswith(('.xlsx', '.xls')):
+        out_name = out_name + '.xlsx'
+
+    if not session_id:
+        return JsonResponse({'erro': 'session_id é obrigatório'}, status=400)
+
+    base_tmp = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'tmp', session_id)
+    if not os.path.exists(base_tmp):
+        return JsonResponse({'erro': 'session não encontrada ou expirada'}, status=400)
+
+    # build sources mapping
+    sources = {}
+    for fname in os.listdir(base_tmp):
+        if '_' in fname and (fname.endswith('.xlsx') or fname.endswith('.xls')):
+            key = fname.split('_', 1)[0]
+            sources[key] = os.path.join(base_tmp, fname)
+
+    if not sources:
+        return JsonResponse({'erro': 'Nenhum arquivo Excel encontrado na sessão'}, status=400)
+
+    try:
+        outdir = os.path.join(settings.MEDIA_ROOT or os.getcwd(), 'conversor', 'merged')
+        os.makedirs(outdir, exist_ok=True)
+        out_path = os.path.join(outdir, out_name)
+        from .conversor_service import ConversorService
+        ConversorService.merge_excels(out_path, sources, add_source_column=add_source_column)
+    except Exception as e:
+        return JsonResponse({'erro': f'Falha ao gerar Excel: {str(e)}'}, status=500)
+
+    # Serve file as attachment
+    try:
+        response = FileResponse(open(out_path, 'rb'), as_attachment=True, filename=out_name)
+    except Exception as e:
+        return JsonResponse({'erro': f'Não foi possível ler o arquivo gerado: {str(e)}'}, status=500)
+
+    # Optional: cleanup temp session
+    try:
+        shutil.rmtree(base_tmp)
+    except Exception:
+        pass
+
+    return response
+
+
+@login_required
 def api_preview_from_text(request):
     """AJAX endpoint: accept raw_text (POST) and return detected transactions + OFX text."""
     if request.method != 'POST':

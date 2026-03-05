@@ -874,6 +874,62 @@ class ConversorService:
         return output_path
 
     @classmethod
+    def merge_excels(cls, output_path: str, sources: Dict[str, str], add_source_column: bool = True):
+        """
+        Merge multiple Excel files into a single Excel file.
+
+        - `sources`: mapping of source keys to file paths, e.g. {'e1': 'file1.xlsx', 'e2': 'file2.xlsx'}
+        - `add_source_column`: if True, adds a column with the source filename
+        
+        All sheets from all files are combined into a single sheet in the output.
+        """
+        try:
+            import pandas as pd
+            import openpyxl
+        except ImportError:
+            raise RuntimeError('pandas e openpyxl são necessários para junção de Excel')
+
+        all_dataframes = []
+
+        for key, path in sources.items():
+            if not path or not os.path.exists(path):
+                raise FileNotFoundError(f"Source '{key}' file not found: {path}")
+            
+            try:
+                # Read all sheets from the Excel file
+                excel_file = pd.ExcelFile(path)
+                for sheet_name in excel_file.sheet_names:
+                    df = pd.read_excel(path, sheet_name=sheet_name)
+                    
+                    # Add source column if requested
+                    if add_source_column:
+                        # Get just the filename without the key prefix
+                        filename = os.path.basename(path)
+                        if '_' in filename:
+                            filename = filename.split('_', 1)[1]
+                        df.insert(0, 'Arquivo_Origem', filename)
+                    
+                    all_dataframes.append(df)
+            except Exception as e:
+                raise RuntimeError(f"Erro ao ler arquivo {path}: {str(e)}")
+
+        if not all_dataframes:
+            raise ValueError("Nenhum dado encontrado nos arquivos Excel")
+
+        # Combine all dataframes
+        combined_df = pd.concat(all_dataframes, ignore_index=True)
+
+        # Ensure output dir
+        outdir = os.path.dirname(output_path)
+        if outdir and not os.path.exists(outdir):
+            os.makedirs(outdir, exist_ok=True)
+
+        # Write to Excel
+        combined_df.to_excel(output_path, index=False, engine='openpyxl')
+
+        return output_path
+
+    @classmethod
     def _finalizar_transacao_caixa(cls, transacao: Dict) -> Optional[Dict]:
         """Finaliza uma transação específica da CAIXA."""
         if not transacao or transacao['valor'] == 0.0:

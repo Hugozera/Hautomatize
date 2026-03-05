@@ -31,7 +31,7 @@ def check_perm(user, perm_code: str) -> bool:
         perm_code: Código da permissão (ex: 'empresa.edit')
         
     Returns:
-        True se o usuário tem a permissão (direta ou via role), False caso contrário
+        True se o usuário tem a permissão direta, False caso contrário
     """
     if not user or user.is_anonymous:
         return False
@@ -272,24 +272,6 @@ def can_close_atendimento(user) -> bool:
     """Verifica se pode fechar atendimento."""
     return check_perm(user, 'painel.close_atendimento')
 
-
-# ===== ROLE (PAPEL) =====
-
-def can_view_role(user) -> bool:
-    """Verifica se pode visualizar papéis."""
-    return check_perm(user, 'role.view')
-
-
-def can_manage_role(user) -> bool:
-    """Verifica se pode gerenciar papéis."""
-    return check_perm(user, 'role.manage')
-
-
-def can_assign_roles(user) -> bool:
-    """Verifica se pode atribuir papéis a usuários."""
-    return check_perm(user, 'role.assign_users')
-
-
 # ===== SISTEMA / ADMIN =====
 
 def is_admin(user) -> bool:
@@ -335,7 +317,7 @@ def user_has_all_permissions(user, *perm_codes) -> bool:
 
 # ===== MATRIZ DE PERMISSÕES (PARA REFERÊNCIA) =====
 # Importa do permission_system.py para manter consistência
-from .permission_system import PERMISSION_MAP, ROLE_DEFINITIONS, get_all_permissions
+from .permission_system import PERMISSION_MAP, get_all_permissions
 
 
 def all_permission_codes():

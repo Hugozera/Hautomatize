@@ -35,13 +35,13 @@
 }
 
 .agendamento-form-card .card-header {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     padding: 1.25rem 1.5rem;
 }
 
 .agendamento-form-card .card-header i {
-    color: var(--verde-deep);
+    color: #16a34a;
     transition: var(--transicao-padrao);
 }
 
@@ -70,8 +70,8 @@
 
 .agendamento-form-card .form-control:focus,
 .agendamento-form-card .form-select:focus {
-    border-color: var(--verde-deep);
-    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
 .agendamento-form-card .alert-info {
@@ -96,10 +96,10 @@
 }
 
 .agendamento-table thead th {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: none;
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     font-weight: 600;
-    color: var(--cinza-escuro);
+    color: #374151;
     padding: 1rem 1.25rem;
     white-space: nowrap;
 }
@@ -111,7 +111,8 @@
 }
 
 .agendamento-table tbody tr:hover {
-    background: rgba(76, 175, 80, 0.02);
+    background: linear-gradient(90deg, rgba(22, 163, 74, 0.04), transparent);
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.1);
 }
 
 /* ===== BADGES ESPECÍFICAS ===== */
@@ -147,13 +148,14 @@
 }
 
 .agendamento-actions .btn-success {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     border: none;
+    color: white;
 }
 
 .agendamento-actions .btn-success:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
 }
 
 .btn-sm.btn-outline-primary {

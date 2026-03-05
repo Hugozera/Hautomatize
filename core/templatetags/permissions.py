@@ -1,12 +1,14 @@
 from django import template
-from .. import permissions as _perms
+
+from ..permissions import check_perm
 
 register = template.Library()
 
+
 @register.filter
 def has_perm_code(user, perm_code):
-    """Template filter: returns True if user has the given permission code (direct or via role)."""
+    """Template filter: retorna True se o usuário possui a permissão informada."""
     try:
-        return _perms._person_has_perm(user, perm_code)
+        return check_perm(user, perm_code)
     except Exception:
         return False

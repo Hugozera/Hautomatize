@@ -59,12 +59,6 @@ urlpatterns = [
     path('configuracao/', views.configuracao, name='configuracao'),
     path('perfil/', views.perfil, name='perfil'),
     path('perfil/generate-token/', views.generate_client_token, name='generate_client_token'),
-
-    # Roles (somente superuser)
-    path('roles/', views.role_list, name='role_list'),
-    path('roles/nova/', views.role_create, name='role_create'),
-    path('roles/<int:pk>/editar/', views.role_edit, name='role_edit'),
-    path('roles/<int:pk>/excluir/', views.role_delete, name='role_delete'),
     
     
     # Certificados
@@ -122,6 +116,10 @@ urlpatterns = [
     path('conversor/merge_create/', views_conversor.merge_create, name='merge_create'),
     path('conversor/merge_upload/', views_conversor.merge_upload_api, name='merge_upload_api'),
     path('conversor/merge_thumbnail/', views_conversor.merge_thumbnail, name='merge_thumbnail'),
+    # Excel merge URLs
+    path('conversor/merge_excel/', views_conversor.merge_editor_excel, name='merge_editor_excel'),
+    path('conversor/merge_excel_create/', views_conversor.merge_create_excel, name='merge_create_excel'),
+    path('conversor/merge_excel_upload/', views_conversor.merge_upload_excel_api, name='merge_upload_excel_api'),
    
     # Autenticação
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),

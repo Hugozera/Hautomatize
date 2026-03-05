@@ -121,28 +121,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // ============================================================================
-    // ROLE CARDS - Visual Selection
-    // ============================================================================
-    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
-    
-    roleCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const card = this.closest('.role-card');
-            if (this.checked) {
-                card.classList.add('selected');
-            } else {
-                card.classList.remove('selected');
-            }
-            updatePermissionSummary();
-        });
-
-        // Marcar como selecionado se já for
-        if (checkbox.checked) {
-            checkbox.closest('.role-card').classList.add('selected');
-        }
-    });
-
-    // ============================================================================
     // MODULE TOGGLE - Expandir/Recolher módulos com animação
     // ============================================================================
     const moduleToggles = document.querySelectorAll('.module-toggle');
@@ -183,20 +161,52 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
+    function setPermItemVisualState(permCheckbox) {
+        const permItem = permCheckbox.closest('.perm-item');
+        if (permItem) {
+            permItem.classList.toggle('selected', permCheckbox.checked);
+        }
+    }
+
+    function updateModuleVisualState(moduleContainer) {
+        if (!moduleContainer) return;
+        const moduleCheckbox = moduleContainer.querySelector('.module-checkbox');
+        const moduleHeader = moduleContainer.querySelector('.module-header');
+        const allPerms = moduleContainer.querySelectorAll('.perm-checkbox');
+        const checkedPerms = moduleContainer.querySelectorAll('.perm-checkbox:checked');
+
+        if (!moduleCheckbox || allPerms.length === 0) return;
+
+        moduleCheckbox.checked = checkedPerms.length > 0 && checkedPerms.length === allPerms.length;
+        moduleCheckbox.indeterminate = checkedPerms.length > 0 && checkedPerms.length < allPerms.length;
+
+        if (moduleHeader) {
+            moduleHeader.classList.toggle('module-selected', moduleCheckbox.checked);
+            moduleHeader.classList.toggle('module-partial', moduleCheckbox.indeterminate);
+        }
+    }
+
     // ============================================================================
     // MODULE CHECKBOX - Selecionar/Desselecionar todas as permissões do módulo
     // ============================================================================
     const moduleCheckboxes = document.querySelectorAll('.module-checkbox');
     
     moduleCheckboxes.forEach(checkbox => {
+        const moduleContainer = checkbox.closest('.module-container');
+        if (moduleContainer) {
+            updateModuleVisualState(moduleContainer);
+        }
+
         checkbox.addEventListener('change', function() {
             const moduleGroup = this.closest('.module-container').querySelector('.module-group');
             if (moduleGroup) {
                 const permCheckboxes = moduleGroup.querySelectorAll('.perm-checkbox');
                 permCheckboxes.forEach(perm => {
                     perm.checked = this.checked;
+                    setPermItemVisualState(perm);
                 });
             }
+            updateModuleVisualState(this.closest('.module-container'));
             updatePermissionSummary();
         });
     });
@@ -205,22 +215,19 @@ document.addEventListener('DOMContentLoaded', function() {
     // PERMISSION CHECKBOX - Sync com permissões individuais
     // ============================================================================
     const permCheckboxes = document.querySelectorAll('.perm-checkbox');
+
+    permCheckboxes.forEach(setPermItemVisualState);
     
     permCheckboxes.forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             updatePermissionSummary();
+            setPermItemVisualState(this);
             
-            // Update module checkbox if all perms are selected
+            // Update module checkbox if all perms are selected/partial
             const moduleGroup = this.closest('.module-group');
             if (moduleGroup) {
                 const moduleContainer = moduleGroup.closest('.module-container');
-                const moduleCheckbox = moduleContainer.querySelector('.module-checkbox');
-                const allPerms = moduleGroup.querySelectorAll('.perm-checkbox');
-                const checkedPerms = moduleGroup.querySelectorAll('.perm-checkbox:checked');
-                
-                if (moduleCheckbox) {
-                    moduleCheckbox.checked = allPerms.length === checkedPerms.length;
-                }
+                updateModuleVisualState(moduleContainer);
             }
         });
     });
@@ -317,36 +324,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // PERMISSION SUMMARY - Atualizar badges com contadores
     // ============================================================================
     function updatePermissionSummary() {
-        const selectedRoles = document.querySelectorAll('.role-checkbox:checked').length;
         const selectedPerms = document.querySelectorAll('.perm-checkbox:checked').length;
-        const totalPerms = selectedRoles > 0 ? 
-            Array.from(document.querySelectorAll('.role-checkbox:checked'))
-                .reduce((sum, checkbox) => {
-                    const card = checkbox.closest('.role-card');
-                    const badge = card.querySelector('.badge');
-                    return sum + parseInt(badge.textContent);
-                }, 0) : 0;
+        const totalPerms = document.querySelectorAll('.perm-checkbox').length;
 
-        const selectedRolesCount = document.getElementById('selectedRolesCount');
         const selectedPermsCount = document.getElementById('selectedPermsCount');
         const totalPermsCount = document.getElementById('totalPermsCount');
 
-        if (selectedRolesCount) selectedRolesCount.textContent = selectedRoles;
         if (selectedPermsCount) selectedPermsCount.textContent = selectedPerms;
-        if (totalPermsCount) totalPermsCount.textContent = selectedPerms + (totalPerms > 0 ? ' (+ ' + uniquePermissionCount() + ' via papéis)' : '');
-    }
-
-    function uniquePermissionCount() {
-        const directPerms = new Set(Array.from(document.querySelectorAll('.perm-checkbox:checked'))
-            .map(cb => cb.value));
-        const rolePerms = new Set(Array.from(document.querySelectorAll('.role-checkbox:checked'))
-            .flatMap(cb => {
-                const card = cb.closest('.role-card');
-                const permList = card.dataset.permissions;
-                return permList ? permList.split(',') : [];
-            }));
-        
-        return rolePerms.size;
+        if (totalPermsCount) totalPermsCount.textContent = totalPerms;
     }
 
     // Initial summary update

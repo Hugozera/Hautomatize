@@ -74,14 +74,8 @@ class Pessoa(models.Model):
         return self.user.get_full_name() or self.user.username
 
     def perm_list(self):
-        """Retorna lista de códigos atribuídos diretamente à pessoa (mais roles)."""
-        own = [p.strip() for p in (self.permissions or '').split(',') if p.strip()]
-        # acrescentar permissões dos roles vinculados
-        for role in self.roles.all():
-            for p in role.perm_list():
-                if p not in own:
-                    own.append(p)
-        return own
+        """Retorna lista de códigos de permissões atribuídas diretamente à pessoa."""
+        return [p.strip() for p in (self.permissions or '').split(',') if p.strip()]
 
     @property
     def usuario(self):
@@ -104,7 +98,7 @@ class Pessoa(models.Model):
         return None
 
     def has_perm_code(self, code):
-        """Retorna True se o usuário tem a permissão, seja direta ou via papel (role)."""
+        """Retorna True se o usuário tem a permissão diretamente atribuída."""
         return code in self.perm_list()
 
     def save(self, *args, **kwargs):

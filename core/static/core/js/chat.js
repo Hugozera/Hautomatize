@@ -1,1040 +1,520 @@
-class ChatManager {
+class ChatModule {
     constructor() {
-        this.ws = null;
-        this.currentId = null;
-        this.currentType = null;
-        this.attachments = [];
-        this.pendingMessages = [];
-        this.groupSelection = new Map();
-        this.pc = null;
-        this.localStream = null;
-        this.remoteStream = null;
-        this.init();
+        this.currentConversationId = null;
+        this.activeRoomId = null;
+        this.activeSocket = null;
+        this.typingTimeout = null;
+        this.conversations = [];
+        this.allUsers = [];
+        this.currentUserId = window.userId;
+        this.currentUsername = window.username || window.userName || '';
     }
 
     init() {
-        this.elements = {
-            list: document.querySelectorAll('.conversation-item'),
-            area: document.getElementById('conv-area'),
-            title: document.getElementById('conv-title'),
-            subtitle: document.getElementById('conv-subtitle'),
-            input: document.getElementById('conv-input'),
-            send: document.getElementById('conv-send'),
-            form: document.getElementById('message-form'),
-            attachBtn: document.getElementById('attach-btn'),
-            fileInput: document.getElementById('file-input'),
-            attachmentPreview: document.getElementById('attachment-preview'),
-            emojiBtn: document.getElementById('emoji-btn'),
-            emojiPicker: document.getElementById('emoji-picker'),
-            toggleInfo: document.getElementById('toggle-info'),
-            infoPanel: document.getElementById('info-panel'),
-            closeInfo: document.getElementById('close-info'),
-            infoContent: document.getElementById('info-content')
-        };
-
-        this.bindEvents();
-        this.loadEmojis();
+        this.showAvailabilityWidget();
+        this.loadConversations();
     }
 
-    bindEvents() {
-        // Clique nas conversas (delegation: suporta itens dinâmicos)
-        const convContainer = document.querySelector('.ig-conversations');
-        if (convContainer) {
-            convContainer.addEventListener('click', (e) => {
-                const item = e.target.closest('.ig-conversation-item');
-                if (item) {
-                    e.preventDefault();
-                    this.openConversation(item);
-                }
+    async loadConversations() {
+        try {
+            const response = await fetch('/chat/my_conversations/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+
+            const data = await response.json();
+            this.conversations = Array.isArray(data) ? data : (data.conversations || []);
+
+            await this.loadAllUsers();
+            this.renderConversations((document.getElementById('chat-search-input') || {}).value || '');
+        } catch (error) {
+            console.error('Erro ao carregar conversas:', error);
+            this.conversations = [];
+            this.renderConversations('');
         }
+    }
 
-        // Envio de mensagem
-        this.elements.form.addEventListener('submit', (e) => this.sendMessage(e));
-
-        // Anexos
-        this.elements.attachBtn.addEventListener('click', () => this.elements.fileInput.click());
-        this.elements.fileInput.addEventListener('change', (e) => this.handleFiles(e.target.files));
-
-        // Emoji
-        this.elements.emojiBtn.addEventListener('click', () => this.toggleEmojiPicker());
-
-        // Info panel
-        this.elements.toggleInfo.addEventListener('click', () => this.toggleInfoPanel());
-        this.elements.closeInfo.addEventListener('click', () => this.hideInfoPanel());
-
-        // Busca
-        const searchInput = document.getElementById('search-input');
-        searchInput.addEventListener('input', () => this.search(searchInput.value));
-
-        // enable/disable send button based on input content
-        if (this.elements.input && this.elements.send) {
-            const updateSendState = () => {
-                const hasText = (this.elements.input.value || '').trim().length > 0;
-                const hasAttach = this.attachments && this.attachments.length > 0;
-                this.elements.send.disabled = !(hasText || hasAttach);
-            };
-            this.elements.input.addEventListener('input', (ev) => { updateSendState(); this.handleTyping(); });
-            // initial
-            updateSendState();
-        }
-
-        // typing debounce
-        this._typingTimer = null;
-
-        // Modal nova conversa
-        const newChatBtn = document.getElementById('new-chat-btn');
-        const newChatModal = document.getElementById('new-chat-modal');
-        const closeModal = document.getElementById('close-modal');
-        const modalSearch = document.getElementById('modal-search');
-        const suggestionsList = document.getElementById('suggestions-list');
-        const createGroupBtn = document.getElementById('create-group-btn');
-        const newGroupBtn = document.getElementById('new-group-btn');
-        const videoBtn = document.getElementById('chat-video-btn');
-        const audioBtn = document.getElementById('chat-audio-btn');
-        const quickVideoBtn = document.getElementById('quick-video-btn');
-        const endCallBtn = document.getElementById('end-call-btn');
-        const closeCallModalBtn = document.getElementById('close-call-modal');
-        const muteCallBtn = document.getElementById('mute-call-btn');
-
-        if (newChatBtn && newChatModal) {
-            newChatBtn.addEventListener('click', () => { newChatModal.style.display = 'block'; if(modalSearch) modalSearch.focus(); });
-        }
-        if (newGroupBtn && newChatModal) {
-            newGroupBtn.addEventListener('click', () => { newChatModal.style.display = 'block'; if(modalSearch) modalSearch.focus(); });
-        }
-        if (closeModal && newChatModal) {
-            closeModal.addEventListener('click', () => { newChatModal.style.display = 'none'; if(suggestionsList) suggestionsList.innerHTML = ''; if(modalSearch) modalSearch.value = ''; this.groupSelection.clear(); });
-        }
-
-        if (modalSearch) {
-            let searchTimer = null;
-            modalSearch.addEventListener('input', (e) => {
-                const q = (e.target.value || '').trim();
-                suggestionsList.innerHTML = '';
-                if (searchTimer) clearTimeout(searchTimer);
-                if (!q) return;
-                // debounce
-                searchTimer = setTimeout(() => {
-                    // buscar pessoas do sistema
-                    fetch(`/api/users/?q=${encodeURIComponent(q)}`)
-                        .then(r => r.json())
-                        .then(js => {
-                            const users = js.users || [];
-                            users.slice(0,8).forEach(u => {
-                                const div = document.createElement('div');
-                                div.className = 'ig-suggestion-item';
-                                div.dataset.id = u.id;
-                                div.dataset.nome = u.name;
-                                div.dataset.userId = u.id;
-                                div.innerHTML = `<div class="ig-suggestion-avatar"><div class="ig-avatar-placeholder small">${(u.name||'')[0]||''}</div></div><div class="ig-suggestion-info"><span class="ig-suggestion-name">${u.name}</span><span class="ig-suggestion-detail">Usuário</span></div><input type="checkbox" class="ig-suggestion-check" />`;
-                                div.addEventListener('click', (ev) => { ev.preventDefault(); this.createConversationWithUser(u.id, u.name); newChatModal.style.display = 'none'; });
-                                div.querySelector('.ig-suggestion-check').addEventListener('click', (ev) => {
-                                    ev.stopPropagation();
-                                    if (ev.target.checked) this.groupSelection.set(String(u.id), u.name);
-                                    else this.groupSelection.delete(String(u.id));
-                                });
-                                suggestionsList.appendChild(div);
-                            });
-                        }).catch(() => {});
-
-                    // buscar empresas
-                    fetch(`/empresas/api/search/?q=${encodeURIComponent(q)}`)
-                        .then(r => r.json())
-                        .then(js => {
-                            const results = js.results || js || [];
-                            results.slice(0,8).forEach(e => {
-                                const div = document.createElement('div');
-                                div.className = 'ig-suggestion-item';
-                                div.dataset.id = e.id;
-                                div.dataset.nome = e.nome || e.nome_fantasia || '';
-                                div.innerHTML = `<div class="ig-suggestion-avatar"><div class="ig-avatar-placeholder small"><i class="bi bi-building"></i></div></div><div class="ig-suggestion-info"><span class="ig-suggestion-name">${div.dataset.nome}</span><span class="ig-suggestion-detail">Empresa</span></div>`;
-                                div.addEventListener('click', (ev) => { ev.preventDefault(); this.createConversationWithEmpresa(e.id, div.dataset.nome); newChatModal.style.display = 'none'; });
-                                suggestionsList.appendChild(div);
-                            });
-                        }).catch(() => {});
-                    // buscar pessoas direto na tabela Pessoa (funcionários)
-                    fetch(`/api/pessoas/?q=${encodeURIComponent(q)}`)
-                        .then(r => r.json())
-                        .then(js => {
-                            const results = js.results || [];
-                            results.slice(0,8).forEach(p => {
-                                const div = document.createElement('div');
-                                div.className = 'ig-suggestion-item';
-                                div.dataset.id = 'pessoa-' + p.id;
-                                div.dataset.nome = p.nome || '';
-                                const uid = p.usuario_id || p.id;
-                                div.dataset.userId = uid;
-                                div.innerHTML = `<div class="ig-suggestion-avatar"><div class="ig-avatar-placeholder small">${(p.nome||'')[0]||''}</div></div><div class="ig-suggestion-info"><span class="ig-suggestion-name">${p.nome}</span><span class="ig-suggestion-detail">Funcionário</span></div><input type="checkbox" class="ig-suggestion-check" />`;
-                                div.addEventListener('click', (ev) => { ev.preventDefault(); this.createConversationWithUser(p.usuario_id || p.id, p.nome); newChatModal.style.display = 'none'; });
-                                div.querySelector('.ig-suggestion-check').addEventListener('click', (ev) => {
-                                    ev.stopPropagation();
-                                    if (ev.target.checked) this.groupSelection.set(String(uid), p.nome);
-                                    else this.groupSelection.delete(String(uid));
-                                });
-                                suggestionsList.appendChild(div);
-                            });
-                        }).catch(() => {});
-                }, 250);
+    async loadAllUsers() {
+        try {
+            const response = await fetch('/api/users/', {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
             });
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+
+            const data = await response.json();
+            const users = Array.isArray(data) ? data : (data.users || []);
+            this.allUsers = users.filter(user => Number(user.id) !== Number(this.currentUserId));
+        } catch (error) {
+            console.error('Erro ao carregar funcionários:', error);
+            this.allUsers = [];
         }
+    }
 
-        if (createGroupBtn) {
-            createGroupBtn.addEventListener('click', () => {
-                const ids = Array.from(this.groupSelection.keys()).map(Number).filter(Boolean);
-                if (ids.length < 2) {
-                    alert('Selecione ao menos 2 participantes para criar grupo.');
-                    return;
-                }
-                const title = prompt('Nome do grupo:') || 'Grupo';
-                this.createGroupConversation(title, ids);
-                if (newChatModal) newChatModal.style.display = 'none';
-            });
-        }
+    renderConversations(filter = '') {
+        const list = document.getElementById('chat-list');
+        if (!list) return;
 
-        if (videoBtn) videoBtn.addEventListener('click', () => this.startCall('video'));
-        if (audioBtn) audioBtn.addEventListener('click', () => this.startCall('audio'));
-        if (quickVideoBtn) quickVideoBtn.addEventListener('click', () => this.startCall('video'));
-        if (endCallBtn) endCallBtn.addEventListener('click', () => this.endCall());
-        if (closeCallModalBtn) closeCallModalBtn.addEventListener('click', () => this.endCall());
-        if (muteCallBtn) muteCallBtn.addEventListener('click', () => this.toggleMute());
+        const normalizedFilter = (filter || '').toLowerCase().trim();
+        const cards = [];
 
-        // Tabs switching (Todas / Empresas / Pessoas)
-        document.querySelectorAll('.ig-tab').forEach(tab => {
-            tab.addEventListener('click', (ev) => {
-                ev.preventDefault();
-                document.querySelectorAll('.ig-tab').forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const which = tab.dataset.tab;
-                document.querySelectorAll('.ig-conversation-group').forEach(g => g.classList.remove('active'));
-                const target = document.getElementById('conv-' + which);
-                if (target) target.classList.add('active');
-            });
+        this.conversations.forEach(conv => {
+            const convName = (conv.title || (conv.participants || []).join(', ') || 'Conversa').trim();
+            if (normalizedFilter && !convName.toLowerCase().includes(normalizedFilter)) return;
+
+            cards.push(`
+                <div class="chat-item" onclick="chatModule.openExistingConversation(${Number(conv.id)})">
+                    <div class="chat-item-avatar">
+                        <div class="avatar avatar-xs" style="background:${this.getAvatarColor(convName)}">${this.getInitials(convName)}</div>
+                        <div class="chat-item-status online"></div>
+                    </div>
+                    <div class="chat-item-info">
+                        <div class="chat-item-name">${this.escapeHtml(convName)}</div>
+                        <div class="chat-item-message">${this.escapeHtml(conv.last_message || 'Nenhuma mensagem')}</div>
+                    </div>
+                </div>
+            `);
         });
 
-        // 'Enviar mensagem' button in empty state opens new chat modal
-        const startNewChatBtn = document.getElementById('start-new-chat');
-        if (startNewChatBtn) startNewChatBtn.addEventListener('click', () => { const m = document.getElementById('new-chat-modal'); if (m) { m.style.display = 'block'; const s = document.getElementById('modal-search'); if (s) s.focus(); } });
+        this.allUsers.forEach(user => {
+            const userName = (user.name || user.nome || `Usuário ${user.id}`).trim();
+            if (normalizedFilter && !userName.toLowerCase().includes(normalizedFilter)) return;
+
+            cards.push(`
+                <div class="chat-item" onclick="chatModule.startConversationWithUser(${Number(user.id)}, '${this.escapeForAttr(userName)}')">
+                    <div class="chat-item-avatar">
+                        <div class="avatar avatar-xs" style="background:${this.getAvatarColor(userName)}">${this.getInitials(userName)}</div>
+                        <div class="chat-item-status online"></div>
+                    </div>
+                    <div class="chat-item-info">
+                        <div class="chat-item-name">${this.escapeHtml(userName)}</div>
+                        <div class="chat-item-message">Iniciar conversa</div>
+                    </div>
+                </div>
+            `);
+        });
+
+        if (!cards.length) {
+            list.innerHTML = '<div class="chat-empty">Nenhum funcionário encontrado.</div>';
+            return;
+        }
+
+        list.innerHTML = cards.join('');
     }
 
-    handleTyping() {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
-        // send typing true immediately
-        this.sendTyping(true);
-        if (this._typingTimer) clearTimeout(this._typingTimer);
-        this._typingTimer = setTimeout(() => { this.sendTyping(false); }, 1500);
+    filterConversations() {
+        const input = document.getElementById('chat-search-input');
+        this.renderConversations(input ? input.value : '');
     }
 
-    sendTyping(state) {
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return;
+    async startConversationWithUser(userId, userName) {
         try {
-            this.ws.send(JSON.stringify({ action: 'typing', typing: !!state }));
-        } catch (e) {
-            // ignore
+            const response = await fetch('/chat/create_user_conversation/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
+                },
+                body: JSON.stringify({ user_id: Number(userId) })
+            });
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+
+            const data = await response.json();
+            if (!data.conversation_id) throw new Error('conversation_id ausente');
+
+            await this.loadConversations();
+            await this.openExistingConversation(Number(data.conversation_id), userName);
+        } catch (error) {
+            console.error('Erro ao criar conversa:', error);
         }
     }
 
-    openConversation(item) {
-        // Remove active class de todos
-        document.querySelectorAll('.conversation-item').forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
+    async openExistingConversation(conversationId, fallbackTitle = '') {
+        const conv = this.conversations.find(item => Number(item.id) === Number(conversationId));
+        const title = fallbackTitle || (conv ? (conv.title || (conv.participants || []).join(', ')) : '') || 'Conversa';
 
-        const rawId = item.dataset.id;
-        const type = item.dataset.type;
-        const name = (item.querySelector('.ig-conversation-name') || item.querySelector('.conversation-name') || { textContent: '' }).textContent || '';
+        this.currentConversationId = Number(conversationId);
+        this.activeRoomId = `conv-${this.currentConversationId}`;
 
-        // Open existing conversations directly (recent list uses conv-<id>)
-        if (typeof rawId === 'string' && rawId.startsWith('conv-')) {
-            this.currentId = rawId;
-            this.currentType = 'conversa';
-            this.elements.title.textContent = `Conversa - ${name}`;
+        const nameEl = document.getElementById('chat-window-user-name');
+        const statusEl = document.getElementById('chat-window-user-status');
+        const avatarEl = document.getElementById('chat-window-avatar');
 
-            const inputArea = document.getElementById('input-area');
-            if (inputArea) inputArea.style.display = '';
-            if (this.elements.form) this.elements.form.style.display = '';
-            if (this.elements.input) this.elements.input.focus();
-
-            this.connectWebSocket(this.currentId);
-            this.clearMessages();
-            this.loadMessageHistory(this.currentId);
-            this.markConversationRead(this.currentId);
-            this.renderConversationInfo();
-            return;
+        if (nameEl) nameEl.textContent = title;
+        if (statusEl) statusEl.textContent = 'Online';
+        if (avatarEl) {
+            avatarEl.style.background = this.getAvatarColor(title);
+            avatarEl.textContent = this.getInitials(title);
         }
 
-        // Plain pessoa entry (data-id pessoa-<id>) should create/open a direct conversation by user id
-        if (typeof rawId === 'string' && rawId.startsWith('pessoa-')) {
-            const userId = item.dataset.userId || String(rawId).replace(/^pessoa-/, '');
-            this.createConversationWithUser(userId, name || item.dataset.nome || 'Conversa');
-            return;
-        }
+        const panel = document.getElementById('chat-panel');
+        const chatWindow = document.getElementById('chat-window');
+        if (panel) panel.style.display = 'none';
+        if (chatWindow) chatWindow.style.display = 'flex';
 
-        // If this is an atendimento entry (at-<id>) keep existing behavior
-        const id = rawId;
-
-        this.currentId = id;
-        this.currentType = type;
-        this.elements.title.textContent = `Conversa - ${name}`;
-
-        if (type === 'pessoa') {
-            this.loadUserInfo(id);
-        }
-
-        // show input area and form
-        const inputArea = document.getElementById('input-area');
-        if (inputArea) inputArea.style.display = '';
-        if (this.elements.form) this.elements.form.style.display = '';
-        if (this.elements.input) this.elements.input.focus();
-
-        this.connectWebSocket(id);
-        this.clearMessages();
-        this.loadMessageHistory(id);
-        // marcar como lida ao abrir
-        this.markConversationRead(id);
-        this.renderConversationInfo();
+        await this.loadMessages(this.activeRoomId);
+        this.connectRoomSocket(this.activeRoomId);
+        await this.markAsRead(this.currentConversationId);
     }
 
-    connectWebSocket(id) {
-        if (this.ws) {
-            this.ws.close();
+    async loadMessages(roomId) {
+        const messagesEl = document.getElementById('chat-messages');
+        if (messagesEl) messagesEl.innerHTML = '<div class="chat-loading">Carregando mensagens...</div>';
+
+        try {
+            const response = await fetch(`/api/messages/${encodeURIComponent(roomId)}/`, {
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            if (!response.ok) throw new Error(`Status ${response.status}`);
+
+            const data = await response.json();
+            const messages = Array.isArray(data) ? data : (data.messages || []);
+            this.renderMessages(messages);
+        } catch (error) {
+            console.error('Erro ao carregar mensagens:', error);
+            this.renderMessages([]);
+        }
+    }
+
+    renderMessages(messages) {
+        const container = document.getElementById('chat-messages');
+        if (!container) return;
+
+        if (!Array.isArray(messages) || !messages.length) {
+            container.innerHTML = '<div class="chat-empty">Nenhuma mensagem ainda.</div>';
+            return;
+        }
+
+        container.innerHTML = messages.map(msg => {
+            const own = Boolean(msg.own) || (msg.user && this.currentUsername && msg.user === this.currentUsername);
+            const name = msg.user || 'Usuário';
+            const text = msg.message || msg.content || '';
+            const time = msg.time || this.formatTime(msg.created || msg.timestamp);
+            return `
+                <div class="chat-message ${own ? 'sent' : 'received'}">
+                    ${!own ? `<div class="avatar avatar-xs" style="background:${this.getAvatarColor(name)}">${this.getInitials(name)}</div>` : ''}
+                    <div class="chat-message-content">
+                        <div class="chat-message-bubble">
+                            <p class="chat-message-text">${this.escapeHtml(text)}</p>
+                            <small class="chat-message-time">${this.escapeHtml(time)}</small>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    appendMessage(message) {
+        const container = document.getElementById('chat-messages');
+        if (!container) return;
+
+        const own = Boolean(message.own) || (message.user && this.currentUsername && message.user === this.currentUsername);
+        const name = message.user || 'Usuário';
+        const text = message.message || '';
+        const time = message.time || this.formatTime(message.created);
+
+        if (container.querySelector('.chat-empty')) {
+            container.innerHTML = '';
+        }
+
+        container.insertAdjacentHTML('beforeend', `
+            <div class="chat-message ${own ? 'sent' : 'received'}">
+                ${!own ? `<div class="avatar avatar-xs" style="background:${this.getAvatarColor(name)}">${this.getInitials(name)}</div>` : ''}
+                <div class="chat-message-content">
+                    <div class="chat-message-bubble">
+                        <p class="chat-message-text">${this.escapeHtml(text)}</p>
+                        <small class="chat-message-time">${this.escapeHtml(time)}</small>
+                    </div>
+                </div>
+            </div>
+        `);
+
+        container.scrollTop = container.scrollHeight;
+    }
+
+    connectRoomSocket(roomId) {
+        if (this.activeSocket) {
+            try { this.activeSocket.close(); } catch (_) {}
+            this.activeSocket = null;
         }
 
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-        const wsPath = id.startsWith('at-') ? 
-            `/ws/atendimento/${id.substring(3)}/` : 
-            `/ws/chat/${id}/`;
+        const wsUrl = `${protocol}${window.location.host}/ws/chat/${roomId}/`;
 
-        this.ws = new WebSocket(protocol + window.location.host + wsPath);
+        try {
+            this.activeSocket = new WebSocket(wsUrl);
+        } catch (error) {
+            console.error('Erro ao abrir WebSocket:', error);
+            return;
+        }
 
-        this.ws.onmessage = (e) => this.receiveMessage(e);
-        this.ws.onopen = () => {
-            console.log('Conectado ao chat');
-            // enable send UI when socket opens (if input has content it'll be enabled by input listener)
-            if (this.elements && this.elements.send) {
-                const ev = new Event('input');
-                if (this.elements.input) this.elements.input.dispatchEvent(ev);
-            }
-            // flush any pending messages queued while socket was connecting
-            if (this.pendingMessages && this.pendingMessages.length > 0) {
-                this.pendingMessages.forEach(msg => {
-                    try { this.ws.send(JSON.stringify(msg)); } catch (e) { console.error('Erro enviando pending message', e); }
-                });
-                this.pendingMessages = [];
-            }
-        };
-        this.ws.onclose = () => console.log('Desconectado do chat');
-    }
-
-    async sendMessage(e) {
-        e.preventDefault();
-        
-        const text = this.elements.input.value.trim();
-        
-        if (!text && this.attachments.length === 0) return;
-        // Prepare payload
-        const cid = 'c' + Date.now() + '-' + Math.random().toString(36).slice(2,8);
-        const payload = { type: 'message', message: text, cid: cid };
-
-        // If there are attachments, upload first and include resulting files in payload
-        if (this.attachments.length > 0) {
+        this.activeSocket.onmessage = (event) => {
             try {
-                const files = await this.uploadAttachments();
-                payload.attachments = files || [];
-            } catch (err) {
-                console.error('Erro no upload de anexos:', err);
-            }
-        }
+                const data = JSON.parse(event.data || '{}');
 
-        // optimistic UI: display immediately as own (mark pending with cid)
-        this.displayMessage({ user: (window.userName || 'Você'), message: payload.message, time: new Date().toLocaleTimeString(), own: true, attachments: payload.attachments || [], cid: cid });
-        this.elements.area.scrollTop = this.elements.area.scrollHeight;
-
-        // bump this conversation to top of recent list
-        try { this.bumpConversation(this.currentId || payload.conversation_id || payload.cid); } catch (e) {}
-
-        // If websocket not ready, queue the message to be sent when it opens
-        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-            this.pendingMessages.push(payload);
-        } else {
-            this.ws.send(JSON.stringify(payload));
-        }
-
-        this.elements.input.value = '';
-        this.clearAttachments();
-    }
-
-    receiveMessage(e) {
-        try {
-            const data = JSON.parse(e.data);
-            if (data.type === 'call') {
-                this.handleCallSignal(data);
-                return;
-            }
-            if (data.type === 'typing') {
-                const el = document.getElementById('typing-indicator');
-                if (el) {
-                    if (data.typing) {
-                        el.textContent = `${data.user} está digitando...`;
-                        el.style.display = '';
-                    } else {
-                        el.style.display = 'none';
-                        el.textContent = '';
-                    }
-                }
-                return;
-            }
-
-            if (data.type === 'message' || (!data.type && data.message)) {
-                // If server echoed a cid, try to find existing optimistic message and upgrade it
-                if (data.cid) {
-                    const existing = this.elements.area.querySelector(`[data-cid="${data.cid}"]`);
-                    if (existing) {
-                        // update content and remove pending state
-                        const sender = existing.querySelector('.message-sender');
-                        const timeEl = existing.querySelector('.message-time');
-                        const contentEl = existing.querySelector('.message-content');
-                        if (sender) sender.textContent = data.user || 'Anônimo';
-                        if (timeEl) timeEl.textContent = new Date(data.created || Date.now()).toLocaleTimeString();
-                        // replace message text
-                        if (contentEl) {
-                            contentEl.innerHTML = '';
-                            const p = document.createElement('p'); p.textContent = data.message || '';
-                            contentEl.appendChild(p);
-                        }
-                        existing.classList.remove('pending');
-                        return;
-                    }
+                if (data.type === 'typing') {
+                    const sameUser = this.currentUsername && data.user && data.user === this.currentUsername;
+                    if (!sameUser) this.showTypingIndicator(Boolean(data.typing), data.user || 'Alguém');
+                    return;
                 }
 
-                this.displayMessage({
-                    user: data.user || 'Anônimo',
-                    message: data.message || '',
-                    time: new Date().toLocaleTimeString(),
-                    own: (data.user === (window.userName || window.USERNAME || '')),
-                    attachments: data.attachments || [],
-                    created: data.created,
-                    cid: data.cid
-                });
-                // bump conversation in recent list if conversation_id provided
-                try { if (data.conversation_id) this.bumpConversation('conv-' + String(data.conversation_id)); } catch (e) {}
-                // hide typing indicator when a message arrives
-                const el = document.getElementById('typing-indicator'); if (el) { el.style.display = 'none'; el.textContent = ''; }
-            }
-        } catch (err) {
-            console.error('Erro ao processar mensagem:', err);
-        }
-    }
-
-    displayMessage(msg) {
-        const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${msg.own ? 'own' : ''}`;
-        if (msg.cid) wrapper.dataset.cid = msg.cid;
-        if (msg.own && !msg.created) wrapper.classList.add('pending');
-
-        const bubble = document.createElement('div');
-        bubble.className = 'message-bubble';
-
-        // Header
-        const header = document.createElement('div');
-        header.className = 'message-header';
-        header.innerHTML = `
-            <span class="message-sender">${msg.user}</span>
-            <span class="message-time">${msg.time}</span>
-        `;
-
-        // Conteúdo
-        const content = document.createElement('div');
-        content.className = 'message-content';
-        
-        if (msg.message) {
-            const p = document.createElement('p');
-            p.textContent = msg.message;
-            content.appendChild(p);
-        }
-
-        // Anexos
-        if (msg.attachments && msg.attachments.length > 0) {
-            const attachmentsDiv = document.createElement('div');
-            attachmentsDiv.className = 'message-attachments';
-            
-            msg.attachments.forEach(att => {
-                if (att.type.startsWith('image/')) {
-                    const thumb = document.createElement('div');
-                    thumb.className = 'attachment-thumb';
-                    thumb.innerHTML = `<img src="${att.url}" alt="${att.name}" onclick="window.open('${att.url}')">`;
-                    attachmentsDiv.appendChild(thumb);
-                } else {
-                    const fileDiv = document.createElement('div');
-                    fileDiv.className = 'attachment-file';
-                    fileDiv.innerHTML = `
-                        <i class="bi bi-file-earmark"></i>
-                        <div class="file-info">
-                            <div class="file-name">${att.name}</div>
-                            <div class="file-size">${this.formatFileSize(att.size)}</div>
-                        </div>
-                        <a href="${att.url}" download="${att.name}" class="btn btn-sm btn-outline-primary">
-                            <i class="bi bi-download"></i>
-                        </a>
-                    `;
-                    attachmentsDiv.appendChild(fileDiv);
+                if (data.type === 'message' || data.type === 'chat_message' || data.message) {
+                    this.appendMessage({
+                        user: data.user,
+                        message: data.message,
+                        created: data.created,
+                        time: this.formatTime(data.created),
+                        own: Boolean(this.currentUsername && data.user === this.currentUsername)
+                    });
+                    this.loadConversations();
                 }
-            });
-            
-            content.appendChild(attachmentsDiv);
-        }
-
-        bubble.appendChild(header);
-        bubble.appendChild(content);
-        wrapper.appendChild(bubble);
-
-        this.elements.area.appendChild(wrapper);
-        this.elements.area.scrollTop = this.elements.area.scrollHeight;
-    }
-
-    handleFiles(files) {
-        for (let file of files) {
-            // Validações
-            if (file.size > 10 * 1024 * 1024) { // 10MB
-                alert('Arquivo muito grande. Máximo 10MB');
-                continue;
-            }
-
-            this.attachments.push(file);
-            this.previewFile(file);
-        }
-    }
-
-    previewFile(file) {
-        const reader = new FileReader();
-        
-        reader.onload = (e) => {
-            const preview = document.createElement('div');
-            preview.className = 'preview-item';
-            
-            if (file.type.startsWith('image/')) {
-                preview.innerHTML = `
-                    <img src="${e.target.result}" alt="${file.name}">
-                    <button class="remove-file" data-filename="${file.name}">
-                        <i class="bi bi-x"></i>
-                    </button>
-                `;
-            } else {
-                preview.innerHTML = `
-                    <div class="file-preview">
-                        <i class="bi bi-file-earmark"></i>
-                        <span class="file-name">${file.name}</span>
-                    </div>
-                    <button class="remove-file" data-filename="${file.name}">
-                        <i class="bi bi-x"></i>
-                    </button>
-                `;
-            }
-
-            preview.querySelector('.remove-file').addEventListener('click', () => {
-                this.removeAttachment(file.name);
-                preview.remove();
-            });
-
-            this.elements.attachmentPreview.appendChild(preview);
+            } catch (_) {}
         };
+    }
 
-        if (file.type.startsWith('image/')) {
-            reader.readAsDataURL(file);
-        } else {
-            reader.readAsText(file);
+    sendMessage() {
+        const input = document.getElementById('chat-input');
+        if (!input) return;
+
+        const text = (input.value || '').trim();
+        if (!text || !this.activeSocket || this.activeSocket.readyState !== WebSocket.OPEN || !this.activeRoomId) return;
+
+        this.activeSocket.send(JSON.stringify({
+            message: text,
+            cid: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+        }));
+
+        input.value = '';
+        input.style.height = 'auto';
+        this.showTypingIndicator(false);
+    }
+
+    handleKeydown(event) {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            this.sendMessage();
         }
     }
 
-    async uploadAttachments() {
-        const formData = new FormData();
-        this.attachments.forEach(file => formData.append('files', file));
-        formData.append('conversation_id', this.currentId);
+    handleTyping() {
+        const input = document.getElementById('chat-input');
+        if (input) {
+            input.style.height = 'auto';
+            input.style.height = `${Math.min(input.scrollHeight, 100)}px`;
+        }
 
+        if (!this.activeSocket || this.activeSocket.readyState !== WebSocket.OPEN) return;
+
+        this.activeSocket.send(JSON.stringify({ typing: true }));
+        clearTimeout(this.typingTimeout);
+        this.typingTimeout = setTimeout(() => {
+            if (this.activeSocket && this.activeSocket.readyState === WebSocket.OPEN) {
+                this.activeSocket.send(JSON.stringify({ typing: false }));
+            }
+        }, 1200);
+    }
+
+    showTypingIndicator(isTyping, username = 'Alguém') {
+        const indicator = document.getElementById('chat-typing-indicator');
+        if (!indicator) return;
+        if (!isTyping) {
+            indicator.style.display = 'none';
+            return;
+        }
+
+        indicator.style.display = 'flex';
+        indicator.lastChild.textContent = `${username} digitando...`;
+
+        setTimeout(() => {
+            indicator.style.display = 'none';
+        }, 2200);
+    }
+
+    attachChatFile() {
+        const input = document.getElementById('chat-file-input');
+        if (input) input.click();
+    }
+
+    handleChatFileSelected(event) {
+        const file = event && event.target && event.target.files ? event.target.files[0] : null;
+        if (!file) return;
+        console.log('Arquivo selecionado (upload não implementado):', file.name);
+    }
+
+    togglePanel() {
+        const panel = document.getElementById('chat-panel');
+        const chatWindow = document.getElementById('chat-window');
+        if (!panel) return;
+
+        panel.style.display = 'block';
+        if (chatWindow) chatWindow.style.display = 'none';
+        this.loadConversations();
+    }
+
+    closePanel() {
+        const panel = document.getElementById('chat-panel');
+        if (panel) panel.style.display = 'none';
+    }
+
+    closeChatWindow() {
+        const panel = document.getElementById('chat-panel');
+        const chatWindow = document.getElementById('chat-window');
+        if (chatWindow) chatWindow.style.display = 'none';
+        if (panel) panel.style.display = 'block';
+
+        this.currentConversationId = null;
+        this.activeRoomId = null;
+
+        if (this.activeSocket) {
+            try { this.activeSocket.close(); } catch (_) {}
+            this.activeSocket = null;
+        }
+    }
+
+    switchTab(tab) {
+        document.querySelectorAll('.chat-tab').forEach(button => {
+            button.classList.toggle('active', button.getAttribute('data-tab') === tab);
+        });
+
+        document.querySelectorAll('.chat-tab-content').forEach(content => {
+            content.style.display = 'none';
+        });
+
+        const tabEl = document.getElementById(`${tab}-tab`);
+        if (tabEl) tabEl.style.display = 'block';
+
+        if (tab === 'conversations') {
+            this.loadConversations();
+        } else if (tab === 'notifications') {
+            this.renderNotifications([]);
+        }
+    }
+
+    renderNotifications(notifications) {
+        const list = document.getElementById('notifications-list');
+        if (!list) return;
+
+        if (!notifications || !notifications.length) {
+            list.innerHTML = '<div class="chat-empty">Nenhuma notificação</div>';
+            return;
+        }
+
+        list.innerHTML = notifications.map(item => `
+            <div class="notification-item ${item.read ? '' : 'unread'}">
+                <div class="notification-title">${this.escapeHtml(item.title || 'Notificação')}</div>
+                <div class="notification-content">${this.escapeHtml(item.content || '')}</div>
+                <div class="notification-time">${this.escapeHtml(this.formatTime(item.created_at))}</div>
+            </div>
+        `).join('');
+    }
+
+    markAllNotificationsRead() {
+        this.renderNotifications([]);
+    }
+
+    async markAsRead(conversationId) {
         try {
-            const response = await fetch('/api/upload-attachments/', {
+            await fetch('/chat/mark_read/', {
                 method: 'POST',
                 headers: {
-                    'X-CSRFToken': this.getCookie('csrftoken')
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': this.getCsrfToken()
                 },
-                body: formData
+                body: JSON.stringify({ conversation_id: Number(conversationId) })
             });
-
-            const data = await response.json();
-            // return uploaded files info for inclusion in message payload
-            return data.files || [];
-
         } catch (error) {
-            console.error('Erro ao fazer upload:', error);
-            alert('Erro ao enviar arquivos');
-            return [];
+            console.error('Erro ao marcar conversa como lida:', error);
         }
     }
 
-    removeAttachment(filename) {
-        this.attachments = this.attachments.filter(f => f.name !== filename);
+    toggleAvailability(checked) {
+        const statusIndicator = document.getElementById('status-indicator');
+        const text = document.getElementById('availability-text');
+        if (statusIndicator) statusIndicator.style.background = checked ? '#4caf50' : '#ff9800';
+        if (text) text.textContent = checked ? 'Disponível' : 'Indisponível';
     }
 
-    clearAttachments() {
-        this.attachments = [];
-        this.elements.attachmentPreview.innerHTML = '';
-        this.elements.fileInput.value = '';
+    updateUserStatus() {}
+
+    showAvailabilityWidget() {
+        const widget = document.getElementById('availability-widget');
+        if (widget) widget.style.display = 'block';
     }
 
-    bumpConversation(id) {
-        if (!id) return;
-        const raw = String(id);
-        // normalize to possible selectors
-        const candidates = [raw, `conv-${raw}`, raw.replace(/^conv-/, ''), raw.replace(/^pessoa-/, ''), `pessoa-${raw.replace(/^pessoa-/, '')}`];
-        let item = null;
-        for (let c of candidates) {
-            const sel = `[data-id="${c}"]`;
-            item = document.querySelector(sel);
-            if (item) break;
+    formatTime(timestamp) {
+        if (!timestamp) return '';
+        const date = new Date(timestamp);
+        if (Number.isNaN(date.getTime())) return '';
+
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMin = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMin / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffMin < 1) return 'Agora';
+        if (diffMin < 60) return `${diffMin}m`;
+        if (diffHours < 24) return `${diffHours}h`;
+        if (diffDays < 7) return `${diffDays}d`;
+
+        return date.toLocaleDateString('pt-BR');
+    }
+
+    getInitials(name) {
+        if (!name) return '?';
+        return String(name)
+            .trim()
+            .split(/\s+/)
+            .slice(0, 2)
+            .map(part => part[0] || '')
+            .join('')
+            .toUpperCase() || '?';
+    }
+
+    getAvatarColor(seed) {
+        const colors = ['#16a34a', '#0ea5e9', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4'];
+        const text = String(seed || 'user');
+        let hash = 0;
+        for (let i = 0; i < text.length; i += 1) {
+            hash = ((hash << 5) - hash) + text.charCodeAt(i);
+            hash |= 0;
         }
-        if (!item) return;
-        // move to top of first conversation group
-        const container = document.querySelector('.ig-conversations');
-        if (!container) return;
-        const firstGroup = container.querySelector('.ig-conversation-group');
-        if (!firstGroup) return;
-        try {
-            firstGroup.insertBefore(item, firstGroup.firstChild);
-        } catch (e) {
-            // fallback: prepend to container
-            try { container.insertBefore(item, container.firstChild); } catch (ee) {}
-        }
+        return colors[Math.abs(hash) % colors.length];
     }
 
-    search(query) {
-        const q = (query || '').trim().toLowerCase();
-        const items = document.querySelectorAll('.ig-conversation-item');
-        if (!q) {
-            items.forEach(i => i.style.display = 'flex');
-            // show groups if any
-            document.querySelectorAll('.ig-conversation-group').forEach(g => g.classList.add('active'));
-            return;
-        }
+    getCsrfToken() {
+        const byInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (byInput && byInput.value) return byInput.value;
 
-        items.forEach(i => {
-            try {
-                const nameEl = i.querySelector('.ig-conversation-name');
-                const previewEl = i.querySelector('.ig-preview-text') || i.querySelector('.ig-conversation-preview');
-                const name = nameEl ? (nameEl.textContent || '') : '';
-                const preview = previewEl ? (previewEl.textContent || '') : '';
-                const dataId = i.dataset.id || '';
-                const hay = (name + ' ' + preview + ' ' + dataId).toLowerCase();
-                if (hay.indexOf(q) !== -1) {
-                    i.style.display = 'flex';
-                } else {
-                    i.style.display = 'none';
-                }
-            } catch (err) {
-                i.style.display = 'none';
-            }
-        });
-        // hide empty groups
-        document.querySelectorAll('.ig-conversation-group').forEach(g => {
-            const visible = Array.from(g.querySelectorAll('.ig-conversation-item')).some(el => el.style.display !== 'none');
-            if (visible) g.classList.add('active'); else g.classList.remove('active');
-        });
+        const pair = document.cookie.split('; ').find(row => row.startsWith('csrftoken='));
+        return pair ? pair.split('=')[1] : '';
     }
 
-    toggleEmojiPicker() {
-        if (this.elements.emojiPicker.style.display === 'none') {
-            this.elements.emojiPicker.style.display = 'block';
-        } else {
-            this.elements.emojiPicker.style.display = 'none';
-        }
+    escapeHtml(text) {
+        const value = String(text == null ? '' : text);
+        return value
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    loadEmojis() {
-        // Carregar emojis comuns
-        const emojis = ['😊', '😂', '❤️', '👍', '😢', '😡', '🎉', '🔥'];
-        this.elements.emojiPicker.innerHTML = emojis.map(e => 
-            `<span class="emoji" onclick="chatManager.insertEmoji('${e}')">${e}</span>`
-        ).join('');
-    }
-
-    insertEmoji(emoji) {
-        this.elements.input.value += emoji;
-        this.elements.emojiPicker.style.display = 'none';
-    }
-
-    toggleInfoPanel() {
-        if (this.elements.infoPanel.classList.contains('show')) {
-            this.hideInfoPanel();
-        } else {
-            this.showInfoPanel();
-        }
-    }
-
-    showInfoPanel() {
-        this.elements.infoPanel.classList.add('show');
-    }
-
-    hideInfoPanel() {
-        this.elements.infoPanel.classList.remove('show');
-    }
-
-    loadUserInfo(id) {
-        const userId = id.replace('pessoa-', '');
-        
-        fetch(`/api/user/${userId}/info/`)
-            .then(r => r.json())
-            .then(data => {
-                this.elements.infoContent.innerHTML = `
-                    <div class="user-info">
-                        <div class="user-avatar-large">
-                            ${data.foto ? `<img src="${data.foto}" alt="${data.nome}">` : 
-                                `<div class="avatar-placeholder">${data.nome[0]}</div>`}
-                        </div>
-                        <h5>${data.nome}</h5>
-                        <p class="text-muted">${data.cargo || 'Funcionário'}</p>
-                        
-                        <div class="info-section">
-                            <h6>Contato</h6>
-                            <p><i class="bi bi-envelope"></i> ${data.email}</p>
-                            ${data.telefone ? `<p><i class="bi bi-telephone"></i> ${data.telefone}</p>` : ''}
-                        </div>
-                        
-                        <div class="info-section">
-                            <h6>Departamento</h6>
-                            <p>${data.departamento || '—'}</p>
-                        </div>
-                    </div>
-                `;
-            });
-    }
-
-    loadMessageHistory(id) {
-        // Carregar histórico completo via API para garantir persistência ao recarregar.
-        fetch(`/api/messages/${id}/`)
-            .then(r => {
-                if (!r.ok) throw new Error('history_fetch_failed');
-                return r.json();
-            })
-            .then(messages => {
-                this.clearMessages();
-                (messages || []).forEach(msg => {
-                    this.displayMessage({
-                        user: msg.user || 'Anônimo',
-                        message: msg.message || '',
-                        time: msg.time || new Date(msg.created || Date.now()).toLocaleTimeString(),
-                        own: !!msg.own,
-                        attachments: msg.attachments || [],
-                        created: msg.created,
-                    });
-                });
-                this.elements.area.scrollTop = this.elements.area.scrollHeight;
-            })
-            .catch(() => {
-                // fallback: leave empty, websocket may still stream recent messages
-                this.clearMessages();
-            });
-    }
-
-    clearMessages() {
-        this.elements.area.innerHTML = '';
-    }
-
-    formatFileSize(bytes) {
-        if (bytes < 1024) return bytes + ' B';
-        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-        return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-    }
-
-    getCookie(name) {
-        const v = document.cookie.match('(^|;) ?' + name + '=([^;]*)(;|$)');
-        return v ? v[2] : null;
-    }
-
-    markConversationRead(id) {
-        if (!id) return;
-        // mark_read endpoint only supports Conversation IDs (conv-<id>)
-        if (!(typeof id === 'string' && id.startsWith('conv-'))) return;
-        // espera id no formato 'conv-<num>' ou número
-        const convId = (typeof id === 'string' && id.startsWith('conv-')) ? id.split('-')[1] : id;
-        if (!convId) return;
-
-        // pega badge local e o valor para decrementar o bubble
-        // try several possible data-id formats inserted by templates
-        const convEl = document.querySelector(`[data-id="conv-${convId}"], [data-id="${convId}"], [data-id="pessoa-${convId}"], [data-id="at-${convId}"]`);
-        let localCount = 0;
-        if (convEl) {
-            const badge = convEl.querySelector('.local-unread');
-            if (badge) {
-                localCount = parseInt(badge.textContent || '0') || 0;
-                badge.remove();
-            }
-        }
-
-        // chamada ao endpoint para persistir last_read
-        fetch('/chat/mark_read/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': this.getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ conversation_id: convId })
-        }).then(r => r.json()).then(js => {
-            // atualizar badge global decrementando pelo localCount
-            if (localCount > 0) {
-                const bubbleBadge = document.querySelector('#chatBubble .chat-badge');
-                if (bubbleBadge) {
-                    let n = parseInt(bubbleBadge.textContent || '0') || 0;
-                    n = Math.max(0, n - localCount);
-                    if (n <= 0) {
-                        bubbleBadge.style.display = 'none';
-                        bubbleBadge.textContent = '0';
-                    } else {
-                        bubbleBadge.textContent = n;
-                    }
-                }
-            }
-        }).catch(() => {});
-    }
-
-    createConversationWithUser(userId, name) {
-        if (!userId || Number.isNaN(Number(userId))) {
-            console.error('userId inválido para criar conversa:', userId);
-            return;
-        }
-        fetch('/chat/create_user_conversation/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': this.getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ user_id: userId })
-        }).then(r => r.json()).then(js => {
-            if (js.conversation_id) {
-                const convId = js.conversation_id;
-                this.currentId = `conv-${convId}`;
-                this.currentType = 'conversa';
-                this.elements.title.textContent = name || 'Conversa';
-                this.connectWebSocket(this.currentId);
-                this.clearMessages();
-                this.loadMessageHistory(this.currentId);
-                    // marcar como lida na criação/abertura
-                    this.markConversationRead(this.currentId);
-                this.renderConversationInfo();
-                if (this.elements.input) this.elements.input.focus();
-                if (this.elements.form) this.elements.form.style.display = '';
-            }
-        }).catch(err => { console.error('Erro criando conversa:', err); });
-    }
-
-    createConversationWithEmpresa(empresaId, nome) {
-        fetch('/chat/create_empresa_conversation/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': this.getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ empresa_id: empresaId })
-        }).then(r => r.json()).then(js => {
-            if (js.conversation_id) {
-                const convId = js.conversation_id;
-                this.currentId = `conv-${convId}`;
-                this.currentType = 'conversa';
-                this.elements.title.textContent = nome || 'Empresa';
-                this.connectWebSocket(this.currentId);
-                this.clearMessages();
-                this.loadMessageHistory(this.currentId);
-                    // marcar como lida na criação/abertura
-                    this.markConversationRead(this.currentId);
-                this.renderConversationInfo();
-                if (this.elements.input) this.elements.input.focus();
-                if (this.elements.form) this.elements.form.style.display = '';
-            }
-        }).catch(err => { console.error('Erro criando conversa:', err); });
-    }
-
-    createGroupConversation(title, userIds) {
-        fetch('/chat/create_group_conversation/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': this.getCookie('csrftoken'),
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ title, user_ids: userIds })
-        }).then(r => r.json()).then(js => {
-            if (js.conversation_id) {
-                this.groupSelection.clear();
-                this.currentId = `conv-${js.conversation_id}`;
-                this.currentType = 'conversa';
-                this.elements.title.textContent = title || 'Grupo';
-                this.connectWebSocket(this.currentId);
-                this.clearMessages();
-                this.loadMessageHistory(this.currentId);
-                this.markConversationRead(this.currentId);
-                this.renderConversationInfo();
-            }
-        }).catch(err => console.error('Erro criando grupo:', err));
-    }
-
-    renderConversationInfo() {
-        if (!this.elements.infoContent || !this.currentId) return;
-        const room = this.currentId;
-        this.elements.infoContent.innerHTML = `
-            <div class="info-tabs">
-                <button class="info-tab active" data-tab="about">Detalhes</button>
-                <button class="info-tab" data-tab="media">Mídias</button>
-            </div>
-            <div class="info-tab-content" id="info-about">
-                <p><strong>Sala:</strong> ${room}</p>
-                <p class="text-muted">Conversa segura Hautomatize</p>
-            </div>
-            <div class="info-tab-content" id="info-media" style="display:none;"></div>
-        `;
-
-        const tabs = this.elements.infoContent.querySelectorAll('.info-tab');
-        tabs.forEach(tab => {
-            tab.addEventListener('click', () => {
-                tabs.forEach(t => t.classList.remove('active'));
-                tab.classList.add('active');
-                const which = tab.dataset.tab;
-                const about = document.getElementById('info-about');
-                const media = document.getElementById('info-media');
-                if (which === 'media') {
-                    if (about) about.style.display = 'none';
-                    if (media) media.style.display = '';
-                    this.loadMediaTab(room);
-                } else {
-                    if (about) about.style.display = '';
-                    if (media) media.style.display = 'none';
-                }
-            });
-        });
-    }
-
-    loadMediaTab(room) {
-        const mediaBox = document.getElementById('info-media');
-        if (!mediaBox) return;
-        mediaBox.innerHTML = '<p class="text-muted">Carregando mídias...</p>';
-        fetch(`/api/messages/${room}/`).then(r => r.json()).then(list => {
-            const all = [];
-            (list || []).forEach(m => (m.attachments || []).forEach(a => all.push(a)));
-            if (!all.length) {
-                mediaBox.innerHTML = '<p class="text-muted">Nenhuma mídia compartilhada.</p>';
-                return;
-            }
-            const grid = document.createElement('div');
-            grid.className = 'media-grid';
-            all.forEach(a => {
-                const item = document.createElement('a');
-                item.className = 'media-item';
-                item.href = a.url;
-                item.target = '_blank';
-                const isImg = (a.type || '').startsWith('image/');
-                item.innerHTML = isImg
-                    ? `<img src="${a.url}" alt="${a.name || 'mídia'}"/>`
-                    : `<div class="media-file"><i class="bi bi-file-earmark"></i><span>${a.name || 'arquivo'}</span></div>`;
-                grid.appendChild(item);
-            });
-            mediaBox.innerHTML = '';
-            mediaBox.appendChild(grid);
-        }).catch(() => {
-            mediaBox.innerHTML = '<p class="text-muted">Falha ao carregar mídias.</p>';
-        });
-    }
-
-    async startCall(kind = 'video') {
-        if (!this.currentId || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-            alert('Abra uma conversa antes de iniciar chamada.');
-            return;
-        }
-        const callModal = document.getElementById('call-modal');
-        const localVideo = document.getElementById('local-video');
-        const remoteVideo = document.getElementById('remote-video');
-        if (!callModal || !localVideo || !remoteVideo) return;
-
-        callModal.style.display = 'flex';
-        this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: kind === 'video' });
-        localVideo.srcObject = this.localStream;
-
-        this.pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-        this.localStream.getTracks().forEach(t => this.pc.addTrack(t, this.localStream));
-        this.remoteStream = new MediaStream();
-        remoteVideo.srcObject = this.remoteStream;
-        this.pc.ontrack = (ev) => ev.streams[0].getTracks().forEach(t => this.remoteStream.addTrack(t));
-        this.pc.onicecandidate = (ev) => {
-            if (ev.candidate) this.ws.send(JSON.stringify({ action: 'call_ice', data: { candidate: ev.candidate } }));
-        };
-
-        const offer = await this.pc.createOffer();
-        await this.pc.setLocalDescription(offer);
-        this.ws.send(JSON.stringify({ action: 'call_offer', data: { sdp: offer, kind } }));
-    }
-
-    async handleCallSignal(payload) {
-        const action = payload.action;
-        const data = payload.data || {};
-        const fromMe = (payload.from && payload.from === (window.userName || window.username || ''));
-        const callModal = document.getElementById('call-modal');
-        const localVideo = document.getElementById('local-video');
-        const remoteVideo = document.getElementById('remote-video');
-
-        if (fromMe && action !== 'call_end') return;
-
-        if (action === 'call_offer') {
-            if (callModal) callModal.style.display = 'flex';
-            this.localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: !!(data.kind === 'video') });
-            if (localVideo) localVideo.srcObject = this.localStream;
-            this.pc = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] });
-            this.localStream.getTracks().forEach(t => this.pc.addTrack(t, this.localStream));
-            this.remoteStream = new MediaStream();
-            if (remoteVideo) remoteVideo.srcObject = this.remoteStream;
-            this.pc.ontrack = (ev) => ev.streams[0].getTracks().forEach(t => this.remoteStream.addTrack(t));
-            this.pc.onicecandidate = (ev) => {
-                if (ev.candidate) this.ws.send(JSON.stringify({ action: 'call_ice', data: { candidate: ev.candidate } }));
-            };
-            await this.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            const answer = await this.pc.createAnswer();
-            await this.pc.setLocalDescription(answer);
-            this.ws.send(JSON.stringify({ action: 'call_answer', data: { sdp: answer } }));
-            return;
-        }
-
-        if (action === 'call_answer' && this.pc) {
-            await this.pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
-            return;
-        }
-
-        if (action === 'call_ice' && this.pc && data.candidate) {
-            try { await this.pc.addIceCandidate(new RTCIceCandidate(data.candidate)); } catch (e) {}
-            return;
-        }
-
-        if (action === 'call_end') {
-            this.endCall(false);
-        }
-    }
-
-    toggleMute() {
-        if (!this.localStream) return;
-        this.localStream.getAudioTracks().forEach(t => { t.enabled = !t.enabled; });
-    }
-
-    endCall(sendSignal = true) {
-        const callModal = document.getElementById('call-modal');
-        if (callModal) callModal.style.display = 'none';
-        if (sendSignal && this.ws && this.ws.readyState === WebSocket.OPEN) {
-            this.ws.send(JSON.stringify({ action: 'call_end', data: {} }));
-        }
-        if (this.pc) {
-            try { this.pc.close(); } catch (e) {}
-            this.pc = null;
-        }
-        if (this.localStream) {
-            this.localStream.getTracks().forEach(t => t.stop());
-            this.localStream = null;
-        }
-        this.remoteStream = null;
+    escapeForAttr(text) {
+        return this.escapeHtml(text).replace(/'/g, '\\&#039;');
     }
 }
 
-// Inicialização
-document.addEventListener('DOMContentLoaded', () => {
-    window.chatManager = new ChatManager();
-});
+(function initChatModule() {
+    const start = () => {
+        window.chatModule = new ChatModule();
+        window.chatModule.init();
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', start);
+    } else {
+        start();
+    }
+})();

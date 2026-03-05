@@ -21,8 +21,8 @@
 }
 
 .empresa-card .card-header {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     padding: 1rem 1.5rem;
     font-weight: 600;
 }
@@ -57,13 +57,13 @@
 }
 
 .empresa-form-card .card-header {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     padding: 1.25rem 1.5rem;
 }
 
 .empresa-form-card .card-header i {
-    color: var(--verde-deep);
+    color: #16a34a;
     transition: var(--transicao-padrao);
 }
 
@@ -92,8 +92,8 @@
 
 .empresa-form-card .form-control:focus,
 .empresa-form-card .form-select:focus {
-    border-color: var(--verde-deep);
-    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
 .empresa-form-card .input-group .btn {
@@ -103,15 +103,16 @@
 }
 
 .empresa-form-card .input-group .btn:hover {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
-    border-color: var(--verde-deep);
+    border-color: #16a34a;
 }
 
 /* ===== FORM SWITCH ===== */
 .form-check-input:checked {
-    background-color: var(--verde-deep);
-    border-color: var(--verde-deep);
+    background-color: #16a34a;
+    border-color: #16a34a;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.3);
 }
 
 /* ===== SEÇÃO DE ENDEREÇO ===== */
@@ -132,18 +133,17 @@
 
 /* ===== SEÇÃO DE CERTIFICADO ===== */
 .certificado-section {
-    background: rgba(76, 175, 80, 0.05);
+    background: rgba(22, 163, 74, 0.04);
     border-radius: 16px;
     padding: 1.5rem;
     margin: 1.5rem 0;
+    border-left: 4px solid #16a34a;
 }
 
 .certificado-section h5 {
-    color: var(--verde-deep);
+    color: #16a34a;
     font-weight: 600;
     margin-bottom: 1.5rem;
-    padding-left: 0.5rem;
-    border-left: 4px solid var(--verde-deep);
 }
 
 .certificado-info {
@@ -175,23 +175,25 @@
 }
 
 .empresa-actions .btn-success {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     border: none;
+    color: white;
 }
 
 .empresa-actions .btn-success:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.35);
 }
 
 .empresa-actions .btn-outline-primary {
-    border: 2px solid var(--verde-deep);
-    color: var(--verde-deep);
+    border: 2px solid #16a34a;
+    color: #16a34a;
 }
 
 .empresa-actions .btn-outline-primary:hover {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
+    border-color: #15803d;
     transform: translateY(-2px);
 }
 
@@ -209,10 +211,10 @@
 }
 
 .empresa-table thead th {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: none;
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     font-weight: 600;
-    color: var(--cinza-escuro);
+    color: #374151;
     padding: 1rem 1.25rem;
     white-space: nowrap;
 }
@@ -224,7 +226,8 @@
 }
 
 .empresa-table tbody tr:hover {
-    background: rgba(76, 175, 80, 0.02);
+    background: linear-gradient(90deg, rgba(22, 163, 74, 0.04), transparent);
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.1);
 }
 
 .empresa-table .btn-group {

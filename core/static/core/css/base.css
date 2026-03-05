@@ -45,8 +45,8 @@
 
 .filtros-card .form-control:focus,
 .filtros-card .form-select:focus {
-    border-color: var(--verde-deep);
-    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
 .filtros-card .btn {
@@ -58,15 +58,17 @@
 }
 
 .filtros-card .btn-outline-success {
-    border: 2px solid var(--verde-deep);
-    color: var(--verde-deep);
+    border: 2px solid #16a34a;
+    color: #16a34a;
+    background: transparent;
 }
 
 .filtros-card .btn-outline-success:hover {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+    border-color: #15803d;
 }
 
 .filtros-card .btn-outline-secondary {
@@ -95,8 +97,8 @@
 }
 
 .usuarios-table thead th {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: none;
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     font-weight: 600;
     color: var(--cinza-escuro);
     padding: 1rem 1.25rem;
@@ -122,9 +124,9 @@
 }
 
 .usuarios-table tbody tr:hover {
-    background: rgba(76, 175, 80, 0.02);
-    transform: scale(1.01);
-    box-shadow: var(--sombra-suave);
+    background: linear-gradient(90deg, rgba(22, 163, 74, 0.04), transparent);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(22, 163, 74, 0.12);
 }
 
 /* ===== AVATAR DO USUÁRIO ===== */
@@ -139,13 +141,14 @@
     height: 40px;
     border-radius: 50%;
     object-fit: cover;
-    border: 2px solid var(--verde-deep);
+    border: 2px solid #16a34a;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.2);
     transition: var(--transicao-padrao);
 }
 
 .usuario-avatar i {
     font-size: 2rem;
-    color: var(--verde-deep);
+    color: #16a34a;
     transition: var(--transicao-padrao);
 }
 
@@ -169,8 +172,9 @@
 }
 
 .status-badge.bg-success {
-    background: var(--gradiente-verde) !important;
+    background: linear-gradient(135deg, #16a34a, #15803d) !important;
     color: white;
+    box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
 }
 
 .status-badge.bg-secondary {
@@ -180,19 +184,21 @@
 
 /* ===== BOTÕES DE AÇÃO ===== */
 .btn-acao {
-    padding: 0.4rem 0.8rem;
-    border-radius: 8px;
-    transition: var(--transicao-padrao);
+    padding: 0.5rem 1rem;
+    border-radius: 6px;
+    transition: all 0.2s ease;
     background: transparent;
-    border: 2px solid var(--verde-deep);
-    color: var(--verde-deep);
+    border: 2px solid #16a34a;
+    color: #16a34a;
+    font-weight: 500;
 }
 
 .btn-acao:hover {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
+    border-color: #15803d;
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
 }
 
 /* ===== ESTADO VAZIO ===== */
@@ -203,8 +209,8 @@
 
 .empty-state i {
     font-size: 4rem;
-    color: var(--verde-deep);
-    opacity: 0.5;
+    color: #16a34a;
+    opacity: 0.6;
     margin-bottom: 1rem;
 }
 
@@ -222,29 +228,30 @@
 
 .empty-state .btn-success {
     padding: 0.75rem 2rem;
-    border-radius: 30px;
+    border-radius: 8px;
     font-weight: 500;
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     border: none;
-    transition: var(--transicao-padrao);
+    transition: all 0.2s ease;
+    color: white;
 }
 
 .empty-state .btn-success:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 20px rgba(76, 175, 80, 0.4);
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.35);
 }
 
 /* ===== FOOTER DA TABELA ===== */
 .table-footer {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.05), rgba(255, 193, 7, 0.05));
-    border-top: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.04), rgba(234, 179, 8, 0.04));
+    border-top: 1px solid rgba(22, 163, 74, 0.1);
     padding: 0.75rem 1.5rem;
     font-size: 0.9rem;
     color: #6c757d;
 }
 
 .table-footer i {
-    color: var(--verde-deep);
+    color: #16a34a;
 }
 
 /* Responsividade */

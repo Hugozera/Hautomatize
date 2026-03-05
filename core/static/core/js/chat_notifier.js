@@ -13,15 +13,27 @@
             notifier.onmessage = function(e){
                 try{
                     const data = JSON.parse(e.data);
+                    
+                    // Não mostrar notificação para mensagens do próprio usuário
+                    const senderId = data.user_id || data.sender_id;
+                    if(senderId && String(senderId) === String(window.userId)) {
+                        console.debug('Ignoring own message notification');
+                        return;
+                    }
+                    
                     // chat_message broadcast will use type 'message' or 'chat_message' depending on source
                     const convIdNum = data.conversation_id ? String(data.conversation_id) : null;
                     // possible DOM data-id values: 'conv-<id>', '<id>', 'pessoa-<id>', 'at-<id>'
                     const sender = data.user || 'Anônimo';
                     const text = data.message || '';
-                    // increment global badge
+                    
+                    // increment global badge apenas para mensagens de outros usuários
                     const bubbleBadge = document.querySelector('#chatBubble .chat-badge');
                     if(bubbleBadge){
-                        let n = parseInt(bubbleBadge.textContent||'0')||0; n = n + 1; bubbleBadge.textContent = n; bubbleBadge.style.display='inline-block';
+                        let n = parseInt(bubbleBadge.textContent||'0')||0; 
+                        n = n + 1; 
+                        bubbleBadge.textContent = n; 
+                        bubbleBadge.style.display='inline-block';
                     }
 
                     // refresh panel list when open (keeps recents ordered by latest message)

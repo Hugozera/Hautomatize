@@ -134,9 +134,9 @@
 }
 
 .historico-table th {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
     font-weight: 600;
-    color: var(--cinza-escuro);
+    color: #374151;
     padding: 1rem;
 }
 
@@ -197,18 +197,19 @@
 
 /* ===== BOTÃO DE DOWNLOAD ===== */
 .btn-download {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
     border: none;
-    padding: 0.4rem 1rem;
+    padding: 0.5rem 1.25rem;
     border-radius: 8px;
     font-size: 0.9rem;
-    transition: var(--transicao-padrao);
+    font-weight: 500;
+    transition: all 0.2s ease;
 }
 
 .btn-download:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
 }
 
 /* Responsividade */

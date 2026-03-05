@@ -1,7 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 import os
-from .models import Pessoa, Empresa, Agendamento, Role
+from .models import Pessoa, Empresa, Agendamento
 
 # helper to keep permissions choices in sync with the matrix
 
@@ -24,7 +24,6 @@ def _permission_choices():
         'agendamento': 'Agendamento',
         'download': 'Download',
         'historico': 'Histórico',
-        'role': 'Papel',
     }
     action_map = {
         'add': 'Cadastrar',
@@ -58,13 +57,6 @@ class PessoaForm(forms.ModelForm):
     password = forms.CharField(widget=forms.PasswordInput, required=False, label='Senha')
     password_confirm = forms.CharField(widget=forms.PasswordInput, required=False, label='Confirme a senha')
 
-    # associação de roles e permissões diretas
-    roles = forms.ModelMultipleChoiceField(
-        queryset=Role.objects.filter(ativo=True),
-        widget=forms.CheckboxSelectMultiple(),
-        required=False,
-        label='Papéis (roles)'
-    )
     permissions = forms.MultipleChoiceField(
         choices=_permission_choices(),
         widget=forms.CheckboxSelectMultiple(),
@@ -85,15 +77,12 @@ class PessoaForm(forms.ModelForm):
             self.fields['email'].initial = self.instance.user.email
             self.fields['password'].required = False
             self.fields['password_confirm'].required = False
-            # roles / permissions initial values
-            self.initial['roles'] = self.instance.roles.filter(ativo=True)
             self.initial['permissions'] = [p for p in (self.instance.permissions or '').split(',') if p]
         else:
             self.fields['password'].required = True
             self.fields['password_confirm'].required = True
 
         # style classes for new fields (checkbox lists)
-        self.fields['roles'].widget.attrs.update({'class': 'form-check'})
         self.fields['permissions'].widget.attrs.update({'class': 'form-check'})
 
     def clean_username(self):
@@ -167,13 +156,10 @@ class PessoaForm(forms.ModelForm):
             
             user.save()
         
-        # atribui permissões e roles antes de salvar m2m
+        # atribui permissões diretas
         pessoa.permissions = ','.join(self.cleaned_data.get('permissions') or [])
         if commit:
             pessoa.save()
-            # atualizar roles também
-            if 'roles' in self.cleaned_data:
-                pessoa.roles.set(self.cleaned_data['roles'])
         
         return pessoa
 
@@ -265,43 +251,3 @@ class AgendamentoForm(forms.ModelForm):
         self.fields['ativo'].widget.attrs['class'] = 'form-check-input'
         self.fields['notificar_email'].widget.attrs['class'] = 'form-check-input'
         self.fields['compactar_auto'].widget.attrs['class'] = 'form-check-input'
-
-
-class RoleForm(forms.ModelForm):
-    # override field so we can expose checkboxes instead of a textarea
-    permissions = forms.MultipleChoiceField(
-        choices=_permission_choices(),
-        widget=forms.CheckboxSelectMultiple,
-        required=False,
-        label='Permissões'
-    )
-
-    class Meta:
-        model = Role
-        fields = ['name', 'codename', 'descricao', 'permissions', 'pessoas', 'ativo']
-        widgets = {
-            'descricao': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
-            # 'permissions' widget removed; using explicit field above
-            'pessoas': forms.SelectMultiple(attrs={'class': 'form-select', 'size': 6}),
-            'name': forms.TextInput(attrs={'class': 'form-control'}),
-            'codename': forms.TextInput(attrs={'class': 'form-control'}),
-            'ativo': forms.CheckboxInput(attrs={'class': 'form-check-input'})
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # when editing, populate the checkbox field from the stored comma list
-        if self.instance and self.instance.pk:
-            perm_list = self.instance.perm_list()
-            # ensure keystyle (already stored codes not including model prefix?)
-            # stored values already look like 'empresa.edit' etc., so just use them
-            self.initial['permissions'] = perm_list
-
-        # add bootstrap classes for custom field widgets
-        self.fields['permissions'].widget.attrs.update({'class': 'form-check'})
-        self.fields['pessoas'].widget.attrs.update({'class': 'form-select', 'size': '6'})
-
-    def clean_permissions(self):
-        # the widget returns a list; store comma separated string
-        perms = self.cleaned_data.get('permissions') or []
-        return ','.join(perms)

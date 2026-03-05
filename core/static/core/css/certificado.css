@@ -21,8 +21,8 @@
 }
 
 .certificado-card .card-header {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     padding: 1rem 1.5rem;
     font-weight: 600;
 }
@@ -33,10 +33,11 @@
 
 /* ===== INFORMAÇÕES DO CERTIFICADO ===== */
 .certificado-info {
-    background: rgba(76, 175, 80, 0.05);
+    background: rgba(22, 163, 74, 0.04);
     border-radius: 12px;
     padding: 1rem;
     margin-bottom: 1.5rem;
+    border-left: 3px solid #16a34a;
 }
 
 .certificado-info p {
@@ -59,10 +60,10 @@
 }
 
 .certificado-table thead th {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: none;
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     font-weight: 600;
-    color: var(--cinza-escuro);
+    color: #374151;
     padding: 1rem 1.25rem;
 }
 
@@ -99,8 +100,8 @@
 }
 
 .certificado-form .form-control:focus {
-    border-color: var(--verde-deep);
-    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
 }
 
 .certificado-form .form-text {
@@ -117,7 +118,7 @@
 }
 
 .certificado-form input[type="file"]::file-selector-button {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
     border: none;
     padding: 0.5rem 1rem;
@@ -129,7 +130,7 @@
 
 .certificado-form input[type="file"]::file-selector-button:hover {
     transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(76, 175, 80, 0.3);
+    box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
 }
 
 /* ===== BOTÕES DE AÇÃO ===== */
@@ -147,13 +148,14 @@
 }
 
 .certificado-actions .btn-outline-success {
-    border: 2px solid var(--verde-deep);
-    color: var(--verde-deep);
+    border: 2px solid #16a34a;
+    color: #16a34a;
 }
 
 .certificado-actions .btn-outline-success:hover {
-    background: var(--gradiente-verde);
+    background: linear-gradient(135deg, #16a34a, #15803d);
     color: white;
+    border-color: #15803d;
     transform: translateY(-2px);
 }
 

@@ -61,19 +61,37 @@
                 </div>
             </div>
 
-            <!-- Card de Junção de PDFs (Nova aba integrada) -->
+            <!-- Card de Junção de Arquivos -->
             <div class="card mb-4 animate__animated animate__fadeInUp">
                 <div class="card-header bg-transparent d-flex align-items-center">
                     <i class="bi bi-files fs-4 me-2 icon-accent-azul"></i>
-                    <span class="fw-semibold">Junção de PDFs</span>
+                    <span class="fw-semibold">Junção de Arquivos</span>
                 </div>
                 <div class="card-body">
-                    <p class="text-muted">Faça upload de vários PDFs e monte um novo PDF escolhendo páginas.</p>
-                    <form id="mergeUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor' %}">
-                        {% csrf_token %}
-                        <input type="file" id="mergeFiles" name="pdfs" multiple accept="application/pdf">
-                        <button type="submit" class="btn btn-outline-primary btn-sm mt-2" id="btnUploadMerge">Enviar e Preparar</button>
-                    </form>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold mb-3"><i class="bi bi-file-earmark-pdf me-1 text-danger"></i>PDFs</h6>
+                            <p class="text-muted small">Faça upload de vários PDFs e monte um novo PDF escolhendo páginas.</p>
+                            <form id="mergeUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor' %}">
+                                {% csrf_token %}
+                                <input type="file" id="mergeFiles" name="pdfs" multiple accept="application/pdf" class="form-control form-control-sm mb-2">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" id="btnUploadMerge">
+                                    <i class="bi bi-file-earmark-pdf me-1"></i>Juntar PDFs
+                                </button>
+                            </form>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-semibold mb-3"><i class="bi bi-file-earmark-excel me-1 text-success"></i>Planilhas Excel</h6>
+                            <p class="text-muted small">Faça upload de vários arquivos Excel (.xlsx) e combine-os em uma única planilha.</p>
+                            <form id="mergeExcelUploadForm" method="post" enctype="multipart/form-data" action="{% url 'merge_editor_excel' %}">
+                                {% csrf_token %}
+                                <input type="file" id="mergeExcelFiles" name="excels" multiple accept=".xlsx,.xls" class="form-control form-control-sm mb-2">
+                                <button type="submit" class="btn btn-outline-success btn-sm" id="btnUploadMergeExcel">
+                                    <i class="bi bi-file-earmark-excel me-1"></i>Juntar Planilhas
+                                </button>
+                            </form>
+                        </div>
+                    </div>
 
                     <div id="mergePanel" class="mt-3 d-none">
                         <p><strong>Session:</strong> <span id="mergeSession"></span></p>
@@ -91,6 +109,34 @@
                                     <input type="hidden" name="sequence" id="merge_sequence_input">
                                     <input type="text" name="out_name" placeholder="nome_saida.pdf" class="form-control form-control-sm mt-2">
                                     <button type="button" class="btn btn-success btn-sm mt-2" id="btnGenerateMerge">Gerar PDF</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Painel de Junção de Excel -->
+                    <div id="mergeExcelPanel" class="mt-3 d-none">
+                        <hr class="my-3">
+                        <h6 class="fw-semibold mb-3"><i class="bi bi-file-earmark-excel me-1 text-success"></i>Junção de Excel</h6>
+                        <p><strong>Session:</strong> <span id="mergeExcelSession"></span></p>
+                        <div class="row">
+                            <div class="col-md-12">
+                                <h6>Arquivos carregados</h6>
+                                <ul id="mergeExcelSources" class="list-group mb-3"></ul>
+                                <form id="mergeExcelSubmitForm" method="post" action="{% url 'merge_create_excel' %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="session_id" id="merge_excel_session_input">
+                                    <label class="form-label small">Nome do arquivo de saída:</label>
+                                    <input type="text" name="out_name" placeholder="nome_saida.xlsx" class="form-control form-control-sm mb-2">
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" name="add_source_column" id="add_source_column" checked>
+                                        <label class="form-check-label small" for="add_source_column">
+                                            Adicionar coluna com nome do arquivo de origem
+                                        </label>
+                                    </div>
+                                    <button type="button" class="btn btn-success btn-sm" id="btnGenerateMergeExcel">
+                                        <i class="bi bi-file-earmark-excel me-1"></i>Gerar Excel
+                                    </button>
                                 </form>
                             </div>
                         </div>
@@ -539,6 +585,80 @@ document.addEventListener('DOMContentLoaded', function(){
         // submit form to trigger file download
         document.getElementById('mergeSubmitForm').submit();
     });
+});
+
+// --- Merge Excel UI JS ---
+document.addEventListener('DOMContentLoaded', function(){
+    const btnUploadExcel = document.getElementById('btnUploadMergeExcel');
+    const fileInputExcel = document.getElementById('mergeExcelFiles');
+    const mergeExcelPanel = document.getElementById('mergeExcelPanel');
+    const mergeExcelSessionEl = document.getElementById('mergeExcelSession');
+    const mergeExcelSourcesEl = document.getElementById('mergeExcelSources');
+    const mergeExcelSessionInput = document.getElementById('merge_excel_session_input');
+    const btnGenerateExcel = document.getElementById('btnGenerateMergeExcel');
+    const mergeExcelForm = document.getElementById('mergeExcelUploadForm');
+
+    if (mergeExcelForm) {
+        mergeExcelForm.addEventListener('submit', function(e){
+            e.preventDefault();
+            const files = fileInputExcel.files;
+            if(!files || files.length===0){ 
+                alert('Selecione ao menos uma planilha Excel'); 
+                return; 
+            }
+
+            const formData = new FormData();
+            for (let i = 0; i < files.length; i++) {
+                formData.append('excels', files[i]);
+            }
+
+            // Upload via AJAX
+            fetch("{% url 'merge_upload_excel_api' %}", {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}'
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert('Erro: ' + data.error);
+                    return;
+                }
+                setupMergeExcelUI(data.session_id, data.sources);
+            })
+            .catch(err => {
+                alert('Erro ao fazer upload: ' + err);
+            });
+        });
+    }
+
+    function setupMergeExcelUI(session_id, sources){
+        mergeExcelPanel.classList.remove('d-none');
+        mergeExcelSessionEl.textContent = session_id;
+        mergeExcelSessionInput.value = session_id;
+        mergeExcelSourcesEl.innerHTML = '';
+        
+        for(const k in sources){
+            const li = document.createElement('li');
+            li.className = 'list-group-item d-flex justify-content-between align-items-center';
+            li.innerHTML = `
+                <span><i class="bi bi-file-earmark-excel text-success me-2"></i>${sources[k]}</span>
+                <span class="badge bg-success">${k}</span>
+            `;
+            mergeExcelSourcesEl.appendChild(li);
+        }
+    }
+
+    if (btnGenerateExcel) {
+        btnGenerateExcel.addEventListener('click', ()=>{
+            const sessionId = mergeExcelSessionInput.value;
+            if(!sessionId){ alert('Nenhuma sessão ativa'); return; }
+            // submit form to trigger file download
+            document.getElementById('mergeExcelSubmitForm').submit();
+        });
+    }
 });
 
 

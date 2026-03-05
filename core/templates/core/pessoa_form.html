@@ -53,45 +53,11 @@
                     <div class="col-md-6">{{ form.password_confirm|as_crispy_field }}</div>
                 </div>
                 <hr class="my-4">
-                <!-- PAPÉIS (ROLES) -->
-                <div class="permissions-section mb-4">
-                    <h5 class="mb-3">
-                        <i class="bi bi-shield-check text-primary me-2"></i>Papéis (Roles)
-                        <small class="text-muted font-weight-normal">- Pré-definidos com permissões agrupadas</small>
-                    </h5>
-                    
-                    <div class="roles-grid" id="rolesGrid">
-                        {% for role in form.fields.roles.queryset %}
-                            <div class="role-card card mb-3" data-role-id="{{ role.pk }}" data-role-perms="{{ role.perm_list|join:',' }}">
-                                <div class="card-body p-3">
-                                    <div class="form-check d-flex align-items-start">
-                                        <input 
-                                            class="form-check-input role-checkbox mt-1" 
-                                            type="checkbox" 
-                                            name="roles" 
-                                            value="{{ role.pk }}" 
-                                            id="role_{{ role.pk }}"
-                                            {% if role.pk in form.roles.value %}checked{% endif %}
-                                            data-role-name="{{ role.name }}"
-                                            data-role-index="{{ forloop.counter0 }}"
-                                        >
-                                        <label class="form-check-label ms-2 flex-grow-1" for="role_{{ role.pk }}" style="cursor:pointer;">
-                                            <strong class="d-block">{{ role.name }}</strong>
-                                            <small class="text-muted d-block">{{ role.descricao }}</small>
-                                            <span class="badge bg-info mt-1">{{ role.perm_list|length }} permissões</span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                </div>
-
                 <!-- PERMISSÕES DIRETAS -->
                 <div class="permissions-section">
                     <h5 class="mb-3">
                         <i class="bi bi-key text-success me-2"></i>Permissões Diretas
-                        <small class="text-muted font-weight-normal">- Adicione permissões específicas além dos papéis</small>
+                        <small class="text-muted font-weight-normal">- Defina exatamente o que este usuário pode acessar</small>
                     </h5>
                     
                     <!-- Barra de controle -->
@@ -191,11 +157,7 @@
                     </h6>
                     <div class="row g-3">
                         <div class="col-auto">
-                            <small class="text-muted d-block">Papéis selecionados:</small>
-                            <span class="badge bg-primary" id="selectedRolesCount">0</span>
-                        </div>
-                        <div class="col-auto">
-                            <small class="text-muted d-block">Permissões diretas:</small>
+                            <small class="text-muted d-block">Permissões selecionadas:</small>
                             <span class="badge bg-success" id="selectedPermsCount">0</span>
                         </div>
                         <div class="col-auto">
@@ -228,187 +190,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-document.addEventListener('DOMContentLoaded', function(){
-    // Avatar drop & preview
-    const avatarDrop = document.getElementById('avatarDrop');
-    const avatarInput = document.getElementById('id_foto_custom');
-    const avatarPreview = document.getElementById('avatarPreview');
-    const realInput = document.querySelector('input[type=file][name="foto"]');
-
-    function handleFiles(files){
-        if (!files || !files.length) return;
-        const f = files[0];
-        if (!f.type.startsWith('image/')) return;
-        const url = URL.createObjectURL(f);
-        if (avatarPreview) avatarPreview.src = url;
-        if (realInput) {
-            const dt = new DataTransfer();
-            dt.items.add(f);
-            realInput.files = dt.files;
-        }
-    }
-
-    if (avatarDrop) {
-        avatarDrop.addEventListener('click', () => avatarInput && avatarInput.click());
-        if (avatarInput) avatarInput.addEventListener('change', (e) => handleFiles(e.target.files));
-        avatarDrop.addEventListener('dragover', (e)=>{ e.preventDefault(); avatarDrop.classList.add('drag-over'); });
-        avatarDrop.addEventListener('dragleave', (e)=>{ e.preventDefault(); avatarDrop.classList.remove('drag-over'); });
-        avatarDrop.addEventListener('drop', (e)=>{ e.preventDefault(); avatarDrop.classList.remove('drag-over'); handleFiles(e.dataTransfer.files); });
-        if (realInput) realInput.addEventListener('change', function(e){ handleFiles(e.target.files); });
-    }
-
-    // synchronize module toggles (NOVO SISTEMA)
-    const moduleToggles = document.querySelectorAll('.module-toggle');
-    const moduleCheckboxes = document.querySelectorAll('.module-checkbox');
-    const permCheckboxes = document.querySelectorAll('.perm-checkbox');
-    const roleCheckboxes = document.querySelectorAll('.role-checkbox');
-
-    // Inicializar checkboxes de módulo
-    moduleCheckboxes.forEach(cb => {
-        const idx = cb.dataset.moduleIndex;
-        const container = document.querySelector('.module-group-' + idx);
-        const children = document.querySelectorAll('.module-group-' + idx + ' .perm-checkbox');
-        
-        // State inicial
-        let allChecked = true;
-        children.forEach(p => { if (!p.checked) allChecked = false; });
-        cb.checked = allChecked;
-        
-        // Comportamento
-        cb.addEventListener('change', () => {
-            children.forEach(p => p.checked = cb.checked);
-            if (cb.checked && container) {
-                container.classList.add('expanded');
-            }
-            updatePermissionCounts();
-        });
-        
-        children.forEach(p => p.addEventListener('change', () => {
-            let all = true;
-            children.forEach(c => { if (!c.checked) all = false; });
-            cb.checked = all;
-            updatePermissionCounts();
-        }));
-    });
-
-    // Toggle módulos
-    moduleToggles.forEach(toggle => {
-        toggle.addEventListener('click', () => {
-            const idx = toggle.dataset.moduleIndex;
-            const container = document.querySelector('.module-group-' + idx);
-            const icon = toggle.querySelector('.module-toggle-icon');
-            
-            if (container) {
-                container.classList.toggle('expanded');
-                icon.style.transform = container.classList.contains('expanded') ? 'rotate(90deg)' : 'rotate(0deg)';
-            }
-        });
-    });
-
-    // Pesquisa de permissões
-    const permSearch = document.getElementById('permSearch');
-    if (permSearch) {
-        permSearch.addEventListener('input', (e) => {
-            const query = e.target.value.toLowerCase();
-            const containers = document.querySelectorAll('.module-container');
-            
-            containers.forEach(container => {
-                if (!query) {
-                    container.style.display = 'block';
-                    return;
-                }
-                
-                const perms = container.querySelectorAll('.perm-item label');
-                let found = false;
-                
-                perms.forEach(label => {
-                    if (label.textContent.toLowerCase().includes(query)) {
-                        found = true;
-                    }
-                });
-                
-                container.style.display = found ? 'block' : 'none';
-            });
-        });
-    }
-
-    // Botões expandir/recolher
-    const expandAllBtn = document.getElementById('expandAllBtn');
-    const collapseAllBtn = document.getElementById('collapseAllBtn');
-    
-    if (expandAllBtn) {
-        expandAllBtn.addEventListener('click', () => {
-            document.querySelectorAll('.module-group').forEach(g => {
-                g.classList.add('expanded');
-                const i = g.previousElementSibling?.querySelector('.module-toggle-icon');
-                if (i) i.style.transform = 'rotate(90deg)';
-            });
-        });
-    }
-    
-    if (collapseAllBtn) {
-        collapseAllBtn.addEventListener('click', () => {
-            document.querySelectorAll('.module-group').forEach(g => {
-                g.classList.remove('expanded');
-                const i = g.previousElementSibling?.querySelector('.module-toggle-icon');
-                if (i) i.style.transform = 'rotate(0deg)';
-            });
-        });
-    }
-
-    // Contador de permissões
-    function updatePermissionCounts() {
-        const selectedRoles = document.querySelectorAll('.role-checkbox:checked').length;
-        const selectedPerms = document.querySelectorAll('input[name="permissions"]:checked').length;
-        const totalGrouped = document.querySelectorAll('.perm-checkbox').length;
-        
-        const totalPerms = selectedRoles > 0 ? 'Auto-calculado' : selectedPerms;
-        
-        document.getElementById('selectedRolesCount').textContent = selectedRoles;
-        document.getElementById('selectedPermsCount').textContent = selectedPerms;
-        document.getElementById('totalPermsCount').textContent = totalPerms;
-    }
-
-    // Listener para mudanças em roles e permissões
-    roleCheckboxes.forEach(cb => {
-        cb.addEventListener('change', updatePermissionCounts);
-    });
-    
-    permCheckboxes.forEach(cb => {
-        cb.addEventListener('change', updatePermissionCounts);
-    });
-    
-    // Inicializar contadores
-    updatePermissionCounts();
-
-    // Password strength (simple heuristic)
-    const pwInput = document.querySelector('input[name="password"]');
-    const pwFill = document.getElementById('pwFill');
-    const pwText = document.getElementById('pwText');
-    function scorePassword(pw){
-        if (!pw) return 0;
-        let score = 0;
-        if (pw.length >= 8) score += 30;
-        if (/[A-Z]/.test(pw)) score += 20;
-        if (/[0-9]/.test(pw)) score += 20;
-        if (/[^A-Za-z0-9]/.test(pw)) score += 30;
-        return Math.min(100, score);
-    }
-    function updatePwMeter(){
-        const v = pwInput ? pwInput.value : '';
-        const s = scorePassword(v);
-        if (pwFill) pwFill.style.width = s + '%';
-        if (pwText) {
-            if (s < 40) { pwFill.style.background = 'linear-gradient(90deg,#ff6b6b,#ff9a9a)'; pwText.textContent = 'Senha fraca'; }
-            else if (s < 75) { pwFill.style.background = 'linear-gradient(90deg,#ffd166,#ffd88a)'; pwText.textContent = 'Senha média'; }
-            else { pwFill.style.background = 'linear-gradient(90deg,#8ce99a,#38d39f)'; pwText.textContent = 'Senha forte'; }
-        }
-    }
-    if (pwInput) { pwInput.addEventListener('input', updatePwMeter); updatePwMeter(); }
-});
-</script>
-
-<!-- Custom JavaScript para Pessoa Form -->
 <script src="{% static 'js/pessoa_form.js' %}"></script>
 {% endblock %}

@@ -49,7 +49,7 @@ else:
             ('certificado.manage', 'Gerenciar certificados'),
             ('conversor.use', 'Usar conversor'),
             ('painel.manage', 'Gerenciar painel'),
-            ('role.manage', 'Gerenciar papéis/roles'),
+            ('sistema.admin', 'Acesso administrativo completo'),
         ]
         
         for perm_code, desc in perms_to_test:
@@ -63,13 +63,6 @@ else:
         status = '✅' if can_edit else '❌'
         print(f"   {status} can_edit_pessoa(hugo_user, pessoa_obj)")
         
-        # Verificar roles
-        roles = pessoa.roles.filter(ativo=True)
-        print(f"\n👥 Papéis (Roles): {roles.count()}")
-        for role in roles:
-            print(f"   • {role.name} ({role.codename})")
-            print(f"     - Ativo: {'Sim' if role.ativo else 'Não'}")
-            print(f"     - Permissões: {len(role.perm_list())} ações")
         
     except Exception as e:
         print(f"\n❌ Erro ao acessar Pessoa: {str(e)}")

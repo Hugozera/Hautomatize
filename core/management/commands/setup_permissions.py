@@ -1,26 +1,22 @@
 """
 Management command para inicializar o sistema de permissões.
 
-Cria todos os roles e atribui permissões corretamente ao usuário Hugo (id=1).
+Atribui permissões diretas ao usuário Hugo (id=1) e prepara diagnóstico básico.
 """
-from django.core.management.base import BaseCommand, CommandError
+from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from core.models import Pessoa, Role
-from core.permission_system import (
-    ROLE_DEFINITIONS,
-    get_permissions_for_role,
-    get_all_permissions,
-)
+from core.models import Pessoa
+from core.permission_system import get_all_permissions
 
 
 class Command(BaseCommand):
-    help = 'Inicializa o sistema de permissões: cria todos os papéis e atribui permissões'
+    help = 'Inicializa o sistema de permissões diretas e atribui acesso ao usuário Hugo'
 
     def add_arguments(self, parser):
         parser.add_argument(
             '--reset',
             action='store_true',
-            help='Remove todos os roles existentes antes de criar novos (careful!)',
+            help='Remove todas as permissões diretas de usuários antes de reconfigurar (careful!)',
         )
         parser.add_argument(
             '--assign-hugo-admin',
@@ -41,39 +37,11 @@ class Command(BaseCommand):
 
         # ===== RESET (se solicitado) =====
         if options['reset']:
-            self.stdout.write(self.style.WARNING('⚠️  Deletando todos os roles existentes...'))
-            deleted_count, _ = Role.objects.all().delete()
-            self.stdout.write(self.style.WARNING(f'   Deletado {deleted_count} roles.\n'))
-
-        # ===== CRIAR ROLES =====
-        self.stdout.write(self.style.SUCCESS('📋 Criando papéis (roles)...\n'))
-
-        created_roles = {}
-        for role_codename, role_def in ROLE_DEFINITIONS.items():
-            perms = get_permissions_for_role(role_codename)
-            perm_string = ','.join(perms)
-
-            role, created = Role.objects.update_or_create(
-                codename=role_codename,
-                defaults={
-                    'name': role_def['name'],
-                    'descricao': role_def['descricao'],
-                    'permissions': perm_string,
-                    'ativo': True,
-                }
-            )
-
-            action = '✅ CRIADO' if created else '♻️  ATUALIZADO'
-            self.stdout.write(
-                f'{action}: Role "{role.name}" ({role_codename})'
-            )
-            self.stdout.write(
-                self.style.SUCCESS(
-                    f'           → {len(perms)} permissões'
-                )
-            )
-
-            created_roles[role_codename] = role
+            self.stdout.write(self.style.WARNING('⚠️  Limpando permissões diretas de usuários...'))
+            for pessoa in Pessoa.objects.all():
+                pessoa.permissions = ''
+                pessoa.save(update_fields=['permissions'])
+            self.stdout.write(self.style.WARNING('   Permissões diretas limpas.\n'))
 
         # ===== ATRIBUIR HUGO COMO ADMIN =====
         if options['assign_hugo_admin']:
@@ -119,20 +87,12 @@ class Command(BaseCommand):
 
             # Atribui TODAS as permissões diretas à pessoa
             all_perms = get_all_permissions()
-            perm_string = ','.join(all_perms)
-            pessoa.permissions = perm_string
-            pessoa.save()
-
-            # Limpa roles anteriores e atribui apenas Admin
-            pessoa.roles.clear()
-            admin_role = created_roles.get('admin')
-            if admin_role:
-                pessoa.roles.add(admin_role)
-                self.stdout.write(self.style.SUCCESS(f'   ✅ Role "Admin" atribuído a Hugo'))
+            pessoa.permissions = ','.join(all_perms)
+            pessoa.save(update_fields=['permissions'])
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f'\n   ✅ TOTAL: Hugo possui {len(all_perms)} PERMISSÕES DIRETAS + Role Admin'
+                    f'\n   ✅ TOTAL: Hugo possui {len(all_perms)} permissões diretas'
                 )
             )
 
@@ -143,14 +103,6 @@ class Command(BaseCommand):
 
         all_perms = get_all_permissions()
         self.stdout.write(f'Total de Permissões: {len(all_perms)}')
-        self.stdout.write(f'Total de Papéis: {len(ROLE_DEFINITIONS)}')
-
-        self.stdout.write('\n📋 PAPÉIS CRIADOS:')
-        for role_codename, role in created_roles.items():
-            role_def = ROLE_DEFINITIONS[role_codename]
-            print(f"  • {role.name} ({role_codename})")
-            print(f"    - {role_def['descricao']}")
-            print(f"    - Permissões: {role.permissions.count(',') + 1}")
 
         if options['verbose_perms']:
             self.stdout.write('\n📝 PERMISSÕES CRIADAS:')
@@ -163,6 +115,6 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.WARNING('📌 PRÓXIMOS PASSOS:'))
         self.stdout.write('  1. Adicione outros usuários ao sistema')
-        self.stdout.write('  2. Atribua papéis apropriados a cada usuário')
-        self.stdout.write('  3. Customize permissões específicas se necessário')
+        self.stdout.write('  2. Atribua permissões diretas conforme necessidade')
+        self.stdout.write('  3. Revise o menu dinâmico para refletir os acessos')
         self.stdout.write('  4. Editar core/permission_system.py para ajustar permissões\n')

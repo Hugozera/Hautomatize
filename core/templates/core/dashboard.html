@@ -1,4 +1,5 @@
 {% extends 'core/base.html' %}
+{% load menu_tags %}
 
 {% block content %}
 <div class="container-fluid px-0">
@@ -27,42 +28,54 @@
 
     <!-- cards de módulos -->
     <div class="row mb-4">
+        {% if request.user|has_perm:'conversor.view' or request.user|has_perm:'conversor.use' %}
         <div class="col-md-2 col-6 mb-3">
             <a href="{% url 'conversor_index' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
                 <div style="font-size:2.5rem;">🔁</div>
                 <div class="mt-2 fw-bold">Conversor</div>
             </a>
         </div>
+        {% endif %}
+        {% if request.user|has_perm:'empresa.view' %}
         <div class="col-md-2 col-6 mb-3">
             <a href="{% url 'empresa_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
                 <div style="font-size:2.5rem;">🏢</div>
                 <div class="mt-2 fw-bold">Empresas</div>
             </a>
         </div>
+        {% endif %}
+        {% if request.user|has_perm:'agendamento.view' %}
         <div class="col-md-2 col-6 mb-3">
             <a href="{% url 'agendamento_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
                 <div style="font-size:2.5rem;">🗓️</div>
                 <div class="mt-2 fw-bold">Agendar</div>
             </a>
         </div>
+        {% endif %}
+        {% if request.user|has_perm:'nfse_downloader.view' or request.user|has_perm:'nfse_downloader.download_manual' %}
         <div class="col-md-2 col-6 mb-3">
             <a href="{% url 'download_manual' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
                 <div style="font-size:2.5rem;">☁️</div>
                 <div class="mt-2 fw-bold">Downloads</div>
             </a>
         </div>
+        {% endif %}
+        {% if request.user|has_perm:'certificado.view' %}
         <div class="col-md-2 col-6 mb-3">
             <a href="{% url 'certificado_list' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
                 <div style="font-size:2.5rem;">🔒</div>
                 <div class="mt-2 fw-bold">Certificados</div>
             </a>
         </div>
+        {% endif %}
+        {% if request.user|has_perm:'nfse_downloader.view_historico' %}
         <div class="col-md-2 col-6 mb-3">
             <a href="{% url 'historico' %}" class="card module-card text-decoration-none text-center shadow-sm h-100 p-3">
                 <div style="font-size:2.5rem;">📁</div>
                 <div class="mt-2 fw-bold">Histórico</div>
             </a>
         </div>
+        {% endif %}
     </div>
 
 

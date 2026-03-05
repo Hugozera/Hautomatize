@@ -1730,13 +1730,34 @@ def api_cep(request):
 @login_required
 def generate_client_token(request):
     """Gera/Regenera token para agente local do usuário logado."""
-    if not hasattr(request.user, 'pessoa'):
-        return JsonResponse({'status': 'ERRO', 'msg': 'Sem perfil associado.'})
-    pessoa = request.user.pessoa
-    token = secrets.token_hex(24)
-    pessoa.client_api_token = token
-    pessoa.save()
-    return JsonResponse({'status': 'OK', 'token': token})
+    def _build_unique_placeholder_cpf(user_id):
+        # CPF técnico para perfis criados automaticamente (11 dígitos)
+        # Ex.: id=7 -> 90000000007
+        base = f"9{int(user_id or 0):010d}"
+        cpf = base[:11]
+        while Pessoa.objects.filter(cpf=cpf).exists():
+            cpf = ''.join(secrets.choice('0123456789') for _ in range(11))
+        return cpf
+
+    pessoa = getattr(request.user, 'pessoa', None)
+
+    if not pessoa:
+        try:
+            pessoa = Pessoa.objects.create(
+                user=request.user,
+                cpf=_build_unique_placeholder_cpf(request.user.id),
+                ativo=bool(request.user.is_active),
+            )
+        except Exception as e:
+            return JsonResponse({'status': 'ERRO', 'msg': f'Falha ao criar perfil da pessoa: {str(e)}'}, status=500)
+
+    try:
+        token = secrets.token_hex(32)
+        pessoa.client_api_token = token
+        pessoa.save(update_fields=['client_api_token'])
+        return JsonResponse({'status': 'OK', 'token': token})
+    except Exception as e:
+        return JsonResponse({'status': 'ERRO', 'msg': f'Falha ao gerar token: {str(e)}'}, status=500)
 
 
 @csrf_exempt
@@ -1915,70 +1936,6 @@ def historico(request):
 def configuracao(request):
     """Página de configurações do sistema"""
     return render(request, 'core/configuracao.html')
-
-
-# ===== Roles UI (apenas superuser) =====
-from django.contrib.auth.decorators import user_passes_test
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def role_list(request):
-    from .models import Role
-    # Cria roles padrão se não existirem (ajuda no primeiro uso)
-    if Role.objects.count() == 0:
-        defaults = [
-            {'name': 'Full Access', 'codename': 'full.access', 'descricao': 'Acesso total', 'permissions': 'empresa.edit,certificado.manage,conversor.use,download.manage', 'ativo': True},
-            {'name': 'Download Manager', 'codename': 'download.manage', 'descricao': 'Gerenciar downloads', 'permissions': 'download.manage,empresa.edit', 'ativo': True},
-            {'name': 'Conversor User', 'codename': 'conversor.use', 'descricao': 'Acessar conversor', 'permissions': 'conversor.use', 'ativo': True},
-        ]
-        for d in defaults:
-            Role.objects.get_or_create(codename=d['codename'], defaults=d)
-
-    roles = Role.objects.all().order_by('name')
-    return render(request, 'core/role_list.html', {'roles': roles})
-
-
-from .permissions import check_perm
-def _can_manage_roles(u):
-    # Verificar se pode gerenciar papéis
-    return check_perm(u, 'role.manage') if u else bool(u and not u.is_anonymous)
-
-@login_required
-def role_create(request):
-    from .forms import RoleForm
-    if request.method == 'POST':
-        form = RoleForm(request.POST)
-        if form.is_valid():
-            form.save()
-            return redirect('role_list')
-    else:
-        form = RoleForm()
-    return render(request, 'core/role_form.html', {'form': form, 'creating': True})
-
-
-@login_required
-def role_edit(request, pk):
-    from .models import Role
-    from .forms import RoleForm
-    role = get_object_or_404(Role, pk=pk)
-    if request.method == 'POST':
-        form = RoleForm(request.POST, instance=role)
-        if form.is_valid():
-            form.save()
-            return redirect('role_list')
-    else:
-        form = RoleForm(instance=role)
-    return render(request, 'core/role_form.html', {'form': form, 'creating': False, 'role': role})
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def role_delete(request, pk):
-    from .models import Role
-    role = get_object_or_404(Role, pk=pk)
-    if request.method == 'POST':
-        role.delete()
-        return redirect('role_list')
-    return render(request, 'core/role_confirm_delete.html', {'role': role})
 
 @login_required
 def perfil(request):

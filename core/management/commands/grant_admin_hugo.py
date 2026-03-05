@@ -3,8 +3,8 @@ Management command para atribuir todas as permissões administrativas ao usuári
 """
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
-from core.models import Pessoa, Role
-from core.permission_system import PERMISSION_MAP, ROLE_DEFINITIONS
+from core.models import Pessoa
+from core.permission_system import PERMISSION_MAP
 
 
 class Command(BaseCommand):
@@ -41,29 +41,9 @@ class Command(BaseCommand):
         pessoa.permissions = ','.join(all_permissions)
         pessoa.save()
         
-        # Cria ou obtém o role de Admin
-        admin_role, role_created = Role.objects.get_or_create(
-            codename='admin',
-            defaults={
-                'name': 'Administrador Completo',
-                'descricao': 'Acesso administrativo total a todos os módulos do sistema',
-                'permissions': ','.join(all_permissions),
-                'ativo': True,
-            }
-        )
-        
-        if not role_created:
-            # Atualiza o role se já existia
-            admin_role.permissions = ','.join(all_permissions)
-            admin_role.ativo = True
-            admin_role.save()
-        
-        # Atribui o role ao Hugo
-        admin_role.pessoas.add(pessoa)
-        admin_role.save()
         
         # Exibe resultado
-        self.stdout.write(self.style.SUCCESS('\n✅ SUCESSO! Todas as permissões atribuídas ao Hugo'))
+        self.stdout.write(self.style.SUCCESS('\n✅ SUCESSO! Todas as permissões diretas foram atribuídas ao Hugo'))
         self.stdout.write(f'   Nome: {user.get_full_name() or user.username}')
         self.stdout.write(f'   Email: {user.email}')
         self.stdout.write(f'   Total de permissões: {len(all_permissions)}')

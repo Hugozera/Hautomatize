@@ -1,0 +1,48 @@
+{# Template para renderizar o menu dinâmico #}
+{# Usado pelo template tag render_menu #}
+
+<ul class="nav flex-column flex-grow-1">
+    {% for item in menu_items %}
+        {# Item com submenu #}
+        {% if item.submenu %}
+            <li class="nav-item">
+                <a class="nav-link {% if item.is_active %}active{% endif %}" 
+                   data-bs-toggle="collapse" 
+                   href="#submenu-{{ forloop.counter }}" 
+                   role="button" 
+                   aria-expanded="{% if item.is_active %}true{% else %}false{% endif %}"
+                   aria-controls="submenu-{{ forloop.counter }}">
+                    <i class="{{ item.icon }}"></i>
+                    <span class="nav-text">{{ item.label }}</span>
+                    <i class="bi bi-caret-down-fill float-end"></i>
+                </a>
+                <div class="collapse {% if item.is_active %}show{% endif %}" id="submenu-{{ forloop.counter }}">
+                    <ul class="nav flex-column ms-3">
+                        {% for sub in item.submenu %}
+                            <li class="nav-item">
+                                <a class="nav-link {% if sub.is_active %}active{% endif %}" 
+                                   href="{{ sub.url }}">
+                                    {% if sub.icon %}<i class="{{ sub.icon }}"></i> {% endif %}
+                                    {{ sub.label }}
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </li>
+        
+        {# Item simples sem submenu #}
+        {% else %}
+            <li class="nav-item {% if item.order >= 200 %}mt-auto{% endif %}">
+                <a class="nav-link {% if item.is_active %}active{% endif %}" href="{{ item.url }}">
+                    <i class="{{ item.icon }}"></i>
+                    <span class="nav-text">{{ item.label }}</span>
+                </a>
+            </li>
+        {% endif %}
+    {% empty %}
+        <li class="nav-item">
+            <span class="nav-text text-muted">Sem acesso a itens no menu</span>
+        </li>
+    {% endfor %}
+</ul>

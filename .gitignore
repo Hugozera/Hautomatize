@@ -21,6 +21,8 @@ env.bak/
 *.log
 local_settings.py
 db.sqlite3
+db_prod.sqlite3
+learning_store.sqlite
 media/
 media/**
 staticfiles/
@@ -84,9 +86,12 @@ media/conversor/processing/
 media/conversor/convertidos/
 media/conversor/originais/
 
+# Backups
+backups/
 
-db_prod.sqlite3
+# Working directories
+PDFS/
+tmp/
+
 # Docker compose local overrides
 docker-compose.override.yml
-core/__pycache__/playwright_service.cpython-313.pyc
-db_prod.sqlite3

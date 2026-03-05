@@ -209,13 +209,13 @@ body.dark-mode .btn-success {
 }
 
 .pessoa-form-card .card-header {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.1);
     padding: 1.25rem 1.5rem;
 }
 
 .pessoa-form-card .card-header i {
-    color: var(--verde-deep);
+    color: #16a34a;
     transition: var(--transicao-padrao);
 }
 
@@ -256,8 +256,8 @@ body.dark-mode .btn-success {
 .pessoa-form-card .form-select:focus,
 .pessoa-form-card textarea:focus,
 .pessoa-form-card input:focus {
-    border-color: var(--verde-deep);
-    box-shadow: 0 0 0 0.2rem rgba(76, 175, 80, 0.25);
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
     outline: none;
 }
 
@@ -294,8 +294,9 @@ body.dark-mode .btn-success {
 }
 
 .filtros-card .btn-outline-success {
-    border: 2px solid var(--verde-deep);
-    color: var(--verde-deep);
+    border: 2px solid #16a34a;
+    color: #16a34a;
+    background: transparent;
 }
 
 .filtros-card .btn-outline-success:hover {

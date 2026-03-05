@@ -113,11 +113,11 @@
 }
 
 .cards-grid .card-header {
-    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(255, 193, 7, 0.1));
-    border-bottom: var(--borda-suave);
+    background: linear-gradient(135deg, rgba(22, 163, 74, 0.08), rgba(234, 179, 8, 0.08));
+    border-bottom: 1px solid rgba(22, 163, 74, 0.12);
     padding: 1rem 1.25rem;
     font-weight: 600;
-    color: var(--cinza-escuro);
+    color: #374151;
 }
 
 .cards-grid .card-header i {
